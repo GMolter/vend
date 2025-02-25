@@ -3,20 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Database Test</title>
+    <title>Cyberflash Vending Machine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f8ff, #e6f2ff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #0066cc;
+        }
+        .container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 102, 204, 0.2);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            font-size: 1.5rem;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .status-code {
+            position: fixed;
+            top: 5px;
+            left: 5px;
+            font-size: 0.8rem;
+            color: rgba(0, 102, 204, 0.5);
+            z-index: 1000;
+        }
+        .dispensing {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.5;
+                transform: scale(0.95);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .pulsing {
+            animation: pulse 1.3s ease-in-out infinite;
+        }
+    </style>
 </head>
 <body>
-
-    <h1>Firebase Database Test</h1>
-    <button onclick="writeData()">Write Data</button>
-    <button onclick="readData()">Read Data</button>
+    <div class="status-code">Status Code: 000</div>
+    <div class="container">
+        <h1>Cyberflash Vending Machine</h1>
+        <p>Say "<span class="bold">Vend</span>" to dispense a snack.</p>
+        <div class="dispensing pulsing">Dispensing Snack...</div>
+    </div>
 
     <script type="module">
         // Import Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+        import { getDatabase, ref, set, get, child, push } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
 
-        // Your Firebase Config
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
             authDomain: "cyberflashvend.firebaseapp.com",
@@ -31,43 +88,79 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Secret Key (MUST match the one in Firebase Database)
+        // Secret Key (MUST match Firebase rules)
         const SECRET_KEY = "iLoveSnacks69";
 
-        // Function to Write Data
-        function writeData() {
-            set(ref(db, "examplePath"), {
-                secretKey: SECRET_KEY, // Include the secret key
-                message: "Hello from CyberFlashVend!"
+        // Function to Write "Vend" Command to Firebase
+        function writeVendCommand() {
+            console.log("📤 Writing 'Vend' command to Firebase...");
+            push(ref(db, "vendingRequests"), {
+                secretKey: SECRET_KEY,  // Include secret key
+                command: "Vend",
+                timestamp: new Date().toISOString()
             })
-            .then(() => console.log("✅ Data written successfully"))
-            .catch(error => console.error("❌ Error writing data:", error));
+            .then(() => console.log("✅ Vend command successfully logged to Firebase"))
+            .catch(error => console.error("❌ Error writing to Firebase:", error));
         }
 
-        // Function to Read Data (Only if Secret Key Matches)
-        function readData() {
-            const dbRef = ref(db);
-            get(child(dbRef, "config/accessKey")).then(snapshot => {
-                if (snapshot.exists() && snapshot.val() === SECRET_KEY) {
-                    return get(child(dbRef, "examplePath"));
-                } else {
-                    throw new Error("❌ Access Denied - Invalid Secret Key");
-                }
-            })
-            .then(snapshot => {
-                if (snapshot.exists()) {
-                    console.log("📜 Data Retrieved:", snapshot.val());
-                } else {
-                    console.log("📜 No data available.");
-                }
-            })
-            .catch(error => console.error("❌ Error:", error));
-        }
-
-        // ✅ Attach functions to `window` so HTML buttons can access them
-        window.writeData = writeData;
-        window.readData = readData;
+        // Attach function to window so it can be used globally
+        window.writeVendCommand = writeVendCommand;
     </script>
 
+    <script>
+        const statusCode = document.querySelector('.status-code');
+        const dispensingLabel = document.querySelector('.dispensing');
+        let isListening = false;
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {
+            isListening = true;
+            statusCode.textContent = 'Status Code: 001';
+            console.log("🎙️ Speech recognition started...");
+        };
+
+        recognition.onend = function() {
+            isListening = false;
+            statusCode.textContent = 'Status Code: 000';
+            console.log("🛑 Speech recognition stopped. Restarting...");
+            recognition.start(); // Auto-restart for continuous listening
+        };
+
+        recognition.onresult = function(event) {
+            const last = event.results.length - 1;
+            const command = event.results[last][0].transcript.trim().toLowerCase();
+
+            console.log(`🗣️ Heard: "${command}"`); // Debugging statement
+
+            if (command === 'vend') {
+                console.log("✅ Recognized 'Vend' command!");
+                dispensingLabel.style.display = 'block';
+
+                // Log to Firebase
+                window.writeVendCommand();
+
+                setTimeout(() => {
+                    dispensingLabel.style.display = 'none';
+                    alert('Your snack has been dispensed! Enjoy your treat!');
+                }, 3000);
+            } else {
+                console.log("❌ Command not recognized as 'Vend'. Ignoring.");
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.error('❌ Speech recognition error:', event.error);
+            isListening = false;
+            statusCode.textContent = 'Status Code: 000';
+        };
+
+        // Start recognition
+        console.log("🚀 Initializing speech recognition...");
+        recognition.start();
+    </script>
 </body>
 </html>
