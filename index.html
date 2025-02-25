@@ -50,7 +50,7 @@
             top: 10px;
             right: 10px;
             width: 250px;
-            height: 150px;
+            height: 200px;
             background: rgba(0, 0, 0, 0.8);
             color: #0f0;
             font-size: 0.8rem;
@@ -62,7 +62,7 @@
         }
         .console-btns {
             position: fixed;
-            top: 170px;
+            top: 220px;
             right: 10px;
         }
         .console-btns button {
@@ -136,11 +136,13 @@
         window.stopMic = function() {
             micStopped = true;
             recognition.stop();
+            statusCode.textContent = "Status Code: 000";
             logToConsole("🛑 Microphone manually stopped.");
         };
         window.startMic = function() {
             micStopped = false;
             recognition.start();
+            statusCode.textContent = "Status Code: 001";
             logToConsole("🎙️ Microphone manually restarted.");
         };
 
