@@ -45,18 +45,31 @@
             margin-top: 1rem;
             display: none;
         }
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 0.5;
-                transform: scale(0.95);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1);
-            }
+        .in-site-console {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 250px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            font-size: 0.8rem;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-y: auto;
+            font-family: monospace;
+            z-index: 1000;
         }
-        .pulsing {
-            animation: pulse 1.3s ease-in-out infinite;
+        .console-btns {
+            position: fixed;
+            top: 170px;
+            right: 10px;
+        }
+        .console-btns button {
+            margin: 5px;
+            padding: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -68,11 +81,17 @@
         <div class="dispensing pulsing">Dispensing Snack...</div>
     </div>
 
+    <!-- In-Site Console for Logs -->
+    <div class="in-site-console" id="console-log"></div>
+    <div class="console-btns">
+        <button onclick="stopMic()">Stop Mic</button>
+        <button onclick="startMic()">Start Mic</button>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
         import { getDatabase, ref, set, get, update, push } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
 
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
             authDomain: "cyberflashvend.firebaseapp.com",
@@ -86,34 +105,43 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const SECRET_KEY = "iLoveSnacks69";
+        let micStopped = false;
 
-        let micStopped = false; // Tracks if mic was manually stopped
+        function logToConsole(message) {
+            const consoleDiv = document.getElementById('console-log');
+            consoleDiv.innerHTML += `<div>${message}</div>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
 
         function initializeVendingStatus() {
             set(ref(db, "machineStatus"), { isVending: false })
-            .then(() => console.log("✅ 'isVending' initialized to false."))
-            .catch(error => console.error("❌ Error initializing Firebase:", error));
+            .then(() => logToConsole("✅ 'isVending' initialized to false."))
+            .catch(error => logToConsole("❌ Error initializing Firebase: " + error));
         }
 
         function writeVendCommand() {
-            console.log("📤 Writing 'Vend' command to Firebase...");
+            logToConsole("📤 Writing 'Vend' command to Firebase...");
             update(ref(db, "machineStatus"), { isVending: true });
             push(ref(db, "vendingRequests"), {
                 secretKey: SECRET_KEY,
                 command: "Vend",
                 timestamp: new Date().toISOString()
             })
-            .then(() => console.log("✅ Vend command logged to Firebase"))
-            .catch(error => console.error("❌ Error writing to Firebase:", error));
+            .then(() => logToConsole("✅ Vend command logged to Firebase"))
+            .catch(error => logToConsole("❌ Error writing to Firebase: " + error));
         }
 
-        // Attach functions to `window`
         window.writeVendCommand = writeVendCommand;
         window.initializeVendingStatus = initializeVendingStatus;
         window.stopMic = function() {
             micStopped = true;
             recognition.stop();
-            console.log("🛑 Microphone manually stopped.");
+            logToConsole("🛑 Microphone manually stopped.");
+        };
+        window.startMic = function() {
+            micStopped = false;
+            recognition.start();
+            logToConsole("🎙️ Microphone manually restarted.");
         };
 
         initializeVendingStatus();
@@ -132,7 +160,7 @@
         recognition.onstart = function() {
             isListening = true;
             statusCode.textContent = 'Status Code: 001';
-            console.log("🎙️ Mic started...");
+            logToConsole("🎙️ Mic started...");
         };
 
         recognition.onend = function() {
@@ -140,10 +168,10 @@
             statusCode.textContent = 'Status Code: 000';
 
             if (!micStopped) {
-                console.log("🔄 Restarting mic...");
+                logToConsole("🔄 Restarting mic...");
                 recognition.start();
             } else {
-                console.log("🛑 Mic remains off (stopped manually).");
+                logToConsole("🛑 Mic remains off.");
             }
         };
 
@@ -151,10 +179,10 @@
             const last = event.results.length - 1;
             const command = event.results[last][0].transcript.trim().toLowerCase();
 
-            console.log(`🗣️ Heard: "${command}"`); // Debugging
+            logToConsole(`🗣️ Heard: "${command}"`);
 
-            if (command.includes("vend")) {  // Now matches "vend" in any capitalization
-                console.log("✅ Recognized 'Vend' command!");
+            if (command.includes("vend")) {
+                logToConsole("✅ Recognized 'Vend' command!");
                 dispensingLabel.style.display = 'block';
                 window.writeVendCommand();
 
@@ -163,29 +191,22 @@
                     alert('Your snack has been dispensed! Enjoy!');
 
                     update(ref(db, "machineStatus"), { isVending: false })
-                    .then(() => console.log("🔄 Reset 'isVending' to false"))
-                    .catch(error => console.error("❌ Error resetting 'isVending':", error));
+                    .then(() => logToConsole("🔄 Reset 'isVending' to false"))
+                    .catch(error => logToConsole("❌ Error resetting 'isVending': " + error));
 
                 }, 3000);
             } else {
-                console.log("❌ Command not recognized as 'Vend'. Ignoring.");
+                logToConsole("❌ Command not recognized as 'Vend'. Ignoring.");
             }
         };
 
         recognition.onerror = function(event) {
-            console.error('❌ Speech recognition error:', event.error);
+            logToConsole("❌ Speech recognition error: " + event.error);
             isListening = false;
             statusCode.textContent = 'Status Code: 000';
         };
 
-        window.startMic = function() {
-            micStopped = false;
-            recognition.start();
-            console.log("🎙️ Mic manually restarted.");
-        };
-
-        // Automatically start mic on page load
-        console.log("🚀 Starting mic on page load...");
+        logToConsole("🚀 Starting mic...");
         recognition.start();
     </script>
 </body>
