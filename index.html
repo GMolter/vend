@@ -63,6 +63,10 @@
             })
             .catch(error => console.error("❌ Error:", error));
         }
+
+        // ✅ Attach functions to `window` so HTML buttons can access them
+        window.writeData = writeData;
+        window.readData = readData;
     </script>
 
 </body>
