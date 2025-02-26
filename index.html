@@ -56,19 +56,57 @@
             font-size: 0.9rem;
             cursor: pointer;
         }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none;
+        }
+        .modal h2 {
+            margin: 0 0 10px;
+        }
+        .timer-bar {
+            width: 100%;
+            height: 5px;
+            background: #4caf50;
+            position: relative;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        @keyframes countdown {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
     </style>
 </head>
 <body>
     <div class="status-code">Status Code: 000</div>
     <div class="container">
         <h1>Cyberflash Vending Machine</h1>
-        <p>Say "<span class="bold">Vend</span>" to dispense a snack.</p>
+        <p>Say "<span class="bold">Give me a snack!</span>" to dispense a snack.</p>
         <div class="dispensing pulsing">Dispensing Snack...</div>
     </div>
 
     <div class="console-btns">
         <button onclick="stopMic()">Stop Mic</button>
         <button onclick="startMic()">Start Mic</button>
+    </div>
+
+    <!-- Modal for Snack Dispensing -->
+    <div class="modal" id="snackModal">
+        <h2>🍫 Snack Dispensed! 🍪</h2>
+        <p>Enjoy your treat!</p>
+        <div class="timer-bar" id="timerBar"></div>
     </div>
 
     <script type="module">
@@ -97,15 +135,29 @@
         }
 
         function writeVendCommand() {
-            console.log("📤 Writing 'Vend' command to Firebase...");
+            console.log("📤 Writing 'Give me a snack!' command to Firebase...");
             update(ref(db, "machineStatus"), { isVending: true });
+
             push(ref(db, "vendingRequests"), {
                 secretKey: SECRET_KEY,
-                command: "Vend",
+                command: "Give me a snack!",
                 timestamp: new Date().toISOString()
-            })
-            .then(() => console.log("✅ Vend command logged to Firebase"))
-            .catch(error => console.error("❌ Error writing to Firebase:", error));
+            }).then(() => {
+                console.log("✅ Command logged to Firebase");
+                showModal();
+            }).catch(error => console.error("❌ Error logging to Firebase:", error));
+        }
+
+        function showModal() {
+            const modal = document.getElementById("snackModal");
+            const timerBar = document.getElementById("timerBar");
+
+            modal.style.display = "block";
+            timerBar.style.animation = "countdown 7s linear forwards";
+
+            setTimeout(() => {
+                modal.style.display = "none";
+            }, 7000);
         }
 
         window.writeVendCommand = writeVendCommand;
@@ -148,9 +200,7 @@
 
             if (!micStopped) {
                 console.log("🔄 Restarting mic...");
-                recognition.start();
-            } else {
-                console.log("🛑 Mic remains off.");
+                setTimeout(() => recognition.start(), 1000);
             }
         };
 
@@ -163,29 +213,15 @@
 
             console.log(`🗣️ Heard: "${finalText}"`);
 
-            if (finalText.includes("vend")) {
-                console.log("✅ Recognized 'Vend' command!");
-                dispensingLabel.style.display = 'block';
+            if (finalText.includes("give me a snack")) {
+                console.log("✅ Recognized 'Give me a snack!' command!");
                 window.writeVendCommand();
-
-                setTimeout(() => {
-                    dispensingLabel.style.display = 'none';
-                    alert('Your snack has been dispensed! Enjoy!');
-
-                    update(ref(db, "machineStatus"), { isVending: false })
-                    .then(() => console.log("🔄 Reset 'isVending' to false"))
-                    .catch(error => console.error("❌ Error resetting 'isVending':", error));
-
-                }, 3000);
-            } else {
-                console.log("❌ Command not recognized as 'Vend'. Ignoring.");
             }
         };
 
         recognition.onerror = function(event) {
             console.error("❌ Speech recognition error:", event.error);
-            isListening = false;
-            statusCode.textContent = 'Status Code: 000';
+            setTimeout(() => recognition.start(), 2000);
         };
 
         console.log("🚀 Starting mic...");
