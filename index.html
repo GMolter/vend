@@ -79,7 +79,6 @@
             width: 100%;
             height: 5px;
             background: #4caf50;
-            position: relative;
             margin-top: 10px;
             border-radius: 5px;
         }
@@ -126,7 +125,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const SECRET_KEY = "iLoveSnacks69";
-        let micStopped = false;
+
+        window.micStopped = false; // ✅ Moved `micStopped` to global scope
 
         function initializeVendingStatus() {
             set(ref(db, "machineStatus"), { isVending: false })
@@ -162,43 +162,24 @@
 
         window.writeVendCommand = writeVendCommand;
         window.initializeVendingStatus = initializeVendingStatus;
-        window.stopMic = function() {
-            micStopped = true;
-            recognition.stop();
-            statusCode.textContent = "Status Code: 000";
-            console.log("🛑 Microphone manually stopped.");
-        };
-        window.startMic = function() {
-            micStopped = false;
-            recognition.start();
-            statusCode.textContent = "Status Code: 001";
-            console.log("🎙️ Microphone manually restarted.");
-        };
-
-        initializeVendingStatus();
     </script>
 
     <script>
         const statusCode = document.querySelector('.status-code');
-        const dispensingLabel = document.querySelector('.dispensing');
-        let isListening = false;
-
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'en-US';
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
 
         recognition.onstart = function() {
-            isListening = true;
             statusCode.textContent = 'Status Code: 001';
             console.log("🎙️ Mic started...");
         };
 
         recognition.onend = function() {
-            isListening = false;
             statusCode.textContent = 'Status Code: 000';
 
-            if (!micStopped) {
+            if (!window.micStopped) {
                 console.log("🔄 Restarting mic...");
                 setTimeout(() => recognition.start(), 1000);
             }
@@ -222,6 +203,20 @@
         recognition.onerror = function(event) {
             console.error("❌ Speech recognition error:", event.error);
             setTimeout(() => recognition.start(), 2000);
+        };
+
+        window.stopMic = function() {
+            window.micStopped = true;
+            recognition.stop();
+            statusCode.textContent = "Status Code: 000";
+            console.log("🛑 Microphone manually stopped.");
+        };
+
+        window.startMic = function() {
+            window.micStopped = false;
+            recognition.start();
+            statusCode.textContent = "Status Code: 001";
+            console.log("🎙️ Microphone manually restarted.");
         };
 
         console.log("🚀 Starting mic...");
