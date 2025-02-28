@@ -62,6 +62,7 @@
     .console-btns button:hover {
       background-color: #0052a3;
     }
+
     /* Modal Styles */
     .modal {
       position: fixed;
@@ -91,6 +92,7 @@
       from { width: 100%; }
       to { width: 0%; }
     }
+
     /* Camera feed (hidden by default) */
     #cameraVideo {
       position: fixed;
@@ -130,13 +132,13 @@
 
   <script>
     // -------------------- GLOBALS --------------------
-    let micStopped = true;         // Mic is off by default
-    let isRecognizing = false; 
+    let micStopped = true;       // mic off by default
+    let isRecognizing = false;
     let cameraActive = false;
     let cameraStream = null;
 
-    // For short burst motion detection:
-    let motionThreshold = 15000; 
+    // We'll do a short 2-second motion check after phrase
+    let motionThreshold = 30000;  // Increase to reduce false positives
     const statusCode = document.querySelector('.status-code');
 
     // -------------------- CAMERA --------------------
@@ -171,30 +173,29 @@
 
     // -------------------- MOTION DETECTION BURST --------------------
     async function detectMotionFor(durationMs) {
+      // If camera is off => no motion
       if (!cameraActive || !cameraStream) {
-        // Camera off => no motion
-        console.log("Camera is off => no motion.");
+        console.log("Camera off => no motion.");
         return false;
       }
       const videoEl = document.getElementById("cameraVideo");
       if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) {
-        // Not ready => no motion
         console.log("Camera not ready => no motion.");
         return false;
       }
 
-      // baseline
+      // Baseline frame
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = videoEl.videoWidth;
       canvas.height = videoEl.videoHeight;
       ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-      const baselineFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const baseline = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      let motionFound = false;
+      let foundMotion = false;
       let checks = 0;
-      let checkInterval = 300; 
-      let totalChecks = durationMs / checkInterval;
+      const checkInterval = 300; 
+      const totalChecks = durationMs / checkInterval;
 
       return new Promise(resolve => {
         const intervalId = setInterval(() => {
@@ -204,17 +205,17 @@
 
           let diff = 0;
           for (let i = 0; i < currentFrame.data.length; i += 4) {
-            const rDiff = Math.abs(currentFrame.data[i] - baselineFrame.data[i]);
-            const gDiff = Math.abs(currentFrame.data[i + 1] - baselineFrame.data[i + 1]);
-            const bDiff = Math.abs(currentFrame.data[i + 2] - baselineFrame.data[i + 2]);
+            const rDiff = Math.abs(currentFrame.data[i] - baseline.data[i]);
+            const gDiff = Math.abs(currentFrame.data[i + 1] - baseline.data[i + 1]);
+            const bDiff = Math.abs(currentFrame.data[i + 2] - baseline.data[i + 2]);
             diff += (rDiff + gDiff + bDiff);
           }
           if (diff > motionThreshold) {
-            motionFound = true;
+            foundMotion = true;
           }
-          if (motionFound || checks >= totalChecks) {
+          if (foundMotion || checks >= totalChecks) {
             clearInterval(intervalId);
-            resolve(motionFound);
+            resolve(foundMotion);
           }
         }, checkInterval);
       });
@@ -247,25 +248,25 @@
     recognition.onend = function() {
       isRecognizing = false;
       statusCode.textContent = "Status Code: 000";
-      // No repeated logs about no-speech. No auto-logs. 
-      // We'll just quietly restart if mic isn't stopped
       if (!micStopped) {
+        // quietly auto-restart after short delay, no spam logs
         setTimeout(safeStartMic, 1200);
       }
     };
 
-    recognition.onresult = async function(event) {
+    recognition.onresult = async function(e) {
       let text = "";
-      for (let i = 0; i < event.results.length; i++) {
-        text += event.results[i][0].transcript + " ";
+      for (let i = 0; i < e.results.length; i++) {
+        text += e.results[i][0].transcript + " ";
       }
       text = text.trim().toLowerCase();
       console.log(`Heard: "${text}"`);
 
       if (text.includes("give me a snack")) {
+        // short 2-second motion check
         const motion = await detectMotionFor(2000);
         if (motion) {
-          console.log("Motion detected => Dispensing snack.");
+          console.log("Motion found => dispensing snack.");
           dispenseSnack();
         } else {
           console.log("No motion => not dispensing.");
@@ -273,16 +274,16 @@
       }
     };
 
-    recognition.onerror = function(e) {
-      // Minimal logs => ignoring details like "no-speech"
+    recognition.onerror = function() {
+      // minimal logs, no "no-speech" spam
       if (!micStopped) {
         setTimeout(safeStartMic, 1200);
       }
     };
 
-    // -------------------- DISPENSE SNACK --------------------
+    // -------------------- DISPENSE --------------------
     function dispenseSnack() {
-      // Fake logging to DB
+      // pretend we log to DB here
       console.log("Snack command logged to DB (example).");
       showModal();
     }
@@ -297,6 +298,7 @@
     window.startMic = function() {
       micStopped = false;
       safeStartMic();
+      console.log("Microphone requested to start.");
     };
 
     window.stopMic = function() {
