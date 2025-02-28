@@ -131,17 +131,21 @@
   </div>
 
   <script>
-    // -------------------- GLOBALS --------------------
-    let micStopped = true;       // mic off by default
+    // -------------- GLOBALS --------------
+    let micStopped = true;       
     let isRecognizing = false;
     let cameraActive = false;
     let cameraStream = null;
 
     // We'll do a short 2-second motion check after phrase
-    let motionThreshold = 30000;  // Increase to reduce false positives
+    // Using a large threshold to reduce false positives
+    let motionThreshold = 100000;  
+    // We'll also require multiple "hits" above threshold
+    let requiredHits = 2;  // If you still get false positives, increase to 3
+
     const statusCode = document.querySelector('.status-code');
 
-    // -------------------- CAMERA --------------------
+    // -------------- CAMERA CONTROLS --------------
     async function startCam() {
       if (cameraActive) {
         console.log("Camera already on.");
@@ -171,7 +175,7 @@
       console.log("Camera stopped.");
     }
 
-    // -------------------- MOTION DETECTION BURST --------------------
+    // -------------- MOTION DETECTION BURST --------------
     async function detectMotionFor(durationMs) {
       // If camera is off => no motion
       if (!cameraActive || !cameraStream) {
@@ -192,8 +196,8 @@
       ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
       const baseline = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      let foundMotion = false;
       let checks = 0;
+      let hits = 0;
       const checkInterval = 300; 
       const totalChecks = durationMs / checkInterval;
 
@@ -210,18 +214,26 @@
             const bDiff = Math.abs(currentFrame.data[i + 2] - baseline.data[i + 2]);
             diff += (rDiff + gDiff + bDiff);
           }
+
           if (diff > motionThreshold) {
-            foundMotion = true;
+            hits++;
           }
-          if (foundMotion || checks >= totalChecks) {
+
+          // If we already have enough hits, done
+          if (hits >= requiredHits) {
             clearInterval(intervalId);
-            resolve(foundMotion);
+            resolve(true);
+          }
+          else if (checks >= totalChecks) {
+            clearInterval(intervalId);
+            // If we never reached requiredHits, no motion
+            resolve(hits >= requiredHits);
           }
         }, checkInterval);
       });
     }
 
-    // -------------------- MODAL --------------------
+    // -------------- MODAL --------------
     function showModal() {
       const modal = document.getElementById("snackModal");
       const timerBar = document.getElementById("timerBar");
@@ -233,7 +245,7 @@
       }, 7000);
     }
 
-    // -------------------- SPEECH RECOGNITION --------------------
+    // -------------- SPEECH RECOGNITION --------------
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = 'en-US';
     recognition.interimResults = true;
@@ -249,7 +261,7 @@
       isRecognizing = false;
       statusCode.textContent = "Status Code: 000";
       if (!micStopped) {
-        // quietly auto-restart after short delay, no spam logs
+        // quietly auto-restart
         setTimeout(safeStartMic, 1200);
       }
     };
@@ -263,7 +275,7 @@
       console.log(`Heard: "${text}"`);
 
       if (text.includes("give me a snack")) {
-        // short 2-second motion check
+        console.log("Checking motion for 2s...");
         const motion = await detectMotionFor(2000);
         if (motion) {
           console.log("Motion found => dispensing snack.");
@@ -281,14 +293,13 @@
       }
     };
 
-    // -------------------- DISPENSE --------------------
+    // -------------- DISPENSE --------------
     function dispenseSnack() {
-      // pretend we log to DB here
       console.log("Snack command logged to DB (example).");
       showModal();
     }
 
-    // -------------------- MIC CONTROLS --------------------
+    // -------------- MIC CONTROLS --------------
     function safeStartMic() {
       if (!isRecognizing && !micStopped) {
         recognition.start();
@@ -310,6 +321,7 @@
       statusCode.textContent = "Status Code: 000";
     };
 
+    // -------------- INIT --------------
     console.log("Page loaded. Camera & mic are off by default.");
   </script>
 </body>
