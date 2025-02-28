@@ -132,16 +132,16 @@
 
   <script>
     // -------------------- GLOBALS --------------------
-    let micStopped = true;       
+    let micStopped = true;  // mic off by default
     let isRecognizing = false;
     let cameraActive = false;
     let cameraStream = null;
 
-    // We'll do a 2-second wait, multiple checks, no early exit
-    const motionThreshold = 100000;  
-    const requiredHits = 2;          
-    const checkInterval = 300;       
-    const motionDurationMs = 2000;   
+    // We'll do a 2-second check, comparing consecutive frames
+    const motionThreshold = 30000;  // Lower => easier detection; Higher => fewer false positives
+    const requiredHits = 2;         // Number of big diffs needed
+    const checkInterval = 300;      // Check ~6-7 times in 2 seconds
+    const motionDurationMs = 2000;  // Full wait time
 
     const statusCode = document.querySelector('.status-code');
 
@@ -182,19 +182,19 @@
         console.log("Camera off => no motion.");
         return false;
       }
+
       const videoEl = document.getElementById("cameraVideo");
       if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) {
         console.log("Camera not ready => no motion.");
         return false;
       }
 
-      // We'll compare consecutive frames
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = videoEl.videoWidth;
       canvas.height = videoEl.videoHeight;
 
-      // Grab the initial "lastFrame"
+      // Grab initial "lastFrame"
       ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
       let lastFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -210,15 +210,14 @@
           ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
           const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
+          // Compare to lastFrame
           let diff = 0;
           for (let i = 0; i < currentFrame.data.length; i += 4) {
-            const rDiff = Math.abs(currentFrame.data[i] - lastFrame.data[i]);
-            const gDiff = Math.abs(currentFrame.data[i+1] - lastFrame.data[i+1]);
-            const bDiff = Math.abs(currentFrame.data[i+2] - lastFrame.data[i+2]);
-            diff += (rDiff + gDiff + bDiff);
+            diff += Math.abs(currentFrame.data[i]   - lastFrame.data[i]);
+            diff += Math.abs(currentFrame.data[i+1] - lastFrame.data[i+1]);
+            diff += Math.abs(currentFrame.data[i+2] - lastFrame.data[i+2]);
           }
 
-          // If difference is big enough, count a "hit"
           if (diff > motionThreshold) {
             hits++;
           }
@@ -264,8 +263,14 @@
     recognition.onend = function() {
       isRecognizing = false;
       statusCode.textContent = "Status Code: 000";
+
+      // Quietly auto-restart after a delay if the mic is still on
       if (!micStopped) {
-        setTimeout(safeStartMic, 1200);
+        setTimeout(() => {
+          if (!isRecognizing && !micStopped) {
+            recognition.start();
+          }
+        }, 1200);
       }
     };
 
@@ -278,7 +283,7 @@
       console.log(`Heard: "${text}"`);
 
       if (text.includes("give me a snack")) {
-        // Do a 2-second consecutive-frame check
+        // 2-second consecutive-frame check
         const motion = await detectMotionFor2s();
         if (motion) {
           console.log("Motion found => dispensing snack.");
@@ -290,8 +295,13 @@
     };
 
     recognition.onerror = function() {
+      // Minimal logs, no spam
       if (!micStopped) {
-        setTimeout(safeStartMic, 1200);
+        setTimeout(() => {
+          if (!isRecognizing && !micStopped) {
+            recognition.start();
+          }
+        }, 1200);
       }
     };
 
@@ -310,8 +320,8 @@
 
     window.startMic = function() {
       micStopped = false;
-      safeStartMic();
       console.log("Microphone requested to start.");
+      safeStartMic();
     };
 
     window.stopMic = function() {
