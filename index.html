@@ -82,7 +82,7 @@
       to { width: 0%; }
     }
 
-    /* Hide the camera feed */
+    /* Hide or show the camera feed if desired */
     #cameraVideo {
       position: fixed;
       bottom: 0;
@@ -91,7 +91,7 @@
       height: 120px;
       opacity: 0.3;
       z-index: 1;
-      display: none; /* Hide or comment this out if you want to see the feed for debugging */
+      display: none; /* set to 'block' if you want to see the feed */
     }
   </style>
 </head>
@@ -99,8 +99,7 @@
   <div class="status-code">Status Code: 000</div>
   <div class="container">
     <h1>Cyberflash Vending Machine</h1>
-    <p>Say "<span class="bold">Give me a snack!</span>" <br/> 
-       <strong>while moving</strong> in front of the camera to dispense a snack.</p>
+    <p>Say "<span class="bold">Give me a snack!</span>" while moving in front of the camera to dispense.</p>
   </div>
 
   <div class="console-btns">
@@ -108,7 +107,7 @@
     <button onclick="startMic()">Start Mic</button>
   </div>
 
-  <!-- Hidden camera video -->
+  <!-- Camera feed (hidden by default) -->
   <video id="cameraVideo" autoplay playsinline></video>
 
   <!-- Modal for Snack Dispensing -->
@@ -118,21 +117,32 @@
   </div>
 
   <script>
-    // GLOBALS
+    // -------------------------------
+    // GLOBALS & FLAGS
+    // -------------------------------
     let micStopped = false;
+    let isRecognizing = false;       // <--- Prevents "already started" errors
     let motionDetected = false;
+    let phraseHeardButNoMotion = false; // if user said the phrase but no motion yet
     let lastFrameData = null;
-    let motionThreshold = 8000; // Increase if you need more or less sensitivity
-    const statusCode = document.querySelector('.status-code');
+    let motionThreshold = 8000; // tweak for sensitivity
 
-    // 1. Start camera stream
+    const statusCode = document.querySelector('.status-code');
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    // -------------------------------
+    // 1. CAMERA + MOTION DETECTION
+    // -------------------------------
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const video = document.getElementById("cameraVideo");
         video.srcObject = stream;
         video.addEventListener('play', () => {
-          // Start checking for motion once the video is playing
+          console.log("📷 Camera started, beginning motion checks...");
           checkMotion();
         });
       } catch (err) {
@@ -140,7 +150,6 @@
       }
     }
 
-    // 2. Simple motion detection by comparing frames
     function checkMotion() {
       const video = document.getElementById("cameraVideo");
       const canvas = document.createElement('canvas');
@@ -149,33 +158,36 @@
       canvas.width = video.videoWidth || 160;
       canvas.height = video.videoHeight || 120;
 
-      // We'll sample frames every 300ms
       setInterval(() => {
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          // Draw current frame
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
           if (lastFrameData) {
             let diff = 0;
-            // Compare pixel by pixel
             for (let i = 0; i < currentFrameData.data.length; i += 4) {
               const rDiff = Math.abs(currentFrameData.data[i] - lastFrameData.data[i]);
-              const gDiff = Math.abs(currentFrameData.data[i+1] - lastFrameData.data[i+1]);
-              const bDiff = Math.abs(currentFrameData.data[i+2] - lastFrameData.data[i+2]);
+              const gDiff = Math.abs(currentFrameData.data[i + 1] - lastFrameData.data[i + 1]);
+              const bDiff = Math.abs(currentFrameData.data[i + 2] - lastFrameData.data[i + 2]);
               diff += (rDiff + gDiff + bDiff);
             }
-            // If diff is over a threshold, we consider it "motion"
-            motionDetected = (diff > motionThreshold);
-            // console.log("Diff:", diff, "Motion:", motionDetected);
+            motionDetected = diff > motionThreshold;
+
+            // If user said the phrase earlier but no motion then,
+            // log if we detect motion now
+            if (phraseHeardButNoMotion && motionDetected) {
+              console.log("🔎 Movement was detected AFTER the phrase was said.");
+              phraseHeardButNoMotion = false;
+            }
           }
-          // Store this frame for next comparison
           lastFrameData = currentFrameData;
         }
       }, 300);
     }
 
-    // 3. Show the "snack dispensing" modal with 7-second countdown
+    // -------------------------------
+    // 2. MODAL + 7s TIMER
+    // -------------------------------
     function showModal() {
       const modal = document.getElementById("snackModal");
       const timerBar = document.getElementById("timerBar");
@@ -188,22 +200,21 @@
       }, 7000);
     }
 
-    // 4. Speech Recognition
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
+    // -------------------------------
+    // 3. SPEECH RECOGNITION
+    // -------------------------------
     recognition.onstart = function() {
+      isRecognizing = true;
       statusCode.textContent = 'Status Code: 001';
       console.log("🎙️ Mic started...");
     };
 
     recognition.onend = function() {
+      isRecognizing = false;
       statusCode.textContent = 'Status Code: 000';
       if (!micStopped) {
         console.log("🔄 Restarting mic...");
-        setTimeout(() => recognition.start(), 1000);
+        setTimeout(safeStartMic, 1000); // delay to avoid rapid calls
       }
     };
 
@@ -215,59 +226,75 @@
       finalText = finalText.trim().toLowerCase();
       console.log(`🗣️ Heard: "${finalText}"`);
 
-      // 5. Only dispense if "Give me a snack!" is said AND motion is detected
+      // Key phrase
       if (finalText.includes("give me a snack")) {
+        // If there's motion, dispense
         if (motionDetected) {
-          console.log("✅ Recognized phrase + motion detected => Dispensing!");
-          writeVendCommand(); // Log to DB + show modal
+          console.log("✅ Phrase + motion => Dispensing!");
+          writeVendCommand(); 
         } else {
-          console.log("❌ Phrase heard but NO motion => Not dispensing.");
+          // Otherwise, log that phrase was said but no motion
+          console.log("❌ Phrase heard but NO motion => not dispensing.");
+          phraseHeardButNoMotion = true;
         }
       }
     };
 
     recognition.onerror = function(event) {
+      isRecognizing = false;
       console.error("❌ Speech recognition error:", event.error);
-      setTimeout(() => recognition.start(), 2000);
+      if (!micStopped) {
+        setTimeout(safeStartMic, 2000);
+      }
     };
 
-    // 6. Firebase code: log the request, show the modal
-    async function writeVendCommand() {
+    // -------------------------------
+    // 4. FIREBASE (FAKE EXAMPLE)
+    // -------------------------------
+    function writeVendCommand() {
       console.log("📤 Logging 'Give me a snack!' to DB...");
-      try {
-        // If using a real DB, import and use your Firebase code:
-        // await update(ref(db, "machineStatus"), { isVending: true });
-        // await push(ref(db, "vendingRequests"), {
-        //   secretKey: "iLoveSnacks69",
-        //   command: "Give me a snack!",
-        //   timestamp: new Date().toISOString()
-        // });
-        console.log("✅ Command logged (fake or real DB).");
-      } catch (err) {
-        console.error("❌ Error logging to DB:", err);
-      }
-      showModal();
+      // Example: uncomment + adjust for real Firebase usage:
+      // update(ref(db, "machineStatus"), { isVending: true });
+      // push(ref(db, "vendingRequests"), {
+      //   secretKey: "iLoveSnacks69",
+      //   command: "Give me a snack!",
+      //   timestamp: new Date().toISOString()
+      // });
+      console.log("✅ Command logged to DB (example).");
+
+      showModal(); // Show the 7s modal
     }
 
-    // 7. Mic controls
+    // -------------------------------
+    // 5. MIC CONTROLS
+    // -------------------------------
+    function safeStartMic() {
+      if (!isRecognizing && !micStopped) {
+        recognition.start();
+      } else {
+        console.log("⚠️ Attempted to start mic but it's already running or stopped.");
+      }
+    }
+
     window.stopMic = function() {
       micStopped = true;
-      recognition.stop();
+      if (isRecognizing) recognition.stop();
       statusCode.textContent = "Status Code: 000";
       console.log("🛑 Microphone manually stopped.");
     };
 
     window.startMic = function() {
       micStopped = false;
-      recognition.start();
-      statusCode.textContent = "Status Code: 001";
+      safeStartMic();
       console.log("🎙️ Microphone manually restarted.");
     };
 
-    // START EVERYTHING
+    // -------------------------------
+    // INIT
+    // -------------------------------
     console.log("🚀 Initializing...");
-    startCamera();        // Start camera + motion detection
-    recognition.start();  // Start speech recognition
+    startCamera();       // Start camera + motion detection
+    safeStartMic();      // Start speech recognition
   </script>
 </body>
 </html>
