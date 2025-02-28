@@ -1,226 +1,273 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyberflash Vending Machine</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #f0f8ff, #e6f2ff);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            color: #0066cc;
-        }
-        .container {
-            text-align: center;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 102, 204, 0.2);
-        }
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        p {
-            font-size: 1.5rem;
-        }
-        .bold {
-            font-weight: bold;
-        }
-        .status-code {
-            position: fixed;
-            top: 5px;
-            left: 5px;
-            font-size: 0.8rem;
-            color: rgba(0, 102, 204, 0.5);
-            z-index: 1000;
-        }
-        .dispensing {
-            font-size: 1.2rem;
-            margin-top: 1rem;
-            display: none;
-        }
-        .console-btns {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-        }
-        .console-btns button {
-            margin: 5px;
-            padding: 5px;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cyberflash Vending Machine</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f0f8ff, #e6f2ff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #0066cc;
+    }
+    .container {
+      text-align: center;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0, 102, 204, 0.2);
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      font-size: 1.5rem;
+    }
+    .bold {
+      font-weight: bold;
+    }
+    .status-code {
+      position: fixed;
+      top: 5px;
+      left: 5px;
+      font-size: 0.8rem;
+      color: rgba(0, 102, 204, 0.5);
+      z-index: 1000;
+    }
+    .console-btns {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+    }
+    .console-btns button {
+      margin: 5px;
+      padding: 5px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
 
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 300px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            display: none;
-        }
-        .modal h2 {
-            margin: 0 0 10px;
-        }
-        .timer-bar {
-            width: 100%;
-            height: 5px;
-            background: #4caf50;
-            margin-top: 10px;
-            border-radius: 5px;
-        }
-        @keyframes countdown {
-            from { width: 100%; }
-            to { width: 0%; }
-        }
-    </style>
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      display: none;
+    }
+    .modal h2 {
+      margin: 0 0 10px;
+    }
+    .timer-bar {
+      width: 100%;
+      height: 5px;
+      background: #4caf50;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    @keyframes countdown {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+
+    /* Hide the camera feed */
+    #cameraVideo {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 160px;
+      height: 120px;
+      opacity: 0.3;
+      z-index: 1;
+      display: none; /* Hide or comment this out if you want to see the feed for debugging */
+    }
+  </style>
 </head>
 <body>
-    <div class="status-code">Status Code: 000</div>
-    <div class="container">
-        <h1>Cyberflash Vending Machine</h1>
-        <p>Say "<span class="bold">Give me a snack!</span>" to dispense a snack.</p>
-        <div class="dispensing pulsing">Dispensing Snack...</div>
-    </div>
+  <div class="status-code">Status Code: 000</div>
+  <div class="container">
+    <h1>Cyberflash Vending Machine</h1>
+    <p>Say "<span class="bold">Give me a snack!</span>" <br/> 
+       <strong>while moving</strong> in front of the camera to dispense a snack.</p>
+  </div>
 
-    <div class="console-btns">
-        <button onclick="stopMic()">Stop Mic</button>
-        <button onclick="startMic()">Start Mic</button>
-    </div>
+  <div class="console-btns">
+    <button onclick="stopMic()">Stop Mic</button>
+    <button onclick="startMic()">Start Mic</button>
+  </div>
 
-    <!-- Modal for Snack Dispensing -->
-    <div class="modal" id="snackModal">
-        <h2>🍫 Snack Dispensed! 🍪</h2>
-        <p>Enjoy your treat!</p>
-        <div class="timer-bar" id="timerBar"></div>
-    </div>
+  <!-- Hidden camera video -->
+  <video id="cameraVideo" autoplay playsinline></video>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-        import { getDatabase, ref, set, update, push } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+  <!-- Modal for Snack Dispensing -->
+  <div class="modal" id="snackModal">
+    <h2>🍫 Your Snack Is Dispensing! 🍬<br/>Enjoy!</h2>
+    <div class="timer-bar" id="timerBar"></div>
+  </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-            authDomain: "cyberflashvend.firebaseapp.com",
-            databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
-            projectId: "cyberflashvend",
-            storageBucket: "cyberflashvend.firebasestorage.app",
-            messagingSenderId: "63786658773",
-            appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
-        };
+  <script>
+    // GLOBALS
+    let micStopped = false;
+    let motionDetected = false;
+    let lastFrameData = null;
+    let motionThreshold = 8000; // Increase if you need more or less sensitivity
+    const statusCode = document.querySelector('.status-code');
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const SECRET_KEY = "iLoveSnacks69";
+    // 1. Start camera stream
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById("cameraVideo");
+        video.srcObject = stream;
+        video.addEventListener('play', () => {
+          // Start checking for motion once the video is playing
+          checkMotion();
+        });
+      } catch (err) {
+        console.error("❌ Camera access denied or not available:", err);
+      }
+    }
 
-        window.micStopped = false; // ✅ Moved `micStopped` to global scope
+    // 2. Simple motion detection by comparing frames
+    function checkMotion() {
+      const video = document.getElementById("cameraVideo");
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
 
-        function initializeVendingStatus() {
-            set(ref(db, "machineStatus"), { isVending: false })
-            .then(() => console.log("✅ 'isVending' initialized to false."))
-            .catch(error => console.error("❌ Error initializing Firebase:", error));
-        }
+      canvas.width = video.videoWidth || 160;
+      canvas.height = video.videoHeight || 120;
 
-        function writeVendCommand() {
-            console.log("📤 Writing 'Give me a snack!' command to Firebase...");
-            update(ref(db, "machineStatus"), { isVending: true });
+      // We'll sample frames every 300ms
+      setInterval(() => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          // Draw current frame
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-            push(ref(db, "vendingRequests"), {
-                secretKey: SECRET_KEY,
-                command: "Give me a snack!",
-                timestamp: new Date().toISOString()
-            }).then(() => {
-                console.log("✅ Command logged to Firebase");
-                showModal();
-            }).catch(error => console.error("❌ Error logging to Firebase:", error));
-        }
-
-        function showModal() {
-            const modal = document.getElementById("snackModal");
-            const timerBar = document.getElementById("timerBar");
-
-            modal.style.display = "block";
-            timerBar.style.animation = "countdown 7s linear forwards";
-
-            setTimeout(() => {
-                modal.style.display = "none";
-            }, 7000);
-        }
-
-        window.writeVendCommand = writeVendCommand;
-        window.initializeVendingStatus = initializeVendingStatus;
-    </script>
-
-    <script>
-        const statusCode = document.querySelector('.status-code');
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'en-US';
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = function() {
-            statusCode.textContent = 'Status Code: 001';
-            console.log("🎙️ Mic started...");
-        };
-
-        recognition.onend = function() {
-            statusCode.textContent = 'Status Code: 000';
-
-            if (!window.micStopped) {
-                console.log("🔄 Restarting mic...");
-                setTimeout(() => recognition.start(), 1000);
+          if (lastFrameData) {
+            let diff = 0;
+            // Compare pixel by pixel
+            for (let i = 0; i < currentFrameData.data.length; i += 4) {
+              const rDiff = Math.abs(currentFrameData.data[i] - lastFrameData.data[i]);
+              const gDiff = Math.abs(currentFrameData.data[i+1] - lastFrameData.data[i+1]);
+              const bDiff = Math.abs(currentFrameData.data[i+2] - lastFrameData.data[i+2]);
+              diff += (rDiff + gDiff + bDiff);
             }
-        };
+            // If diff is over a threshold, we consider it "motion"
+            motionDetected = (diff > motionThreshold);
+            // console.log("Diff:", diff, "Motion:", motionDetected);
+          }
+          // Store this frame for next comparison
+          lastFrameData = currentFrameData;
+        }
+      }, 300);
+    }
 
-        recognition.onresult = function(event) {
-            let finalText = "";
-            for (let i = 0; i < event.results.length; i++) {
-                finalText += event.results[i][0].transcript + " ";
-            }
-            finalText = finalText.trim().toLowerCase();
+    // 3. Show the "snack dispensing" modal with 7-second countdown
+    function showModal() {
+      const modal = document.getElementById("snackModal");
+      const timerBar = document.getElementById("timerBar");
 
-            console.log(`🗣️ Heard: "${finalText}"`);
+      modal.style.display = "block";
+      timerBar.style.animation = "countdown 7s linear forwards";
 
-            if (finalText.includes("give me a snack")) {
-                console.log("✅ Recognized 'Give me a snack!' command!");
-                window.writeVendCommand();
-            }
-        };
+      setTimeout(() => {
+        modal.style.display = "none";
+      }, 7000);
+    }
 
-        recognition.onerror = function(event) {
-            console.error("❌ Speech recognition error:", event.error);
-            setTimeout(() => recognition.start(), 2000);
-        };
+    // 4. Speech Recognition
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
-        window.stopMic = function() {
-            window.micStopped = true;
-            recognition.stop();
-            statusCode.textContent = "Status Code: 000";
-            console.log("🛑 Microphone manually stopped.");
-        };
+    recognition.onstart = function() {
+      statusCode.textContent = 'Status Code: 001';
+      console.log("🎙️ Mic started...");
+    };
 
-        window.startMic = function() {
-            window.micStopped = false;
-            recognition.start();
-            statusCode.textContent = "Status Code: 001";
-            console.log("🎙️ Microphone manually restarted.");
-        };
+    recognition.onend = function() {
+      statusCode.textContent = 'Status Code: 000';
+      if (!micStopped) {
+        console.log("🔄 Restarting mic...");
+        setTimeout(() => recognition.start(), 1000);
+      }
+    };
 
-        console.log("🚀 Starting mic...");
-        recognition.start();
-    </script>
+    recognition.onresult = function(event) {
+      let finalText = "";
+      for (let i = 0; i < event.results.length; i++) {
+        finalText += event.results[i][0].transcript + " ";
+      }
+      finalText = finalText.trim().toLowerCase();
+      console.log(`🗣️ Heard: "${finalText}"`);
+
+      // 5. Only dispense if "Give me a snack!" is said AND motion is detected
+      if (finalText.includes("give me a snack")) {
+        if (motionDetected) {
+          console.log("✅ Recognized phrase + motion detected => Dispensing!");
+          writeVendCommand(); // Log to DB + show modal
+        } else {
+          console.log("❌ Phrase heard but NO motion => Not dispensing.");
+        }
+      }
+    };
+
+    recognition.onerror = function(event) {
+      console.error("❌ Speech recognition error:", event.error);
+      setTimeout(() => recognition.start(), 2000);
+    };
+
+    // 6. Firebase code: log the request, show the modal
+    async function writeVendCommand() {
+      console.log("📤 Logging 'Give me a snack!' to DB...");
+      try {
+        // If using a real DB, import and use your Firebase code:
+        // await update(ref(db, "machineStatus"), { isVending: true });
+        // await push(ref(db, "vendingRequests"), {
+        //   secretKey: "iLoveSnacks69",
+        //   command: "Give me a snack!",
+        //   timestamp: new Date().toISOString()
+        // });
+        console.log("✅ Command logged (fake or real DB).");
+      } catch (err) {
+        console.error("❌ Error logging to DB:", err);
+      }
+      showModal();
+    }
+
+    // 7. Mic controls
+    window.stopMic = function() {
+      micStopped = true;
+      recognition.stop();
+      statusCode.textContent = "Status Code: 000";
+      console.log("🛑 Microphone manually stopped.");
+    };
+
+    window.startMic = function() {
+      micStopped = false;
+      recognition.start();
+      statusCode.textContent = "Status Code: 001";
+      console.log("🎙️ Microphone manually restarted.");
+    };
+
+    // START EVERYTHING
+    console.log("🚀 Initializing...");
+    startCamera();        // Start camera + motion detection
+    recognition.start();  // Start speech recognition
+  </script>
 </body>
 </html>
