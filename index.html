@@ -139,9 +139,9 @@
 
     // We'll do a 2-second wait, multiple checks, no early exit
     const motionThreshold = 100000;  
-    const requiredHits = 2;          // Increase if you still get false positives
-    const checkInterval = 300;       // ~6-7 checks in 2 seconds
-    const motionDurationMs = 2000;   // total motion check time
+    const requiredHits = 2;          
+    const checkInterval = 300;       
+    const motionDurationMs = 2000;   
 
     const statusCode = document.querySelector('.status-code');
 
@@ -177,33 +177,26 @@
 
     // -------------------- MOTION DETECTION (2s) --------------------
     async function detectMotionFor2s() {
-      console.log("Waiting 2 seconds to check motion...");
+      console.log("Checking for consecutive-frame motion over 2 seconds...");
       if (!cameraActive || !cameraStream) {
         console.log("Camera off => no motion.");
         return false;
       }
-
       const videoEl = document.getElementById("cameraVideo");
       if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) {
         console.log("Camera not ready => no motion.");
         return false;
       }
 
-      // Create an offscreen canvas
+      // We'll compare consecutive frames
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = videoEl.videoWidth;
       canvas.height = videoEl.videoHeight;
 
-      // Grab baseline frame
+      // Grab the initial "lastFrame"
       ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-      const baseline = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      // Check brightness of baseline to see if it's basically black
-      if (isDarkFrame(baseline)) {
-        console.log("Baseline is too dark => camera likely blocked => no motion.");
-        return false;
-      }
+      let lastFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       let checks = 0;
       let hits = 0;
@@ -212,22 +205,28 @@
       return new Promise(resolve => {
         const intervalId = setInterval(() => {
           checks++;
+
+          // Draw new frame
           ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
           const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
           let diff = 0;
           for (let i = 0; i < currentFrame.data.length; i += 4) {
-            const rDiff = Math.abs(currentFrame.data[i] - baseline.data[i]);
-            const gDiff = Math.abs(currentFrame.data[i + 1] - baseline.data[i + 1]);
-            const bDiff = Math.abs(currentFrame.data[i + 2] - baseline.data[i + 2]);
+            const rDiff = Math.abs(currentFrame.data[i] - lastFrame.data[i]);
+            const gDiff = Math.abs(currentFrame.data[i+1] - lastFrame.data[i+1]);
+            const bDiff = Math.abs(currentFrame.data[i+2] - lastFrame.data[i+2]);
             diff += (rDiff + gDiff + bDiff);
           }
 
+          // If difference is big enough, count a "hit"
           if (diff > motionThreshold) {
             hits++;
           }
 
-          // Wait full 2s (no early exit)
+          // Update lastFrame
+          lastFrame = currentFrame;
+
+          // Wait the full 2 seconds (no early exit)
           if (checks >= totalChecks) {
             clearInterval(intervalId);
             const motionFound = (hits >= requiredHits);
@@ -236,22 +235,6 @@
           }
         }, checkInterval);
       });
-    }
-
-    // -------------------- HELPER: DETECT DARK FRAME --------------------
-    function isDarkFrame(imageData) {
-      // We'll say if average brightness is < 20 => too dark
-      let sum = 0;
-      const len = imageData.data.length / 4;
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        let r = imageData.data[i];
-        let g = imageData.data[i + 1];
-        let b = imageData.data[i + 2];
-        // Average pixel brightness
-        sum += (r + g + b) / 3;
-      }
-      let avg = sum / len;
-      return avg < 20; // if average brightness < 20 => consider it blocked/dark
     }
 
     // -------------------- MODAL --------------------
@@ -295,7 +278,7 @@
       console.log(`Heard: "${text}"`);
 
       if (text.includes("give me a snack")) {
-        // Wait full 2 seconds
+        // Do a 2-second consecutive-frame check
         const motion = await detectMotionFor2s();
         if (motion) {
           console.log("Motion found => dispensing snack.");
