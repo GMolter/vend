@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Mic-Only Vending</title>
+  <meta charset="UTF-8">
+  <title>Cyberflash Vending</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -43,20 +43,39 @@
   </style>
 </head>
 <body>
-  <div class="status-code" id="statusCode">Status Code: 000 (Mic OFF)</div>
+  <div class="status-code" id="statusCode">Status Code: 000</div>
   <div class="container">
-    <h1>Vending Machine (Mic-Only)</h1>
-    <p>Say "<strong>Give me a snack!</strong>" to test speech recognition.</p>
+    <h1>Cyberflash Vending</h1>
+    <p>Say "<strong>Give me a snack!</strong>"</p>
     <button onclick="toggleMic()">Toggle Mic</button>
   </div>
 
+  <!-- Firebase v8 Scripts (non-module) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <script>
-    // ----------------- GLOBALS -----------------
-    let micOn = false;         // Tracks if we've toggled the mic ON
-    let isRecognizing = false; // Tracks if recognition is actually active
+    // ------------------- GLOBALS -------------------
+    let micOn = false;
+    let isRecognizing = false;
     const statusEl = document.getElementById("statusCode");
 
-    // ----------------- SPEECH RECOGNITION -----------------
+    // ------------------- Firebase Config -------------------
+    // Replace with your real Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MSG_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ------------------- Speech Recognition Setup -------------------
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = "en-US";
     recognition.interimResults = false;
@@ -64,22 +83,19 @@
 
     recognition.onstart = () => {
       isRecognizing = true;
-      statusEl.textContent = "Status Code: 001 (Mic ON)";
+      statusEl.textContent = "Status Code: 001";
       console.log("Mic started.");
     };
 
     recognition.onend = () => {
       isRecognizing = false;
-      statusEl.textContent = "Status Code: 000 (Mic OFF)";
+      statusEl.textContent = "Status Code: 000";
       console.log("Mic ended.");
 
-      // Auto-restart if user toggled mic on
+      // Auto-restart if mic is still toggled on
       if (micOn) {
         setTimeout(() => {
-          // Only start if it's still off & user wants mic on
-          if (!isRecognizing && micOn) {
-            recognition.start();
-          }
+          if (!isRecognizing && micOn) recognition.start();
         }, 1000);
       }
     };
@@ -89,27 +105,67 @@
       console.log("Heard:", transcript);
 
       if (transcript.includes("give me a snack")) {
-        console.log("Key phrase recognized!");
-        // Do whatever you want on success...
+        console.log("Key phrase recognized => Logging to DB...");
+        logToDatabase();
       }
     };
 
     recognition.onerror = (err) => {
       console.log("Speech error:", err.error);
-      // "no-speech" is normal if you're silent for too long.
-      // We'll let onend handle the restart, no double-start here.
+      // "no-speech" is normal if silent too long; let onend handle restart
     };
 
-    // ----------------- TOGGLE MIC -----------------
+    // ------------------- LOGGING TO DATABASE -------------------
+    function logToDatabase() {
+      // 1) Grab the localStorage key
+      const storedKey = localStorage.getItem("vendAccessKey");
+      if (!storedKey) {
+        console.log("No localStorage key found! (Check /vend/config)");
+        // Attempt a dummy push to see Firebase response
+        db.ref("timestamps").push("No key => test request")
+          .then(() => console.log("Wrote 'No key => test request' - not secure though."))
+          .catch(err => console.log("Firebase error response:", err));
+        return;
+      }
+
+      console.log("Access Key found in localStorage:", storedKey);
+
+      // 2) Format date/time (3/7/25 || 3:42pm)
+      const now = new Date();
+      const dateStr = (now.getMonth()+1) + "/" + now.getDate() + "/" + String(now.getFullYear()).slice(-2);
+      let hours = now.getHours();
+      const ampm = hours >= 12 ? "pm" : "am";
+      hours = hours % 12 || 12;
+      const mins = now.getMinutes().toString().padStart(2, "0");
+      const timeStr = hours + ":" + mins + ampm;
+      const fullStamp = dateStr + " || " + timeStr;
+
+      // 3) Write to DB
+      // config/accessKey => <storedKey>
+      db.ref("config/accessKey").set(storedKey)
+        .then(() => console.log("Wrote config/accessKey:", storedKey))
+        .catch(err => console.log("Firebase error on config key:", err));
+
+      // machineStatus/isVending => false
+      db.ref("machineStatus/isVending").set(false)
+        .then(() => console.log("Wrote machineStatus/isVending = false"))
+        .catch(err => console.log("Firebase error on isVending:", err));
+
+      // timestamps => push date/time
+      db.ref("timestamps").push(fullStamp)
+        .then(() => console.log("Wrote timestamps =>", fullStamp))
+        .catch(err => console.log("Firebase error on timestamps:", err));
+    }
+
+    // ------------------- TOGGLE MIC -------------------
     function toggleMic() {
       if (!micOn) {
         micOn = true;
-        // Only start if it's not already recognizing
         if (!isRecognizing) {
           recognition.start();
           console.log("Mic toggled ON.");
         } else {
-          console.log("Mic is already on; ignoring toggle ON request.");
+          console.log("Mic is already on.");
         }
       } else {
         micOn = false;
@@ -117,7 +173,7 @@
           recognition.stop();
           console.log("Mic toggled OFF.");
         } else {
-          console.log("Mic is already off; ignoring toggle OFF request.");
+          console.log("Mic already off.");
         }
       }
     }
