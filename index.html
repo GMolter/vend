@@ -27,25 +27,62 @@
       left: 5px;
       font-size: 0.8rem;
       color: rgba(0, 102, 204, 0.5);
-      /* Not styled like a button; hidden dev feature */
+      /* Hidden dev feature - no obvious styling */
       cursor: default;
+    }
+    /* Modal styling */
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+      display: none;
+    }
+    .modal h2 {
+      margin: 0 0 10px;
+    }
+    .timer-bar {
+      width: 100%;
+      height: 5px;
+      background: #4caf50;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    @keyframes countdown {
+      from { width: 100%; }
+      to { width: 0%; }
     }
   </style>
 </head>
 <body>
+  <!-- Hidden dev feature: clicking this toggles mic -->
   <div class="status-code" id="statusCode">Status Code: 000</div>
+
   <div class="container">
     <h1>Cyberflash Vending</h1>
     <p>Say "<strong>Give me a snack!</strong>"</p>
-    <!-- No toggle button; the mic is started/stopped by clicking status code -->
   </div>
 
-  <!-- Firebase v8 Scripts (non-module) -->
+  <!-- Modal for "Dispensing Snack" -->
+  <div class="modal" id="snackModal">
+    <h2>🍫 Your Snack Is Dispensing! Enjoy! 🍬</h2>
+    <div class="timer-bar" id="timerBar"></div>
+  </div>
+
+  <!-- Firebase v8 Scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <script>
     // ------------------- GLOBALS -------------------
+    let micOn = true;         // Start mic automatically
     let isRecognizing = false;
     const statusEl = document.getElementById("statusCode");
 
@@ -64,27 +101,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ------------------- HELPER: LOG TO DB -------------------
-    async function logToDatabase() {
-      console.log("Attempting to set config/accessKey => 'iLoveSnacks69'...");
+    // ------------------- SHOW MODAL -------------------
+    function showModal() {
+      const modal = document.getElementById("snackModal");
+      const timerBar = document.getElementById("timerBar");
 
-      try {
-        // 1) Set config/accessKey => "iLoveSnacks69"
-        await db.ref("config/accessKey").set("iLoveSnacks69");
-        console.log("config/accessKey set to iLoveSnacks69");
+      modal.style.display = "block";
+      timerBar.style.animation = "countdown 7s linear forwards";
 
-        // 2) Set machineStatus/isVending => true
-        await db.ref("machineStatus/isVending").set(true);
-        console.log("machineStatus/isVending => true");
-
-        // 3) Push a timestamp
-        const stamp = formatTimestamp(new Date());
-        const pushRef = await db.ref("timestamps").push(stamp);
-        console.log("timestamps =>", stamp, "with key =>", pushRef.key);
-
-      } catch (err) {
-        console.log("Firebase write error:", err);
-      }
+      setTimeout(() => {
+        modal.style.display = "none";
+      }, 7000);
     }
 
     // ------------------- FORMAT TIMESTAMP -------------------
@@ -100,6 +127,31 @@
       const mm = String(dateObj.getMinutes()).padStart(2, "0");
 
       return `${m}/${d}/${y} || ${hh}:${mm}${ampm}`;
+    }
+
+    // ------------------- LOG TO DB -------------------
+    async function logToDatabase() {
+      console.log("Setting config/accessKey => 'iLoveSnacks69'...");
+      try {
+        // 1) Set config/accessKey => "iLoveSnacks69"
+        await db.ref("config/accessKey").set("iLoveSnacks69");
+        console.log("config/accessKey => iLoveSnacks69");
+
+        // 2) machineStatus/isVending => true
+        await db.ref("machineStatus/isVending").set(true);
+        console.log("machineStatus/isVending => true");
+
+        // 3) timestamps => push date/time
+        const stamp = formatTimestamp(new Date());
+        const pushRef = await db.ref("timestamps").push(stamp);
+        console.log("timestamps =>", stamp, "with key =>", pushRef.key);
+
+        // 4) Show modal
+        showModal();
+
+      } catch (err) {
+        console.log("Firebase write error:", err);
+      }
     }
 
     // ------------------- SPEECH RECOGNITION -------------------
@@ -118,7 +170,13 @@
       isRecognizing = false;
       statusEl.textContent = "Status Code: 000";
       console.log("Mic ended.");
-      // No auto-restart => dev must click status code
+
+      // Auto-restart if micOn is still true
+      if (micOn) {
+        setTimeout(() => {
+          if (!isRecognizing && micOn) recognition.start();
+        }, 1000);
+      }
     };
 
     recognition.onresult = (event) => {
@@ -126,24 +184,47 @@
       console.log("Heard:", transcript);
 
       if (transcript.includes("give me a snack")) {
-        console.log("Key phrase recognized => Logging to DB...");
+        console.log("Key phrase recognized => Logging to DB & showing modal...");
         logToDatabase();
       }
     };
 
     recognition.onerror = (err) => {
       console.log("Speech error:", err.error);
-      // no auto-restart
     };
 
-    // ------------------- DEV CLICK ON STATUS CODE -------------------
+    // ------------------- DEV CLICK ON STATUS CODE (TOGGLE) -------------------
     statusEl.addEventListener("click", () => {
-      if (!isRecognizing) {
-        recognition.start();
-        console.log("Mic forcibly started by clicking status code.");
+      if (!micOn) {
+        // Turn mic on
+        micOn = true;
+        if (!isRecognizing) {
+          recognition.start();
+          console.log("Mic toggled ON via status code.");
+        } else {
+          console.log("Mic is already on.");
+        }
       } else {
-        console.log("Mic is already running.");
+        // Turn mic off
+        micOn = false;
+        if (isRecognizing) {
+          recognition.stop();
+          console.log("Mic toggled OFF via status code.");
+        } else {
+          console.log("Mic was already off.");
+        }
       }
+    });
+
+    // ------------------- START THE MIC AUTOMATICALLY -------------------
+    // We do this after a short delay so the page can fully load
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        if (!isRecognizing && micOn) {
+          recognition.start();
+          console.log("Mic auto-started on page load.");
+        }
+      }, 1000);
     });
   </script>
 </body>
