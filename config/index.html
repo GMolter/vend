@@ -24,7 +24,7 @@
       const keyVal = document.getElementById('accessKeyInput').value.trim();
       if (keyVal) {
         localStorage.setItem('vendAccessKey', keyVal);
-        alert('Access key saved in localStorage.');
+        alert('Access key saved in localStorage: ' + keyVal);
       } else {
         alert('Please enter a valid access key.');
       }
