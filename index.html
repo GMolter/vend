@@ -60,22 +60,60 @@
     let isRecognizing = false;
     const statusEl = document.getElementById("statusCode");
 
-    // ------------------- Firebase Config -------------------
-    // Replace with your real Firebase config
+    // ------------------- Your Firebase Credentials -------------------
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MSG_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
+      projectId: "cyberflashvend",
+      storageBucket: "cyberflashvend.firebasestorage.app",
+      messagingSenderId: "63786658773",
+      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ------------------- Speech Recognition Setup -------------------
+    // ------------------- HELPER: LOG TO DB -------------------
+    async function logToDatabase() {
+      console.log("Attempting to set config/accessKey => 'iLoveSnacks69'...");
+
+      try {
+        // 1) Set config/accessKey => "iLoveSnacks69" (allowed once if empty, or always if it’s already correct)
+        await db.ref("config/accessKey").set("iLoveSnacks69");
+        console.log("config/accessKey set to iLoveSnacks69");
+
+        // 2) Set machineStatus/isVending => false
+        await db.ref("machineStatus/isVending").set(false);
+        console.log("machineStatus/isVending => false");
+
+        // 3) Push a timestamp
+        const stamp = formatTimestamp(new Date());
+        const pushRef = await db.ref("timestamps").push(stamp);
+        console.log("timestamps =>", stamp, "with key =>", pushRef.key);
+
+      } catch (err) {
+        console.log("Firebase write error:", err);
+      }
+    }
+
+    // ------------------- FORMAT TIMESTAMP -------------------
+    function formatTimestamp(dateObj) {
+      // e.g. 3/7/25 || 3:42pm
+      const m = dateObj.getMonth() + 1;
+      const d = dateObj.getDate();
+      const y = String(dateObj.getFullYear()).slice(-2);
+
+      let hh = dateObj.getHours();
+      const ampm = hh >= 12 ? "pm" : "am";
+      hh = hh % 12 || 12;
+      const mm = String(dateObj.getMinutes()).padStart(2, "0");
+
+      return `${m}/${d}/${y} || ${hh}:${mm}${ampm}`;
+    }
+
+    // ------------------- SPEECH RECOGNITION -------------------
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = "en-US";
     recognition.interimResults = false;
@@ -92,7 +130,7 @@
       statusEl.textContent = "Status Code: 000";
       console.log("Mic ended.");
 
-      // Auto-restart if mic is still toggled on
+      // Auto-restart if mic is toggled on
       if (micOn) {
         setTimeout(() => {
           if (!isRecognizing && micOn) recognition.start();
@@ -112,50 +150,8 @@
 
     recognition.onerror = (err) => {
       console.log("Speech error:", err.error);
-      // "no-speech" is normal if silent too long; let onend handle restart
+      // "no-speech" is normal if silent
     };
-
-    // ------------------- LOGGING TO DATABASE -------------------
-    function logToDatabase() {
-      // 1) Grab the localStorage key
-      const storedKey = localStorage.getItem("vendAccessKey");
-      if (!storedKey) {
-        console.log("No localStorage key found! (Check /vend/config)");
-        // Attempt a dummy push to see Firebase response
-        db.ref("timestamps").push("No key => test request")
-          .then(() => console.log("Wrote 'No key => test request' - not secure though."))
-          .catch(err => console.log("Firebase error response:", err));
-        return;
-      }
-
-      console.log("Access Key found in localStorage:", storedKey);
-
-      // 2) Format date/time (3/7/25 || 3:42pm)
-      const now = new Date();
-      const dateStr = (now.getMonth()+1) + "/" + now.getDate() + "/" + String(now.getFullYear()).slice(-2);
-      let hours = now.getHours();
-      const ampm = hours >= 12 ? "pm" : "am";
-      hours = hours % 12 || 12;
-      const mins = now.getMinutes().toString().padStart(2, "0");
-      const timeStr = hours + ":" + mins + ampm;
-      const fullStamp = dateStr + " || " + timeStr;
-
-      // 3) Write to DB
-      // config/accessKey => <storedKey>
-      db.ref("config/accessKey").set(storedKey)
-        .then(() => console.log("Wrote config/accessKey:", storedKey))
-        .catch(err => console.log("Firebase error on config key:", err));
-
-      // machineStatus/isVending => false
-      db.ref("machineStatus/isVending").set(false)
-        .then(() => console.log("Wrote machineStatus/isVending = false"))
-        .catch(err => console.log("Firebase error on isVending:", err));
-
-      // timestamps => push date/time
-      db.ref("timestamps").push(fullStamp)
-        .then(() => console.log("Wrote timestamps =>", fullStamp))
-        .catch(err => console.log("Firebase error on timestamps:", err));
-    }
 
     // ------------------- TOGGLE MIC -------------------
     function toggleMic() {
