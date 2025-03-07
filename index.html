@@ -27,18 +27,8 @@
       left: 5px;
       font-size: 0.8rem;
       color: rgba(0, 102, 204, 0.5);
-    }
-    button {
-      margin-top: 1rem;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 5px;
-      background-color: #0066cc;
-      color: #fff;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0052a3;
+      /* Not styled like a button; hidden dev feature */
+      cursor: default;
     }
   </style>
 </head>
@@ -47,7 +37,7 @@
   <div class="container">
     <h1>Cyberflash Vending</h1>
     <p>Say "<strong>Give me a snack!</strong>"</p>
-    <button onclick="toggleMic()">Toggle Mic</button>
+    <!-- No toggle button; the mic is started/stopped by clicking status code -->
   </div>
 
   <!-- Firebase v8 Scripts (non-module) -->
@@ -56,7 +46,6 @@
 
   <script>
     // ------------------- GLOBALS -------------------
-    let micOn = false;
     let isRecognizing = false;
     const statusEl = document.getElementById("statusCode");
 
@@ -80,13 +69,13 @@
       console.log("Attempting to set config/accessKey => 'iLoveSnacks69'...");
 
       try {
-        // 1) Set config/accessKey => "iLoveSnacks69" (allowed once if empty, or always if it’s already correct)
+        // 1) Set config/accessKey => "iLoveSnacks69"
         await db.ref("config/accessKey").set("iLoveSnacks69");
         console.log("config/accessKey set to iLoveSnacks69");
 
-        // 2) Set machineStatus/isVending => false
-        await db.ref("machineStatus/isVending").set(false);
-        console.log("machineStatus/isVending => false");
+        // 2) Set machineStatus/isVending => true
+        await db.ref("machineStatus/isVending").set(true);
+        console.log("machineStatus/isVending => true");
 
         // 3) Push a timestamp
         const stamp = formatTimestamp(new Date());
@@ -129,13 +118,7 @@
       isRecognizing = false;
       statusEl.textContent = "Status Code: 000";
       console.log("Mic ended.");
-
-      // Auto-restart if mic is toggled on
-      if (micOn) {
-        setTimeout(() => {
-          if (!isRecognizing && micOn) recognition.start();
-        }, 1000);
-      }
+      // No auto-restart => dev must click status code
     };
 
     recognition.onresult = (event) => {
@@ -150,29 +133,18 @@
 
     recognition.onerror = (err) => {
       console.log("Speech error:", err.error);
-      // "no-speech" is normal if silent
+      // no auto-restart
     };
 
-    // ------------------- TOGGLE MIC -------------------
-    function toggleMic() {
-      if (!micOn) {
-        micOn = true;
-        if (!isRecognizing) {
-          recognition.start();
-          console.log("Mic toggled ON.");
-        } else {
-          console.log("Mic is already on.");
-        }
+    // ------------------- DEV CLICK ON STATUS CODE -------------------
+    statusEl.addEventListener("click", () => {
+      if (!isRecognizing) {
+        recognition.start();
+        console.log("Mic forcibly started by clicking status code.");
       } else {
-        micOn = false;
-        if (isRecognizing) {
-          recognition.stop();
-          console.log("Mic toggled OFF.");
-        } else {
-          console.log("Mic already off.");
-        }
+        console.log("Mic is already running.");
       }
-    }
+    });
   </script>
 </body>
 </html>
