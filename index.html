@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Cyberflash Vending Machine</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #f0f8ff, #e6f2ff);
-      display: flex;
-      justify-content: center;
+      display: flex; 
+      justify-content: center; 
       align-items: center;
-      height: 100vh;
-      margin: 0;
+      height: 100vh; 
+      margin: 0; 
       color: #0066cc;
     }
     .container {
@@ -22,318 +21,153 @@
       border-radius: 15px;
       box-shadow: 0 0 20px rgba(0, 102, 204, 0.2);
     }
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-    }
-    p {
-      font-size: 1.5rem;
-    }
-    .bold {
-      font-weight: bold;
-    }
     .status-code {
-      position: fixed;
-      top: 5px;
-      left: 5px;
-      font-size: 0.8rem;
+      position: fixed; 
+      top: 5px; 
+      left: 5px; 
+      font-size: 0.8rem; 
       color: rgba(0, 102, 204, 0.5);
-      z-index: 1000;
     }
-    .console-btns {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-    }
-    .console-btns button {
-      margin: 5px;
-      padding: 8px 12px;
-      font-size: 0.9rem;
+    button {
+      margin-top: 1rem; 
+      padding: 8px 12px; 
+      border: none; 
+      border-radius: 5px;
+      background-color: #0066cc; 
+      color: #fff; 
       cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-      background-color: #0066cc;
-      transition: background-color 0.2s ease;
     }
-    .console-btns button:hover {
+    button:hover {
       background-color: #0052a3;
-    }
-
-    /* Modal Styles */
-    .modal {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 300px;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-      z-index: 1000;
-      display: none;
-    }
-    .modal h2 {
-      margin: 0 0 10px;
-    }
-    .timer-bar {
-      width: 100%;
-      height: 5px;
-      background: #4caf50;
-      margin-top: 10px;
-      border-radius: 5px;
-    }
-    @keyframes countdown {
-      from { width: 100%; }
-      to { width: 0%; }
-    }
-
-    /* Camera feed (hidden by default) */
-    #cameraVideo {
-      position: fixed;
-      bottom: 0;
-      right: 0;
-      width: 320px;
-      height: 240px;
-      opacity: 0.7;
-      z-index: 1;
-      display: none; /* Start hidden */
-      border: 2px solid #ccc;
     }
   </style>
 </head>
 <body>
-  <div class="status-code">Status Code: 000</div>
+  <div class="status-code" id="statusCode">Status Code: 000</div>
+
   <div class="container">
     <h1>Cyberflash Vending Machine</h1>
-    <p>Say "<span class="bold">Give me a snack!</span>" to dispense a snack.</p>
+    <p>Say "<strong>Give me a snack!</strong>" to dispense a snack.</p>
+    <button onclick="toggleMic()">Toggle Mic</button>
   </div>
 
-  <div class="console-btns">
-    <button onclick="startCam()">Start Cam</button>
-    <button onclick="stopCam()">Stop Cam</button>
-    <button onclick="startMic()">Start Mic</button>
-    <button onclick="stopMic()">Stop Mic</button>
-  </div>
-
-  <!-- Camera feed -->
-  <video id="cameraVideo" autoplay playsinline></video>
-
-  <!-- Modal for Snack Dispensing -->
-  <div class="modal" id="snackModal">
-    <h2>🍫 Your Snack Is Dispensing! Enjoy! 🍬</h2>
-    <div class="timer-bar" id="timerBar"></div>
-  </div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js"></script>
 
   <script>
-    // -------------------- GLOBALS --------------------
-    let micStopped = true;  // mic off by default
+    // ------------------- FIREBASE CONFIG -------------------
+    // (Replace with your real Firebase config)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MSG_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ------------------- GLOBALS -------------------
+    let micOn = false;
     let isRecognizing = false;
-    let cameraActive = false;
-    let cameraStream = null;
+    const statusEl = document.getElementById("statusCode");
 
-    // We'll do a 2-second check, comparing consecutive frames
-    const motionThreshold = 30000;  // Lower => easier detection; Higher => fewer false positives
-    const requiredHits = 2;         // Number of big diffs needed
-    const checkInterval = 300;      // Check ~6-7 times in 2 seconds
-    const motionDurationMs = 2000;  // Full wait time
+    // Speech Recognition Setup
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-    const statusCode = document.querySelector('.status-code');
+    recognition.onstart = () => {
+      isRecognizing = true;
+      statusEl.textContent = "Status Code: 001 (Mic ON)";
+      console.log("Mic started.");
+    };
 
-    // -------------------- CAMERA --------------------
-    async function startCam() {
-      if (cameraActive) {
-        console.log("Camera already on.");
+    recognition.onend = () => {
+      isRecognizing = false;
+      statusEl.textContent = "Status Code: 000 (Mic OFF)";
+      console.log("Mic ended.");
+
+      // If mic is still toggled on, auto-restart
+      if (micOn) {
+        setTimeout(() => {
+          if (!isRecognizing && micOn) recognition.start();
+        }, 1000);
+      }
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+      console.log("Heard:", transcript);
+
+      if (transcript.includes("give me a snack")) {
+        console.log("Keyphrase recognized => Logging to DB...");
+        logToDatabase();
+      }
+    };
+
+    recognition.onerror = () => {
+      if (micOn) {
+        setTimeout(() => {
+          if (!isRecognizing && micOn) recognition.start();
+        }, 1000);
+      }
+    };
+
+    // ------------------- LOGGING TO DATABASE -------------------
+    function logToDatabase() {
+      // 1) Get the localStorage key
+      const storedKey = localStorage.getItem("vendAccessKey");
+      if (!storedKey) {
+        console.log("No localStorage key found. Go to /vend/config first!");
         return;
       }
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const videoEl = document.getElementById("cameraVideo");
-        videoEl.srcObject = cameraStream;
-        videoEl.style.display = "block";
-        cameraActive = true;
-        console.log("Camera started.");
-      } catch (err) {
-        console.log("Could not start camera:", err);
-      }
-    }
 
-    function stopCam() {
-      if (!cameraActive || !cameraStream) {
-        console.log("Camera already off.");
-        return;
-      }
-      cameraStream.getTracks().forEach(track => track.stop());
-      cameraStream = null;
-      cameraActive = false;
-      document.getElementById("cameraVideo").style.display = "none";
-      console.log("Camera stopped.");
-    }
+      // 2) Prepare data
+      const now = new Date();
+      const dateStr = (now.getMonth()+1) + "/" + now.getDate() + "/" + String(now.getFullYear()).slice(-2);
+      let hours = now.getHours();
+      const ampm = hours >= 12 ? "pm" : "am";
+      hours = hours % 12; 
+      hours = hours || 12; 
+      const mins = now.getMinutes().toString().padStart(2,"0");
+      const timeStr = hours + ":" + mins + ampm;
+      const fullStamp = dateStr + " || " + timeStr;
 
-    // -------------------- MOTION DETECTION (2s) --------------------
-    async function detectMotionFor2s() {
-      console.log("Checking for consecutive-frame motion over 2 seconds...");
-      if (!cameraActive || !cameraStream) {
-        console.log("Camera off => no motion.");
-        return false;
-      }
+      // 3) Write to DB
+      // config/accessKey => <storedKey>
+      db.ref("config/accessKey").set(storedKey);
 
-      const videoEl = document.getElementById("cameraVideo");
-      if (videoEl.readyState !== videoEl.HAVE_ENOUGH_DATA) {
-        console.log("Camera not ready => no motion.");
-        return false;
-      }
+      // machineStatus/isVending => false
+      db.ref("machineStatus/isVending").set(false);
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = videoEl.videoWidth;
-      canvas.height = videoEl.videoHeight;
+      // timestamps => push date/time
+      db.ref("timestamps").push(fullStamp);
 
-      // Grab initial "lastFrame"
-      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-      let lastFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      let checks = 0;
-      let hits = 0;
-      const totalChecks = Math.ceil(motionDurationMs / checkInterval);
-
-      return new Promise(resolve => {
-        const intervalId = setInterval(() => {
-          checks++;
-
-          // Draw new frame
-          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-          const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-          // Compare to lastFrame
-          let diff = 0;
-          for (let i = 0; i < currentFrame.data.length; i += 4) {
-            diff += Math.abs(currentFrame.data[i]   - lastFrame.data[i]);
-            diff += Math.abs(currentFrame.data[i+1] - lastFrame.data[i+1]);
-            diff += Math.abs(currentFrame.data[i+2] - lastFrame.data[i+2]);
-          }
-
-          if (diff > motionThreshold) {
-            hits++;
-          }
-
-          // Update lastFrame
-          lastFrame = currentFrame;
-
-          // Wait the full 2 seconds (no early exit)
-          if (checks >= totalChecks) {
-            clearInterval(intervalId);
-            const motionFound = (hits >= requiredHits);
-            console.log(`Motion check finished. hits=${hits}, motionFound=${motionFound}`);
-            resolve(motionFound);
-          }
-        }, checkInterval);
+      console.log("Data logged:", {
+        config: { accessKey: storedKey },
+        machineStatus: { isVending: false },
+        timestamps: fullStamp
       });
     }
 
-    // -------------------- MODAL --------------------
-    function showModal() {
-      const modal = document.getElementById("snackModal");
-      const timerBar = document.getElementById("timerBar");
-
-      modal.style.display = "block";
-      timerBar.style.animation = "countdown 7s linear forwards";
-      setTimeout(() => {
-        modal.style.display = "none";
-      }, 7000);
-    }
-
-    // -------------------- SPEECH RECOGNITION --------------------
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = function() {
-      isRecognizing = true;
-      statusCode.textContent = "Status Code: 001";
-      console.log("Microphone started.");
-    };
-
-    recognition.onend = function() {
-      isRecognizing = false;
-      statusCode.textContent = "Status Code: 000";
-
-      // Quietly auto-restart after a delay if the mic is still on
-      if (!micStopped) {
-        setTimeout(() => {
-          if (!isRecognizing && !micStopped) {
-            recognition.start();
-          }
-        }, 1200);
-      }
-    };
-
-    recognition.onresult = async function(e) {
-      let text = "";
-      for (let i = 0; i < e.results.length; i++) {
-        text += e.results[i][0].transcript + " ";
-      }
-      text = text.trim().toLowerCase();
-      console.log(`Heard: "${text}"`);
-
-      if (text.includes("give me a snack")) {
-        // 2-second consecutive-frame check
-        const motion = await detectMotionFor2s();
-        if (motion) {
-          console.log("Motion found => dispensing snack.");
-          dispenseSnack();
-        } else {
-          console.log("No motion => not dispensing.");
-        }
-      }
-    };
-
-    recognition.onerror = function() {
-      // Minimal logs, no spam
-      if (!micStopped) {
-        setTimeout(() => {
-          if (!isRecognizing && !micStopped) {
-            recognition.start();
-          }
-        }, 1200);
-      }
-    };
-
-    // -------------------- DISPENSE --------------------
-    function dispenseSnack() {
-      console.log("Snack command logged to DB (example).");
-      showModal();
-    }
-
-    // -------------------- MIC CONTROLS --------------------
-    function safeStartMic() {
-      if (!isRecognizing && !micStopped) {
+    // ------------------- TOGGLE MIC -------------------
+    function toggleMic() {
+      if (!micOn) {
+        micOn = true;
         recognition.start();
+        console.log("Mic toggled ON.");
+      } else {
+        micOn = false;
+        recognition.stop();
+        console.log("Mic toggled OFF.");
       }
     }
-
-    window.startMic = function() {
-      micStopped = false;
-      console.log("Microphone requested to start.");
-      safeStartMic();
-    };
-
-    window.stopMic = function() {
-      micStopped = true;
-      if (isRecognizing) {
-        recognition.stop();
-        console.log("Microphone stopped.");
-      }
-      statusCode.textContent = "Status Code: 000";
-    };
-
-    console.log("Page loaded. Camera & mic are off by default.");
   </script>
 </body>
 </html>
