@@ -24,7 +24,7 @@
     }
     .status-code {
       position: fixed;
-      top: 5px; 
+      top: 5px;
       left: 5px;
       font-size: 0.8rem;
       color: rgba(0, 102, 204, 0.5);
@@ -104,8 +104,8 @@
 <div class="container">
   <h1>Snack Vending Test</h1>
   <p>Say "<strong>Give me a snack!</strong>" to open the grid.</p>
-  <p>You can say row+column together (<em>A2</em>) or stutter them separately (<em>A</em> then <em>2</em>).</p>
-  <p>Use dismissive words (<em>close</em>, <em>exit</em>, etc.) to close the grid. Click the status code to toggle mic on/off.</p>
+  <p>Select row + column (like "<em>A2</em>"), then say "<em>Confirm</em>" to finalize dispensing.</p>
+  <p>Use dismissive words ("close", "exit", etc.) to close the grid. Click status code to toggle mic.</p>
 </div>
 
 <!-- The Grid Modal -->
@@ -130,7 +130,7 @@
       </tr>
     </tbody>
   </table>
-  <div class="dispense-msg" id="dispenseMsg">Dispensing...</div>
+  <div class="dispense-msg" id="dispenseMsg">Ready to dispense... (say "Confirm")</div>
 </div>
 
 <!-- The 7-second Dispensing Snack Modal -->
@@ -145,13 +145,14 @@
 
 <script>
   // ------------------- GLOBALS -------------------
-  let micOn = true;         // Mic auto-on
+  let micOn = true;         // Keep mic automatically on
   let isRecognizing = false;
   let modalOpen = false;
   let selectedRow = null;
   let selectedCol = null;
 
   const statusEl = document.getElementById("statusCode");
+  // Dismissive words
   const dismissiveWords = [
     "close", "exit", "dismiss", "cancel", "nevermind", "never mind",
     "forget it", "i'm done", "that's all", "stop", "no thanks",
@@ -183,13 +184,13 @@
   // ------------------- SPEECH RECOGNITION -------------------
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.lang = "en-US";
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
+  recognition.interimResults = true;   // partial results for faster updates
+  recognition.continuous = true;      // keep listening without stopping
 
   recognition.onstart = () => {
     isRecognizing = true;
     statusEl.textContent = "Status Code: 001";
-    console.log("Mic started.");
+    console.log("Mic started (continuous).");
   };
 
   recognition.onend = () => {
@@ -197,7 +198,8 @@
     statusEl.textContent = "Status Code: 000";
     console.log("Mic ended.");
 
-    // Auto-restart if micOn
+    // We only get here if the browser stops listening on its own
+    // or the user toggled mic off. We'll auto-restart if micOn
     if (micOn) {
       setTimeout(() => {
         if (!isRecognizing && micOn) recognition.start();
@@ -206,9 +208,16 @@
   };
 
   recognition.onresult = (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
-    console.log("Heard:", transcript);
-    parseCommand(transcript);
+    // Because interimResults = true, we get partial updates
+    // Let's build a big transcript from all results so far
+    let fullTranscript = "";
+    for (let i = 0; i < event.results.length; i++) {
+      fullTranscript += event.results[i][0].transcript + " ";
+    }
+    fullTranscript = fullTranscript.trim().toLowerCase();
+    console.log("Heard so far:", fullTranscript);
+
+    parseCommand(fullTranscript);
   };
 
   recognition.onerror = (err) => {
@@ -222,61 +231,86 @@
     }, 500);
   });
 
-  // -------------- PARSE COMMANDS --------------
+  // -------------- PARSE COMMANDS (live partial) --------------
   function parseCommand(text) {
-    // 1) "Give me a snack!"
+    // 1) "Give me a snack"
     if (text.includes("give me a snack")) {
       openGridModal();
-      return;
     }
 
-    // If modal not open, ignore row/col/dismiss
+    // If grid not open, ignore row/col/dismiss
     if (!modalOpen) return;
 
-    // 2) Dismissive words => close modal
+    // 2) Dismissive => close modal
     if (dismissiveWords.some(word => text.includes(word))) {
       closeGridModal();
       return;
     }
 
-    // 3) Row+Column in same phrase? e.g. "a2", "see 3", "bee two", "ay one"
-    // We'll interpret them via synonyms.
-    // We'll see if we can find row & col synonyms in the text.
-    let foundRow = interpretRow(text);
-    let foundCol = interpretCol(text);
-    if (foundRow && foundCol) {
-      selectRow(foundRow);
-      selectCol(foundCol);
-      return;
+    // 3) Collect the last row & col synonyms in the text
+    let lastRow = findLastRowSynonym(text);
+    let lastCol = findLastColSynonym(text);
+
+    // If we found a row => highlight that row
+    if (lastRow) {
+      selectedRow = lastRow;
+      selectedCol = null; // reset col if row changed
+      highlightRow(lastRow);
     }
 
-    // 4) Only row
-    if (foundRow && !foundCol) {
-      selectRow(foundRow);
-      return;
+    // If we found a col => highlight that col if row is known
+    if (lastCol && selectedRow) {
+      selectedCol = lastCol;
+      highlightCell(selectedRow, lastCol);
+      // Wait for "Confirm" to actually dispense
     }
 
-    // 5) Only col
-    if (foundCol && !foundRow) {
-      selectCol(foundCol);
-      return;
+    // 4) If user says "confirm" => if row & col => dispense
+    if (text.includes("confirm")) {
+      if (selectedRow && selectedCol) {
+        console.log("User said Confirm => dispensing item:", selectedRow + selectedCol);
+        dispense();
+      } else {
+        console.log("Confirm said, but row/col not fully selected yet.");
+      }
     }
   }
 
-  // -------------- ROW/COL SYNONYMS --------------
-  function interpretRow(text) {
-    text = text.toLowerCase();
-    if (rowA.some(r => text.includes(r))) return "A";
-    if (rowB.some(r => text.includes(r))) return "B";
-    if (rowC.some(r => text.includes(r))) return "C";
-    return null;
+  // -------------- FIND LAST ROW/COL IN TEXT --------------
+  // We'll search for synonyms from left to right, returning the last match
+  function findLastRowSynonym(text) {
+    let found = null;
+    // We'll check all synonyms in order, if they appear in text => store 'A', 'B', or 'C'
+    // Then keep going to find the last occurrence
+    rowA.forEach(s => {
+      let idx = text.lastIndexOf(s);
+      if (idx !== -1) found = "A";
+    });
+    rowB.forEach(s => {
+      let idx = text.lastIndexOf(s);
+      if (idx !== -1) found = "B";
+    });
+    rowC.forEach(s => {
+      let idx = text.lastIndexOf(s);
+      if (idx !== -1) found = "C";
+    });
+    return found;
   }
-  function interpretCol(text) {
-    text = text.toLowerCase();
-    if (col1.some(c => text.includes(c))) return "1";
-    if (col2.some(c => text.includes(c))) return "2";
-    if (col3.some(c => text.includes(c))) return "3";
-    return null;
+  function findLastColSynonym(text) {
+    let found = null;
+    col1.forEach(s => {
+      let idx = text.lastIndexOf(s);
+      if (idx !== -1) found = "1";
+    });
+    col2.forEach(s => {
+      let idx = text.lastIndexOf(s);
+      if (idx !== -1) found = "2";
+    });
+    col3.forEach(s => {
+      let idx = text.lastIndexOf(s);
+      if (idx !== -1) found = "3";
+    });
+    return found;
   }
 
   // -------------- GRID & MODAL LOGIC --------------
@@ -300,52 +334,33 @@
     console.log("Modal closed by dismissive phrase.");
   }
 
-  function selectRow(r) {
-    selectedRow = r;
-    selectedCol = null; // reset col if row changes
-    highlightRow(r);
-    console.log("Selected row:", r);
-  }
-
-  function selectCol(c) {
-    if (!selectedRow) {
-      console.log("You must pick a row first!");
-      return;
-    }
-    selectedCol = c;
-    highlightCell(selectedRow, c);
-    console.log("Selected cell:", selectedRow + c);
-
-    // Once row+col => dispense
-    dispense();
-  }
-
+  // -------------- DISPENSE --------------
   function dispense() {
-    console.log("Dispensing item:", selectedRow + selectedCol);
     document.getElementById("dispenseMsg").style.display = "block";
     // Log to DB => isVending = true, etc.
     logToDatabase();
   }
 
+  // -------------- HIGHLIGHT UTILS --------------
   function clearAllHighlights() {
     const tds = document.querySelectorAll(".grid-table td");
     tds.forEach(td => td.classList.remove("highlight"));
   }
-
   function highlightRow(r) {
     clearAllHighlights();
     const rowEl = document.getElementById("row" + r);
     if (rowEl) {
       rowEl.querySelectorAll("td").forEach(td => td.classList.add("highlight"));
     }
+    console.log("Selected row:", r);
   }
-
   function highlightCell(r, c) {
     clearAllHighlights();
     const cell = document.getElementById(r + c);
     if (cell) {
       cell.classList.add("highlight");
     }
+    console.log("Selected cell:", r + c);
   }
 
   // -------------- FIREBASE: LOG TO DATABASE --------------
@@ -388,7 +403,22 @@
     }, 7000);
   }
 
-  // -------------- DEV CLICK ON STATUS CODE => Toggle Mic --------------
+  // -------------- FORMAT TIMESTAMP --------------
+  function formatTimestamp(dateObj) {
+    // e.g. 3/7/25 || 3:42pm
+    const m = dateObj.getMonth() + 1;
+    const d = dateObj.getDate();
+    const y = String(dateObj.getFullYear()).slice(-2);
+
+    let hh = dateObj.getHours();
+    const ampm = hh >= 12 ? "pm" : "am";
+    hh = hh % 12 || 12;
+    const mm = String(dateObj.getMinutes()).padStart(2, "0");
+
+    return `${m}/${d}/${y} || ${hh}:${mm}${ampm}`;
+  }
+
+  // -------------- DEV CLICK => Toggle Mic --------------
   statusEl.addEventListener("click", () => {
     if (!micOn) {
       micOn = true;
