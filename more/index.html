@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snack Vending Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f9f9f9;
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+      height: 100vh; 
+      color: #333;
+    }
+    .status-code {
+      position: fixed;
+      top: 5px; left: 5px;
+      font-size: 0.8rem;
+      color: rgba(0, 102, 204, 0.5);
+      cursor: default; /* Hidden dev feature for toggling mic */
+    }
+    .container {
+      text-align: center;
+    }
+    .grid-modal {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      background: #fff;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: none;
+      padding: 1rem;
+    }
+    .grid-modal h2 {
+      margin-top: 0;
+    }
+    .grid-table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    .grid-table td {
+      border: 1px solid #ccc;
+      width: 40px; height: 40px;
+      text-align: center;
+      cursor: default;
+    }
+    .highlight {
+      background: gold;
+    }
+    .dispense-msg {
+      text-align: center; 
+      margin-top: 1rem; 
+      font-weight: bold; 
+      color: green;
+      display: none;
+    }
+    /* Dispensing modal */
+    .snack-modal {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      background: #fff;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: none;
+      padding: 1rem;
+      text-align: center;
+      z-index: 999;
+    }
+    .snack-modal h2 {
+      margin: 0 0 10px;
+    }
+    .timer-bar {
+      width: 100%;
+      height: 5px;
+      background: #4caf50;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    @keyframes countdown {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+  </style>
+</head>
+<body>
+<div class="status-code" id="statusCode">Status Code: 000</div>
+
+<div class="container">
+  <h1>Snack Vending Test</h1>
+  <p>Say "<strong>Give me a snack!</strong>" to open the grid.</p>
+  <p>Then pick a row & column, like "<em>A2</em>" or "<em>A</em> then "<em>2</em>".</p>
+  <p>You can say "<em>no i mean B</em>" to change row, or dismiss words (close, exit, never mind) to close the grid.</p>
+</div>
+
+<!-- The Grid Modal -->
+<div class="grid-modal" id="gridModal">
+  <h2>Select a Slot</h2>
+  <table class="grid-table">
+    <tbody>
+      <tr id="rowA">
+        <td id="A1">A1</td>
+        <td id="A2">A2</td>
+        <td id="A3">A3</td>
+      </tr>
+      <tr id="rowB">
+        <td id="B1">B1</td>
+        <td id="B2">B2</td>
+        <td id="B3">B3</td>
+      </tr>
+      <tr id="rowC">
+        <td id="C1">C1</td>
+        <td id="C2">C2</td>
+        <td id="C3">C3</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="dispense-msg" id="dispenseMsg">Dispensing...</div>
+</div>
+
+<!-- The Dispensing Snack Modal -->
+<div class="snack-modal" id="snackModal">
+  <h2>🍫 Your Snack Is Dispensing! Enjoy! 🍬</h2>
+  <div class="timer-bar" id="timerBar"></div>
+</div>
+
+<!-- Firebase v8 Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  // ------------------- GLOBALS -------------------
+  let micOn = true;         // Keep mic automatically on
+  let isRecognizing = false;
+  const statusEl = document.getElementById("statusCode");
+
+  // The grid modal
+  let modalOpen = false;
+  let selectedRow = null;
+  let selectedCol = null;
+
+  // Dismissive words
+  const dismissiveWords = [
+    "close", "exit", "dismiss", "cancel", "nevermind", "never mind",
+    "forget it", "i'm done", "that's all", "stop", "no thanks",
+    "go away", "shut down", "no snack", "i changed my mind"
+  ];
+
+  // ------------------- Firebase Config -------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+    authDomain: "cyberflashvend.firebaseapp.com",
+    databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
+    projectId: "cyberflashvend",
+    storageBucket: "cyberflashvend.firebasestorage.app",
+    messagingSenderId: "63786658773",
+    appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ------------------- SPEECH RECOGNITION -------------------
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    isRecognizing = true;
+    statusEl.textContent = "Status Code: 001";
+    console.log("Mic started.");
+  };
+
+  recognition.onend = () => {
+    isRecognizing = false;
+    statusEl.textContent = "Status Code: 000";
+    console.log("Mic ended.");
+
+    // Auto-restart if mic is still toggled on
+    if (micOn) {
+      setTimeout(() => {
+        if (!isRecognizing && micOn) recognition.start();
+      }, 500);
+    }
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+    console.log("Heard:", transcript);
+    parseCommand(transcript);
+  };
+
+  recognition.onerror = (err) => {
+    console.log("Speech error:", err.error);
+  };
+
+  // Start the mic automatically on page load
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      if (micOn && !isRecognizing) recognition.start();
+    }, 500);
+  });
+
+  // -------------- PARSE COMMANDS --------------
+  function parseCommand(text) {
+    // 1) "Give me a snack!" => open the grid
+    if (text.includes("give me a snack")) {
+      openGridModal();
+      return;
+    }
+
+    // If the modal isn't open, ignore row/col/dismiss
+    if (!modalOpen) return;
+
+    // 2) Dismissive words => close modal
+    if (dismissiveWords.some(word => text.includes(word))) {
+      closeGridModal();
+      return;
+    }
+
+    // 3) Row+Column in same phrase? (e.g. "a2" or "a 2")
+    //    We also handle "no i mean a2"
+    let rowColMatch = text.match(/\b(?:no i mean )?([abc])\s*([123])\b/);
+    if (rowColMatch) {
+      const row = rowColMatch[1].toUpperCase();
+      const col = rowColMatch[2];
+      selectRow(row);
+      selectCol(col);
+      return;
+    }
+
+    // 4) Just row letters (A/B/C), with optional "no i mean"
+    if (text.match(/\b(no i mean )?a\b/)) {
+      selectRow("A");
+      return;
+    }
+    if (text.match(/\b(no i mean )?b\b/)) {
+      selectRow("B");
+      return;
+    }
+    if (text.match(/\b(no i mean )?c\b/)) {
+      selectRow("C");
+      return;
+    }
+
+    // 5) Just column numbers (1/2/3), with optional "no i mean"
+    if (text.match(/\b(no i mean )?1\b/)) {
+      selectCol("1");
+      return;
+    }
+    if (text.match(/\b(no i mean )?2\b/)) {
+      selectCol("2");
+      return;
+    }
+    if (text.match(/\b(no i mean )?3\b/)) {
+      selectCol("3");
+      return;
+    }
+  }
+
+  // -------------- GRID & MODAL LOGIC --------------
+  function openGridModal() {
+    modalOpen = true;
+    selectedRow = null;
+    selectedCol = null;
+    document.getElementById("dispenseMsg").style.display = "none";
+
+    document.getElementById("gridModal").style.display = "block";
+    clearAllHighlights();
+    console.log("Grid modal opened.");
+  }
+
+  function closeGridModal() {
+    modalOpen = false;
+    selectedRow = null;
+    selectedCol = null;
+    clearAllHighlights();
+    document.getElementById("gridModal").style.display = "none";
+    console.log("Modal closed by dismissive phrase.");
+  }
+
+  function selectRow(r) {
+    selectedRow = r;
+    selectedCol = null; // reset col if row changes
+    highlightRow(r);
+    console.log("Selected row:", r);
+  }
+
+  function selectCol(c) {
+    if (!selectedRow) {
+      console.log("You must pick a row first!");
+      return;
+    }
+    selectedCol = c;
+    highlightCell(selectedRow, c);
+    console.log("Selected cell:", selectedRow + c);
+
+    // Once row+col chosen => dispense
+    dispense();
+  }
+
+  function dispense() {
+    console.log("Dispensing item:", selectedRow + selectedCol);
+    document.getElementById("dispenseMsg").style.display = "block";
+
+    // Log to DB => set config/accessKey, machineStatus/isVending = true, push timestamp
+    logToDatabase();
+
+    // (Optional) auto-close the grid after a short delay:
+    // setTimeout(() => closeGridModal(), 2000);
+  }
+
+  // -------------- HIGHLIGHT UTILS --------------
+  function clearAllHighlights() {
+    const tds = document.querySelectorAll(".grid-table td");
+    tds.forEach(td => td.classList.remove("highlight"));
+  }
+
+  function highlightRow(r) {
+    clearAllHighlights();
+    const rowEl = document.getElementById("row" + r);
+    if (rowEl) {
+      rowEl.querySelectorAll("td").forEach(td => td.classList.add("highlight"));
+    }
+  }
+
+  function highlightCell(r, c) {
+    clearAllHighlights();
+    const cell = document.getElementById(r + c);
+    if (cell) {
+      cell.classList.add("highlight");
+    }
+  }
+
+  // -------------- FIREBASE: LOG TO DATABASE --------------
+  async function logToDatabase() {
+    console.log("Setting config/accessKey => 'iLoveSnacks69' and isVending => true");
+    try {
+      // 1) Set config/accessKey => "iLoveSnacks69"
+      await db.ref("config/accessKey").set("iLoveSnacks69");
+      console.log("config/accessKey => iLoveSnacks69");
+
+      // 2) machineStatus/isVending => true
+      await db.ref("machineStatus/isVending").set(true);
+      console.log("machineStatus/isVending => true");
+
+      // 3) timestamps => push date/time
+      const stamp = formatTimestamp(new Date());
+      const pushRef = await db.ref("timestamps").push(stamp);
+      console.log("timestamps =>", stamp, "with key =>", pushRef.key);
+
+      // 4) Show the "Your Snack Is Dispensing" 7s modal
+      showSnackModal();
+    } catch (err) {
+      console.log("Firebase write error:", err);
+    }
+  }
+
+  // -------------- SNACK MODAL (7s) --------------
+  function showSnackModal() {
+    const snackModal = document.getElementById("snackModal");
+    const timerBar = document.getElementById("timerBar");
+
+    snackModal.style.display = "block";
+    timerBar.style.animation = "countdown 7s linear forwards";
+
+    setTimeout(() => {
+      snackModal.style.display = "none";
+      // If you want to reset isVending => false after 7s, do it here:
+      // db.ref("machineStatus/isVending").set(false);
+    }, 7000);
+  }
+  
+  // -------------- DEV CLICK ON STATUS CODE => Toggle Mic --------------
+  statusEl.addEventListener("click", () => {
+    if (!micOn) {
+      micOn = true;
+      console.log("Mic toggled ON via status code.");
+      if (!isRecognizing) recognition.start();
+    } else {
+      micOn = false;
+      console.log("Mic toggled OFF via status code.");
+      if (isRecognizing) recognition.stop();
+    }
+  });
+</script>
+</body>
+</html>
