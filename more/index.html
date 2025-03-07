@@ -4,25 +4,31 @@
   <meta charset="UTF-8">
   <title>Snack Vending Test</title>
   <style>
+    /* Matching main page style */
     body {
       font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: #f9f9f9;
-      display: flex; 
-      justify-content: center; 
+      background: linear-gradient(135deg, #f0f8ff, #e6f2ff);
+      display: flex;
+      justify-content: center;
       align-items: center;
-      height: 100vh; 
-      color: #333;
-    }
-    .status-code {
-      position: fixed;
-      top: 5px; left: 5px;
-      font-size: 0.8rem;
-      color: rgba(0, 102, 204, 0.5);
-      cursor: default; /* Hidden dev feature for toggling mic */
+      height: 100vh;
+      margin: 0;
+      color: #0066cc;
     }
     .container {
       text-align: center;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0, 102, 204, 0.2);
+    }
+    .status-code {
+      position: fixed;
+      top: 5px; 
+      left: 5px;
+      font-size: 0.8rem;
+      color: rgba(0, 102, 204, 0.5);
+      cursor: default; /* hidden dev feature for toggling mic */
     }
     .grid-modal {
       position: fixed;
@@ -35,6 +41,7 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       display: none;
       padding: 1rem;
+      z-index: 1000;
     }
     .grid-modal h2 {
       margin-top: 0;
@@ -45,12 +52,13 @@
     }
     .grid-table td {
       border: 1px solid #ccc;
-      width: 40px; height: 40px;
+      width: 40px; 
+      height: 40px;
       text-align: center;
       cursor: default;
     }
     .highlight {
-      background: gold;
+      background: #cceeff !important; /* light blue highlight */
     }
     .dispense-msg {
       text-align: center; 
@@ -59,7 +67,7 @@
       color: green;
       display: none;
     }
-    /* Dispensing modal */
+    /* Dispensing Snack Modal */
     .snack-modal {
       position: fixed;
       top: 50%; left: 50%;
@@ -72,7 +80,7 @@
       display: none;
       padding: 1rem;
       text-align: center;
-      z-index: 999;
+      z-index: 9999;
     }
     .snack-modal h2 {
       margin: 0 0 10px;
@@ -96,8 +104,8 @@
 <div class="container">
   <h1>Snack Vending Test</h1>
   <p>Say "<strong>Give me a snack!</strong>" to open the grid.</p>
-  <p>Then pick a row & column, like "<em>A2</em>" or "<em>A</em> then "<em>2</em>".</p>
-  <p>You can say "<em>no i mean B</em>" to change row, or dismiss words (close, exit, never mind) to close the grid.</p>
+  <p>You can say row+column together (<em>A2</em>) or stutter them separately (<em>A</em> then <em>2</em>).</p>
+  <p>Use dismissive words (<em>close</em>, <em>exit</em>, etc.) to close the grid. Click the status code to toggle mic on/off.</p>
 </div>
 
 <!-- The Grid Modal -->
@@ -125,33 +133,39 @@
   <div class="dispense-msg" id="dispenseMsg">Dispensing...</div>
 </div>
 
-<!-- The Dispensing Snack Modal -->
+<!-- The 7-second Dispensing Snack Modal -->
 <div class="snack-modal" id="snackModal">
   <h2>🍫 Your Snack Is Dispensing! Enjoy! 🍬</h2>
   <div class="timer-bar" id="timerBar"></div>
 </div>
 
-<!-- Firebase v8 Scripts -->
+<!-- Firebase v8 Scripts (non-module) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
   // ------------------- GLOBALS -------------------
-  let micOn = true;         // Keep mic automatically on
+  let micOn = true;         // Mic auto-on
   let isRecognizing = false;
-  const statusEl = document.getElementById("statusCode");
-
-  // The grid modal
   let modalOpen = false;
   let selectedRow = null;
   let selectedCol = null;
 
-  // Dismissive words
+  const statusEl = document.getElementById("statusCode");
   const dismissiveWords = [
     "close", "exit", "dismiss", "cancel", "nevermind", "never mind",
     "forget it", "i'm done", "that's all", "stop", "no thanks",
     "go away", "shut down", "no snack", "i changed my mind"
   ];
+
+  // Row synonyms (for lenient detection)
+  const rowA = ["a", "ay", "eh", "eight", "hey"];
+  const rowB = ["b", "be", "bee"];
+  const rowC = ["c", "see", "sea", "cee", "si"];
+  // Column synonyms
+  const col1 = ["1", "one", "won"];
+  const col2 = ["2", "two", "to", "too"];
+  const col3 = ["3", "three", "tree"];
 
   // ------------------- Firebase Config -------------------
   const firebaseConfig = {
@@ -183,7 +197,7 @@
     statusEl.textContent = "Status Code: 000";
     console.log("Mic ended.");
 
-    // Auto-restart if mic is still toggled on
+    // Auto-restart if micOn
     if (micOn) {
       setTimeout(() => {
         if (!isRecognizing && micOn) recognition.start();
@@ -201,7 +215,7 @@
     console.log("Speech error:", err.error);
   };
 
-  // Start the mic automatically on page load
+  // Start mic automatically on page load
   window.addEventListener("load", () => {
     setTimeout(() => {
       if (micOn && !isRecognizing) recognition.start();
@@ -210,13 +224,13 @@
 
   // -------------- PARSE COMMANDS --------------
   function parseCommand(text) {
-    // 1) "Give me a snack!" => open the grid
+    // 1) "Give me a snack!"
     if (text.includes("give me a snack")) {
       openGridModal();
       return;
     }
 
-    // If the modal isn't open, ignore row/col/dismiss
+    // If modal not open, ignore row/col/dismiss
     if (!modalOpen) return;
 
     // 2) Dismissive words => close modal
@@ -225,44 +239,44 @@
       return;
     }
 
-    // 3) Row+Column in same phrase? (e.g. "a2" or "a 2")
-    //    We also handle "no i mean a2"
-    let rowColMatch = text.match(/\b(?:no i mean )?([abc])\s*([123])\b/);
-    if (rowColMatch) {
-      const row = rowColMatch[1].toUpperCase();
-      const col = rowColMatch[2];
-      selectRow(row);
-      selectCol(col);
+    // 3) Row+Column in same phrase? e.g. "a2", "see 3", "bee two", "ay one"
+    // We'll interpret them via synonyms.
+    // We'll see if we can find row & col synonyms in the text.
+    let foundRow = interpretRow(text);
+    let foundCol = interpretCol(text);
+    if (foundRow && foundCol) {
+      selectRow(foundRow);
+      selectCol(foundCol);
       return;
     }
 
-    // 4) Just row letters (A/B/C), with optional "no i mean"
-    if (text.match(/\b(no i mean )?a\b/)) {
-      selectRow("A");
-      return;
-    }
-    if (text.match(/\b(no i mean )?b\b/)) {
-      selectRow("B");
-      return;
-    }
-    if (text.match(/\b(no i mean )?c\b/)) {
-      selectRow("C");
+    // 4) Only row
+    if (foundRow && !foundCol) {
+      selectRow(foundRow);
       return;
     }
 
-    // 5) Just column numbers (1/2/3), with optional "no i mean"
-    if (text.match(/\b(no i mean )?1\b/)) {
-      selectCol("1");
+    // 5) Only col
+    if (foundCol && !foundRow) {
+      selectCol(foundCol);
       return;
     }
-    if (text.match(/\b(no i mean )?2\b/)) {
-      selectCol("2");
-      return;
-    }
-    if (text.match(/\b(no i mean )?3\b/)) {
-      selectCol("3");
-      return;
-    }
+  }
+
+  // -------------- ROW/COL SYNONYMS --------------
+  function interpretRow(text) {
+    text = text.toLowerCase();
+    if (rowA.some(r => text.includes(r))) return "A";
+    if (rowB.some(r => text.includes(r))) return "B";
+    if (rowC.some(r => text.includes(r))) return "C";
+    return null;
+  }
+  function interpretCol(text) {
+    text = text.toLowerCase();
+    if (col1.some(c => text.includes(c))) return "1";
+    if (col2.some(c => text.includes(c))) return "2";
+    if (col3.some(c => text.includes(c))) return "3";
+    return null;
   }
 
   // -------------- GRID & MODAL LOGIC --------------
@@ -302,22 +316,17 @@
     highlightCell(selectedRow, c);
     console.log("Selected cell:", selectedRow + c);
 
-    // Once row+col chosen => dispense
+    // Once row+col => dispense
     dispense();
   }
 
   function dispense() {
     console.log("Dispensing item:", selectedRow + selectedCol);
     document.getElementById("dispenseMsg").style.display = "block";
-
-    // Log to DB => set config/accessKey, machineStatus/isVending = true, push timestamp
+    // Log to DB => isVending = true, etc.
     logToDatabase();
-
-    // (Optional) auto-close the grid after a short delay:
-    // setTimeout(() => closeGridModal(), 2000);
   }
 
-  // -------------- HIGHLIGHT UTILS --------------
   function clearAllHighlights() {
     const tds = document.querySelectorAll(".grid-table td");
     tds.forEach(td => td.classList.remove("highlight"));
@@ -356,8 +365,9 @@
       const pushRef = await db.ref("timestamps").push(stamp);
       console.log("timestamps =>", stamp, "with key =>", pushRef.key);
 
-      // 4) Show the "Your Snack Is Dispensing" 7s modal
+      // 4) Show the 7s "Your Snack Is Dispensing" modal
       showSnackModal();
+
     } catch (err) {
       console.log("Firebase write error:", err);
     }
@@ -373,11 +383,11 @@
 
     setTimeout(() => {
       snackModal.style.display = "none";
-      // If you want to reset isVending => false after 7s, do it here:
+      // Optionally set isVending back to false after 7s:
       // db.ref("machineStatus/isVending").set(false);
     }, 7000);
   }
-  
+
   // -------------- DEV CLICK ON STATUS CODE => Toggle Mic --------------
   statusEl.addEventListener("click", () => {
     if (!micOn) {
