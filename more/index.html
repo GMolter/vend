@@ -18,16 +18,15 @@
     button:active {
       transform: scale(0.95);
     }
-  
-    /* App Container & Background (white background, no image) */
+    
+    /* App Container - White background */
     #app {
       position: relative;
       width: 100%;
       height: 100%;
       background: white;
     }
-    /* (Removed #overlay since we now use a plain white background) */
-  
+
     /* Screen Base Class */
     .screen {
       position: absolute;
@@ -36,15 +35,17 @@
       transform: translate(-50%, -50%);
       width: 90%;
       max-width: 800px;
-      color: #333;
       text-align: center;
       display: none;
     }
     .active {
       display: block;
     }
-  
+    
     /* Logo Screen */
+    #logo-screen {
+      position: relative;
+    }
     #logo-screen img {
       width: 300px;
       height: 300px;
@@ -62,7 +63,7 @@
       font-size: 2.5em;
       color: #333;
     }
-  
+    
     /* Keypad Screen */
     #keypad-screen h2 { margin-bottom: 20px; font-size: 2.2em; color: #333; }
     #digit-display {
@@ -84,8 +85,8 @@
       gap: 10px;
     }
     .keypad-grid button {
-      padding: 25px;
-      font-size: 2em;
+      padding: 30px;
+      font-size: 2.5em;
       background: rgba(0,0,0,0.1);
       border: none;
       border-radius: 8px;
@@ -104,36 +105,36 @@
       80% { transform: translateX(10px); }
       100% { transform: translateX(0); }
     }
-  
+    
     /* Snack Screen */
-    #snack-screen .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+    /* Make the snack screen container position relative so we can absolutely position the top elements */
+    #snack-screen {
+      position: relative;
     }
-    #snack-screen .top-bar img {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-    }
-    #snack-screen .top-bar h3 {
-      flex-grow: 1;
-      margin-left: 10px;
-      text-align: left;
+    /* User Name at top left */
+    #student-name {
+      position: absolute;
+      top: 20px;
+      left: 20px;
       font-size: 2em;
+      color: #333;
     }
-    #snack-screen .sign-out {
+    /* Sign Out button at top right */
+    #snack-signout {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 1.8em;
       background: #e74c3c;
       border: none;
       padding: 15px 20px;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 1.2em;
     }
     #snack-screen h2 {
       font-size: 2.5em;
+      margin-top: 80px; /* leave room for the corner elements */
       margin-bottom: 15px;
       color: #333;
     }
@@ -141,7 +142,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 15px;
-      margin-bottom: 20px;
+      margin-bottom: 100px; /* leave space at bottom for the dispense button */
     }
     .snack-item {
       background: rgba(0,0,0,0.05);
@@ -163,8 +164,12 @@
     }
     .snack-item h4 { margin-bottom: 5px; font-size: 1.6em; }
     .snack-item p { font-size: 1.2em; }
+    /* Dispense button centered at bottom */
     #dispense-button {
-      margin-top: 20px;
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       padding: 25px 35px;
       font-size: 1.8em;
       background: #2ecc71;
@@ -172,8 +177,9 @@
       border-radius: 8px;
       color: white;
       cursor: pointer;
+      display: none;
     }
-  
+    
     /* Dispense Screen */
     #dispense-screen {
       max-width: 600px;
@@ -181,6 +187,7 @@
       background: rgba(0, 0, 139, 0.8);
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      color: white;
     }
     #dispense-screen img {
       width: 100px;
@@ -188,8 +195,8 @@
       border-radius: 50%;
       margin-bottom: 15px;
     }
-    #dispense-screen h2 { margin-bottom: 10px; font-size: 2.5em; color: white; }
-    #dispense-screen p { margin-bottom: 20px; font-size: 1.5em; color: white; }
+    #dispense-screen h2 { margin-bottom: 10px; font-size: 2.5em; }
+    #dispense-screen p { margin-bottom: 20px; font-size: 1.5em; }
     #dispense-screen .stay-signed {
       padding: 15px 30px;
       background: #2980b9;
@@ -199,7 +206,7 @@
       cursor: pointer;
       font-size: 1.5em;
     }
-  
+    
     /* Mobile Adjustments */
     @media (max-width: 600px) {
       #logo-screen img {
@@ -216,18 +223,22 @@
         line-height: 80px;
       }
       .keypad-grid button {
-        padding: 30px;
+        padding: 35px;
         font-size: 2.2em;
       }
-      #snack-screen .top-bar img {
-        width: 90px;
-        height: 90px;
+      #student-name {
+        font-size: 1.8em;
+        top: 15px;
+        left: 15px;
       }
-      #snack-screen .top-bar h3 {
-        font-size: 2.2em;
+      #snack-signout {
+        font-size: 1.5em;
+        top: 15px;
+        right: 15px;
       }
       #snack-screen h2 {
-        font-size: 2.8em;
+        font-size: 2.2em;
+        margin-top: 70px;
       }
       .snack-item img {
         width: 110px;
@@ -251,12 +262,10 @@
 </head>
 <body>
   <div id="app">
-    <!-- Removed the overlay since the background is now white -->
-    
     <!-- Logo Screen -->
     <div id="logo-screen" class="screen active">
       <img src="fchs-logo.png" alt="Logo" id="logo-img">
-      <h2>Tap the logo to begin</h2>
+      <h2>Tap to Begin</h2>
     </div>
     
     <!-- Keypad Screen -->
@@ -270,14 +279,11 @@
     
     <!-- Snack Screen -->
     <div id="snack-screen" class="screen">
-      <div class="top-bar">
-        <img src="fchs-logo.png" alt="Logo">
-        <h3 id="student-name">Student Name</h3>
-        <button class="sign-out" id="snack-signout">Sign Out</button>
-      </div>
+      <div id="student-name">Student Name</div>
+      <button class="sign-out" id="snack-signout">Sign Out</button>
       <h2>Select a Snack</h2>
       <div id="snack-grid"></div>
-      <button id="dispense-button" style="display:none;">Dispense Snacks</button>
+      <button id="dispense-button">Dispense Snacks</button>
     </div>
     
     <!-- Dispense Screen -->
@@ -299,6 +305,7 @@
     let selectedItems = new Set();
     let countdownTimer = null;
     let countdownValue = 5;
+    let idleTimer = null;
     
     // ----- Data -----
     const STUDENTS = {
@@ -325,7 +332,22 @@
       { id: "B3", name: "Trail Mix", quantity: 9, image: "placeholder.svg" }
     ];
     
-    // ----- Utility Functions -----
+    // ----- Idle Timer Handling (90 seconds) -----
+    function resetIdleTimer() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        signOut();
+      }, 90 * 1000); // 90 seconds
+    }
+    // Reset idle timer on key, click, mouse move, or touch
+    document.addEventListener("keydown", resetIdleTimer);
+    document.addEventListener("click", resetIdleTimer);
+    document.addEventListener("mousemove", resetIdleTimer);
+    document.addEventListener("touchstart", resetIdleTimer);
+    
+    resetIdleTimer(); // Initialize on load
+
+    // ----- Utility Function -----
     function showScreen(screenId) {
       document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.remove('active');
@@ -335,12 +357,14 @@
     }
     
     // ----- Logo Screen -----
+    const logoScreen = document.getElementById("logo-screen");
     const logoImg = document.getElementById("logo-img");
-    logoImg.addEventListener("click", () => {
+    // Tap anywhere on the logo screen to open keypad
+    logoScreen.addEventListener("click", () => {
       showScreen("keypad-screen");
       initKeypad();
     });
-    // Also, any key press on the logo screen will switch screens
+    // Also, any key press on the logo screen switches screen
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "logo") {
         showScreen("keypad-screen");
