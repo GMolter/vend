@@ -19,23 +19,14 @@
       transform: scale(0.95);
     }
   
-    /* App Container & Background */
+    /* App Container & Background (white background, no image) */
     #app {
       position: relative;
       width: 100%;
       height: 100%;
-      background: url('fchs-logo.png') center center / cover no-repeat fixed;
+      background: white;
     }
-    /* Semi-transparent blue overlay */
-    #overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(10, 61, 145, 0.8);
-      backdrop-filter: blur(5px);
-    }
+    /* (Removed #overlay since we now use a plain white background) */
   
     /* Screen Base Class */
     .screen {
@@ -44,8 +35,8 @@
       left: 50%;
       transform: translate(-50%, -50%);
       width: 90%;
-      max-width: 600px;
-      color: white;
+      max-width: 800px;
+      color: #333;
       text-align: center;
       display: none;
     }
@@ -55,8 +46,8 @@
   
     /* Logo Screen */
     #logo-screen img {
-      width: 220px;
-      height: 220px;
+      width: 300px;
+      height: 300px;
       border-radius: 50%;
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
       animation: pulse 2s infinite alternate;
@@ -68,23 +59,24 @@
     }
     #logo-screen h2 {
       margin-top: 20px;
-      font-size: 1.8em;
+      font-size: 2.5em;
+      color: #333;
     }
   
     /* Keypad Screen */
-    #keypad-screen h2 { margin-bottom: 20px; font-size: 1.8em; }
+    #keypad-screen h2 { margin-bottom: 20px; font-size: 2.2em; color: #333; }
     #digit-display {
       display: flex;
       justify-content: center;
       margin-bottom: 20px;
     }
     .digit-box {
-      width: 50px;
-      height: 50px;
+      width: 70px;
+      height: 70px;
       margin: 0 5px;
-      border-bottom: 2px solid white;
-      font-size: 2.5em;
-      line-height: 50px;
+      border-bottom: 2px solid #333;
+      font-size: 3em;
+      line-height: 70px;
     }
     .keypad-grid {
       display: grid;
@@ -92,12 +84,12 @@
       gap: 10px;
     }
     .keypad-grid button {
-      padding: 20px;
-      font-size: 1.8em;
-      background: rgba(255,255,255,0.2);
+      padding: 25px;
+      font-size: 2em;
+      background: rgba(0,0,0,0.1);
       border: none;
       border-radius: 8px;
-      color: white;
+      color: #333;
       cursor: pointer;
     }
     /* Shake animation when ID is invalid */
@@ -121,39 +113,40 @@
       margin-bottom: 20px;
     }
     #snack-screen .top-bar img {
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
     }
     #snack-screen .top-bar h3 {
       flex-grow: 1;
       margin-left: 10px;
       text-align: left;
-      font-size: 1.5em;
+      font-size: 2em;
     }
     #snack-screen .sign-out {
       background: #e74c3c;
       border: none;
-      padding: 12px 18px;
+      padding: 15px 20px;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 1.2em;
     }
     #snack-screen h2 {
-      font-size: 2em;
+      font-size: 2.5em;
       margin-bottom: 15px;
+      color: #333;
     }
     #snack-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 15px;
       margin-bottom: 20px;
     }
     .snack-item {
-      background: rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.05);
       border: 2px solid transparent;
-      padding: 10px;
+      padding: 15px;
       border-radius: 8px;
       cursor: pointer;
       transition: background 0.3s, border-color 0.3s;
@@ -163,17 +156,17 @@
       border-color: #3498db;
     }
     .snack-item img {
-      width: 90px;
-      height: 90px;
+      width: 100px;
+      height: 100px;
       object-fit: contain;
       margin-bottom: 10px;
     }
-    .snack-item h4 { margin-bottom: 5px; font-size: 1.2em; }
-    .snack-item p { font-size: 1em; }
+    .snack-item h4 { margin-bottom: 5px; font-size: 1.6em; }
+    .snack-item p { font-size: 1.2em; }
     #dispense-button {
       margin-top: 20px;
-      padding: 20px 30px;
-      font-size: 1.5em;
+      padding: 25px 35px;
+      font-size: 1.8em;
       background: #2ecc71;
       border: none;
       border-radius: 8px;
@@ -183,28 +176,28 @@
   
     /* Dispense Screen */
     #dispense-screen {
-      max-width: 500px;
+      max-width: 600px;
       padding: 30px;
       background: rgba(0, 0, 139, 0.8);
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
     #dispense-screen img {
-      width: 90px;
-      height: 90px;
+      width: 100px;
+      height: 100px;
       border-radius: 50%;
       margin-bottom: 15px;
     }
-    #dispense-screen h2 { margin-bottom: 10px; font-size: 2em; }
-    #dispense-screen p { margin-bottom: 20px; font-size: 1.2em; }
+    #dispense-screen h2 { margin-bottom: 10px; font-size: 2.5em; color: white; }
+    #dispense-screen p { margin-bottom: 20px; font-size: 1.5em; color: white; }
     #dispense-screen .stay-signed {
-      padding: 12px 24px;
+      padding: 15px 30px;
       background: #2980b9;
       border: none;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 1.2em;
+      font-size: 1.5em;
     }
   
     /* Mobile Adjustments */
@@ -214,51 +207,51 @@
         height: 250px;
       }
       #logo-screen h2 {
-        font-size: 2em;
-      }
-      .digit-box {
-        width: 60px;
-        height: 60px;
-        font-size: 3em;
-        line-height: 60px;
-      }
-      .keypad-grid button {
-        padding: 25px;
-        font-size: 2em;
-      }
-      #snack-screen .top-bar img {
-        width: 70px;
-        height: 70px;
-      }
-      #snack-screen .top-bar h3 {
-        font-size: 1.8em;
-      }
-      #snack-screen h2 {
         font-size: 2.2em;
       }
+      .digit-box {
+        width: 80px;
+        height: 80px;
+        font-size: 3.5em;
+        line-height: 80px;
+      }
+      .keypad-grid button {
+        padding: 30px;
+        font-size: 2.2em;
+      }
+      #snack-screen .top-bar img {
+        width: 90px;
+        height: 90px;
+      }
+      #snack-screen .top-bar h3 {
+        font-size: 2.2em;
+      }
+      #snack-screen h2 {
+        font-size: 2.8em;
+      }
       .snack-item img {
-        width: 100px;
-        height: 100px;
+        width: 110px;
+        height: 110px;
       }
       .snack-item h4 {
-        font-size: 1.4em;
+        font-size: 1.8em;
       }
       #dispense-button {
-        font-size: 1.8em;
-        padding: 25px 35px;
+        font-size: 2em;
+        padding: 30px 40px;
       }
       #dispense-screen h2, #dispense-screen p {
-        font-size: 1.5em;
+        font-size: 1.8em;
       }
       #dispense-screen .stay-signed {
-        font-size: 1.4em;
+        font-size: 1.8em;
       }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <div id="overlay"></div>
+    <!-- Removed the overlay since the background is now white -->
     
     <!-- Logo Screen -->
     <div id="logo-screen" class="screen active">
