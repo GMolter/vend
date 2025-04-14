@@ -20,7 +20,7 @@
     html, body, button, a {
       cursor: none !important;
     }
-
+    
     /* Button clicking effect */
     button {
       transition: transform 0.1s ease-in-out;
@@ -37,7 +37,17 @@
       height: 100%;
       background: white;
     }
-
+    
+    /* Version Label in bottom-left */
+    #version-label {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      font-size: 1em;
+      color: #555;
+      z-index: 10000;
+    }
+    
     /* Invisible Dev Button in top-right corner */
     #devButton {
       position: fixed;
@@ -49,9 +59,9 @@
       border: none;
       cursor: pointer;
       z-index: 9999;
-      opacity: 0; /* invisible */
+      opacity: 0; /* remains invisible */
     }
-
+    
     /* Screen Base Class */
     .screen {
       position: absolute;
@@ -107,33 +117,33 @@
       font-size: 3em;
       line-height: 70px;
     }
-    
-    /* Keypad Grid - 3 columns, 4 rows */
+    /* Keypad Grid */
     .keypad-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
+      gap: 10px;
       justify-items: center;
     }
     .keypad-btn {
-      width: 80px;
-      height: 80px;
+      width: 100px;
+      height: 100px;
       border-radius: 50%;
       background: rgba(0,0,0,0.1);
       color: #333;
-      font-size: 2em;
+      font-size: 2.5em;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      user-select: none;
     }
     /* Special styling for backspace */
     .keypad-btn.backspace {
       background: red;
       color: white;
-      font-size: 2.2em;
+      font-size: 2.5em;
     }
-
+    
     /* Shake animation when ID is invalid */
     .shake {
       animation: shake 0.5s;
@@ -150,12 +160,12 @@
     /* Snack Screen */
     #snack-screen {
       position: relative;
-      padding-top: 120px; /* ensure heading is below top elements */
+      padding-top: 100px; /* room for the top elements */
     }
     /* User Name at top-left */
     #student-name {
       position: absolute;
-      top: 20px;
+      top: 10px;
       left: 20px;
       font-size: 2em;
       color: #333;
@@ -163,7 +173,7 @@
     /* Sign Out button at top-right */
     #snack-signout {
       position: absolute;
-      top: 20px;
+      top: 10px;
       right: 20px;
       font-size: 1.8em;
       background: #e74c3c;
@@ -182,7 +192,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 15px;
-      margin-bottom: 100px; /* space for the dispense button */
+      margin-bottom: 120px; /* more space for the dispense button */
     }
     .snack-item {
       background: rgba(0,0,0,0.05);
@@ -196,12 +206,7 @@
       background: rgba(52, 152, 219, 0.4);
       border-color: #3498db;
     }
-    .snack-item img {
-      width: 100px;
-      height: 100px;
-      object-fit: contain;
-      margin-bottom: 10px;
-    }
+    /* Remove images from snack items */
     .snack-item h4 {
       margin-bottom: 5px;
       font-size: 1.6em;
@@ -209,10 +214,10 @@
     .snack-item p {
       font-size: 1.2em;
     }
-    /* Dispense button centered at bottom */
+    /* Dispense button centered at bottom, moved down a bit */
     #dispense-button {
       position: absolute;
-      bottom: 20px;
+      bottom: 40px;
       left: 50%;
       transform: translateX(-50%);
       padding: 25px 35px;
@@ -287,10 +292,6 @@
       #snack-screen h2 {
         font-size: 2.2em;
       }
-      .snack-item img {
-        width: 110px;
-        height: 110px;
-      }
       .snack-item h4 {
         font-size: 1.8em;
       }
@@ -347,6 +348,9 @@
       </div>
       <button class="stay-signed" id="stay-signed-btn">Stay Signed In</button>
     </div>
+    
+    <!-- Version Label (bottom left) -->
+    <div id="version-label">v2.4.2</div>
   </div>
 
   <script>
@@ -390,7 +394,7 @@
         signOut();
       }, 90 * 1000); // 90 seconds
     }
-    // Reset idle timer on key, click, mouse move, or touch
+    // Reset idle timer on interaction
     document.addEventListener("keydown", resetIdleTimer);
     document.addEventListener("click", resetIdleTimer);
     document.addEventListener("mousemove", resetIdleTimer);
@@ -404,8 +408,17 @@
       });
       document.getElementById(screenId).classList.add('active');
       currentScreen = screenId.split("-")[0]; // e.g., "logo-screen" -> "logo"
+      
+      // Disable the dev button if not on logo and if user is signed in or in DEV MODE
+      if (currentScreen !== "logo" || studentId !== "") {
+        devButton.disabled = true;
+        devButton.style.pointerEvents = "none";
+      } else {
+        devButton.disabled = false;
+        devButton.style.pointerEvents = "auto";
+      }
     }
-
+    
     // ----- Dev Button (Invisible) -----
     const devButton = document.getElementById("devButton");
     devButton.addEventListener("click", () => {
@@ -419,11 +432,10 @@
     // ----- Logo Screen (Tap Anywhere) -----
     const logoScreen = document.getElementById("logo-screen");
     logoScreen.addEventListener("click", () => {
-      // Move to Keypad Screen
       showScreen("keypad-screen");
       initKeypad();
     });
-    // Also any key press on the logo screen to go to keypad
+    // Also any key press on the logo screen moves to keypad
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "logo") {
         showScreen("keypad-screen");
@@ -436,7 +448,7 @@
     const keypadButtons = document.getElementById("keypad-buttons");
     const maxDigits = 6;
 
-    // Define our keypad layout in a 3x4 grid
+    // Define keypad layout: 3x4 grid
     const keypadLayout = [
       "1","2","3",
       "4","5","6",
@@ -447,21 +459,16 @@
     function initKeypad() {
       studentId = "";
       renderDigits();
-
-      // Build keypad if empty
       if (keypadButtons.children.length === 0) {
         keypadLayout.forEach(value => {
           if (value === "") {
-            // Empty spot, create an invisible placeholder for spacing
             const placeholder = document.createElement("div");
-            placeholder.style.width = "80px";
-            placeholder.style.height = "80px";
+            placeholder.style.width = "100px";
+            placeholder.style.height = "100px";
             keypadButtons.appendChild(placeholder);
-          }
-          else {
+          } else {
             const btn = document.createElement("div");
             btn.classList.add("keypad-btn");
-
             if (value === "backspace") {
               btn.classList.add("backspace");
               btn.textContent = "←";
@@ -503,7 +510,6 @@
       }
     }
     
-    // Keydown events on Keypad Screen
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "keypad") {
         if (/^\d$/.test(e.key)) {
@@ -522,7 +528,6 @@
         showScreen("snack-screen");
         initSnackScreen();
       } else {
-        // Shake digit display and reset
         digitDisplay.classList.add("shake");
         setTimeout(() => {
           digitDisplay.classList.remove("shake");
@@ -548,8 +553,8 @@
       snacks.forEach(snack => {
         const snackDiv = document.createElement("div");
         snackDiv.classList.add("snack-item");
+        // Removed images from each item – only text now.
         snackDiv.innerHTML = `
-          <img src="${snack.image}" alt="${snack.name}">
           <h4>${snack.name}</h4>
           <p>ID: ${snack.id} | Qty: ${snack.quantity}</p>
         `;
@@ -574,7 +579,6 @@
       }
     }
     
-    // Snack Screen key events
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "snack") {
         if (["1","2","3","4","5","6"].includes(e.key)) {
@@ -600,7 +604,6 @@
       initDispenseScreen();
     }
     
-    // Sign out resets to the logo screen
     function signOut() {
       clearInterval(countdownTimer);
       countdownValue = 5;
@@ -613,7 +616,7 @@
     const staySignedBtn = document.getElementById("stay-signed-btn");
     
     function initDispenseScreen() {
-      const name = STUDENTS[studentId] || "Student";
+      const name = STUDENTS[studentId] || studentId || "Student";
       const firstName = name.split(" ")[0];
       thankYouMsg.textContent = `Thank you, ${firstName}!`;
       countdownValue = 5;
@@ -634,23 +637,21 @@
     
     staySignedBtn.addEventListener("click", () => {
       clearInterval(countdownTimer);
-      // On stay signed in, clear previously selected items so user can pick again
+      // When "Stay Signed In" is pressed, clear previously selected items for a fresh selection
       showScreen("snack-screen");
       initSnackScreen();
     });
     
-    // Keydown events for Dispense Screen
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "dispense") {
         if (e.key === "Enter") {
           clearInterval(countdownTimer);
           showScreen("snack-screen");
-          initSnackScreen(); // Clear previous selection
+          initSnackScreen();
         } else if (e.key === "Escape") {
           clearInterval(countdownTimer);
           signOut();
         } else {
-          // Any other key stops countdown
           clearInterval(countdownTimer);
         }
       }
