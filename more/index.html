@@ -4,88 +4,319 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vending Machine</title>
+
   <!-- Firebase scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     /* Global Reset & Base Styles */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; font-family: Arial, sans-serif; }
+    * {
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%; 
+      height: 100%; 
+      font-family: Arial, sans-serif;
+    }
     /* Hide cursor everywhere */
-    html, body, button, a { cursor: none !important; }
+    html, body, button, a {
+      cursor: none !important;
+    }
 
     /* Button clicking effect */
-    button { transition: transform 0.1s ease-in-out; user-select: none; }
-    button:active { transform: scale(0.95); }
+    button {
+      transition: transform 0.1s ease-in-out; 
+      user-select: none;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
     
     /* App Container - White background */
-    #app { position: relative; width: 100%; height: 100%; background: white; }
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: white;
+    }
     
     /* Version Label in bottom-left */
-    #version-label { position: fixed; bottom: 10px; left: 10px; font-size: 1em; color: #555; z-index: 10000; }
+    #version-label {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      font-size: 1em;
+      color: #555;
+      z-index: 10000;
+    }
     
     /* Invisible Dev Button in top-right corner */
-    #devButton { position: fixed; top: 0; right: 0; width: 50px; height: 50px; background: transparent; border: none; cursor: pointer; z-index: 9999; opacity: 0; }
+    #devButton {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 50px;
+      height: 50px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      z-index: 9999;
+      opacity: 0;
+    }
     
     /* Screen Base Class */
-    .screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; text-align: center; display: none; }
-    .active { display: block; }
+    .screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 800px;
+      text-align: center;
+      display: none;
+    }
+    .active {
+      display: block;
+    }
     
     /* Logo Screen */
-    #logo-screen { position: relative; }
-    #logo-screen img { width: 300px; height: 300px; border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.5); animation: pulse 2s infinite alternate; }
-    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
-    #logo-screen h2 { margin-top: 20px; font-size: 2.5em; color: #333; }
+    #logo-screen {
+      position: relative;
+    }
+    #logo-screen img {
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      animation: pulse 2s infinite alternate;
+    }
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+    #logo-screen h2 {
+      margin-top: 20px;
+      font-size: 2.5em;
+      color: #333;
+    }
     
     /* Keypad Screen */
-    #keypad-screen h2 { margin-bottom: 20px; font-size: 2.2em; color: #333; }
-    #digit-display { display: flex; justify-content: center; margin-bottom: 20px; }
-    .digit-box { width: 70px; height: 70px; margin: 0 5px; border-bottom: 2px solid #333; font-size: 3em; line-height: 70px; }
+    #keypad-screen h2 {
+      margin-bottom: 20px;
+      font-size: 2.2em;
+      color: #333;
+    }
+    #digit-display {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .digit-box {
+      width: 70px;
+      height: 70px;
+      margin: 0 5px;
+      border-bottom: 2px solid #333;
+      font-size: 3em;
+      line-height: 70px;
+    }
     /* Keypad Grid */
-    .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; justify-items: center; }
-    .keypad-btn { width: 100px; height: 100px; border-radius: 50%; background: rgba(0,0,0,0.1); color: #333; font-size: 2.5em; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
-    /* Special styling for backspace */
-    .keypad-btn.backspace { background: red; color: white; font-size: 2.5em; }
-    
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      justify-items: center;
+    }
+    .keypad-btn {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.1);
+      color: #333;
+      font-size: 2.5em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .keypad-btn.backspace {
+      background: red;
+      color: white;
+      font-size: 2.5em;
+    }
+
     /* Shake animation when ID is invalid */
-    .shake { animation: shake 0.5s; }
-    @keyframes shake { 0% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-10px); } 80% { transform: translateX(10px); } 100% { transform: translateX(0); } }
+    .shake {
+      animation: shake 0.5s;
+    }
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-10px); }
+      40% { transform: translateX(10px); }
+      60% { transform: translateX(-10px); }
+      80% { transform: translateX(10px); }
+      100% { transform: translateX(0); }
+    }
     
     /* Snack Screen */
-    #snack-screen { position: relative; padding-top: 100px; }
+    #snack-screen {
+      /* Center everything vertically */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+      padding-top: 120px; /* space below top bar */
+    }
     /* User Name at top-left */
-    #student-name { position: absolute; top: 10px; left: 20px; font-size: 2em; color: #333; }
+    #student-name {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      font-size: 2em;
+      color: #333;
+    }
     /* Sign Out button at top-right */
-    #snack-signout { position: absolute; top: 10px; right: 20px; font-size: 1.8em; background: #e74c3c; border: none; padding: 15px 20px; border-radius: 5px; color: white; cursor: pointer; }
-    #snack-screen h2 { font-size: 2.5em; margin-bottom: 30px; color: #333; }
-    #snack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-bottom: 140px; }
-    .snack-item { background: rgba(0,0,0,0.05); border: 2px solid transparent; padding: 15px; border-radius: 8px; cursor: pointer; transition: background 0.3s, border-color 0.3s; }
-    .snack-item.selected { background: rgba(52, 152, 219, 0.4); border-color: #3498db; }
-    .snack-item h4 { margin-bottom: 5px; font-size: 1.6em; }
-    .snack-item p { font-size: 1.2em; }
-    /* Dispense button centered at bottom, moved further down */
-    #dispense-button { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 25px 35px; font-size: 1.8em; background: #2ecc71; border: none; border-radius: 8px; color: white; cursor: pointer; display: none; }
+    #snack-signout {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 1.8em;
+      background: #e74c3c;
+      border: none;
+      padding: 15px 20px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+    }
+    #snack-screen h2 {
+      font-size: 2.5em;
+      margin: 0 0 30px 0; /* no top margin, some bottom margin */
+      color: #333;
+    }
+    #snack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 15px;
+      max-width: 700px;
+      width: 100%;
+      margin: 0 auto 140px auto; /* bottom space for the button */
+      justify-items: center;
+    }
+    .snack-item {
+      background: rgba(0,0,0,0.05);
+      border: 2px solid transparent;
+      padding: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s, border-color 0.3s;
+      text-align: center;
+    }
+    .snack-item.selected {
+      background: rgba(52, 152, 219, 0.4);
+      border-color: #3498db;
+    }
+    .snack-item h4 {
+      margin-bottom: 5px;
+      font-size: 1.6em;
+    }
+    .snack-item p {
+      font-size: 1.2em;
+    }
+    #dispense-button {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 25px 35px;
+      font-size: 1.8em;
+      background: #2ecc71;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      display: none;
+    }
     
     /* Dispense Screen */
-    #dispense-screen { max-width: 600px; padding: 30px; background: rgba(0, 0, 139, 0.8); border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); color: white; }
-    #dispense-screen img { width: 100px; height: 100px; border-radius: 50%; margin-bottom: 15px; }
-    #dispense-screen h2 { margin-bottom: 10px; font-size: 2.5em; }
-    #dispense-screen p { margin-bottom: 20px; font-size: 1.5em; }
-    #dispense-screen .stay-signed { padding: 15px 30px; background: #2980b9; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 1.5em; }
+    #dispense-screen {
+      max-width: 600px;
+      padding: 30px;
+      background: rgba(0, 0, 139, 0.8);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      color: white;
+    }
+    #dispense-screen img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      margin-bottom: 15px;
+    }
+    #dispense-screen h2 {
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+    #dispense-screen p {
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+    #dispense-screen .stay-signed {
+      padding: 15px 30px;
+      background: #2980b9;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: 1.5em;
+    }
     
     /* Mobile Adjustments */
     @media (max-width: 600px) {
-      #logo-screen img { width: 250px; height: 250px; }
-      #logo-screen h2 { font-size: 2.2em; }
-      .digit-box { width: 80px; height: 80px; font-size: 3.5em; line-height: 80px; }
-      .keypad-btn { width: 90px; height: 90px; font-size: 2.2em; }
-      #student-name { font-size: 1.8em; }
-      #snack-signout { font-size: 1.5em; }
-      #snack-screen h2 { font-size: 2.2em; }
-      .snack-item h4 { font-size: 1.8em; }
-      #dispense-button { font-size: 2em; padding: 30px 40px; }
-      #dispense-screen h2, #dispense-screen p { font-size: 1.8em; }
-      #dispense-screen .stay-signed { font-size: 1.8em; }
+      #logo-screen img {
+        width: 250px; 
+        height: 250px;
+      }
+      #logo-screen h2 {
+        font-size: 2.2em;
+      }
+      .digit-box {
+        width: 80px; 
+        height: 80px; 
+        font-size: 3.5em; 
+        line-height: 80px;
+      }
+      .keypad-btn {
+        width: 90px;
+        height: 90px;
+        font-size: 2.2em;
+      }
+      #student-name {
+        font-size: 1.8em;
+      }
+      #snack-signout {
+        font-size: 1.5em;
+      }
+      #snack-screen h2 {
+        font-size: 2.2em;
+      }
+      .snack-item h4 {
+        font-size: 1.8em;
+      }
+      #dispense-button {
+        font-size: 2em;
+        padding: 30px 40px;
+      }
+      #dispense-screen h2,
+      #dispense-screen p {
+        font-size: 1.8em;
+      }
+      #dispense-screen .stay-signed {
+        font-size: 1.8em;
+      }
     }
   </style>
 </head>
@@ -129,13 +360,13 @@
       <button class="stay-signed" id="stay-signed-btn">Stay Signed In</button>
     </div>
     
-    <!-- Version Label in Bottom-left -->
+    <!-- Version Label -->
     <div id="version-label">v2.4.2</div>
   </div>
 
   <script>
-    // ----- Firebase Initialization -----
-    var firebaseConfig = {
+    // ------------------- Firebase Init -------------------
+    const firebaseConfig = {
       apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain: "cyberflashvend.firebaseapp.com",
       databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
@@ -147,15 +378,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ----- State Variables -----
-    let currentScreen = "logo"; // "logo", "keypad", "snack", "dispense"
+    // ------------------- Globals -------------------
+    let currentScreen = "logo"; 
     let studentId = "";
     let selectedItems = new Set();
     let countdownTimer = null;
     let countdownValue = 5;
     let idleTimer = null;
-    
-    // ----- Data -----
+
+    // ------------------- Student Data (No Firebase Auth) -------------------
     const STUDENTS = {
       "260514": "Gavin Molter",
       "250257": "Amit Ghumaan",
@@ -170,7 +401,8 @@
       "250639": "Rohan Rajanahalli",
       "260627": "Mason Robbins"
     };
-    
+
+    // Our snack data
     const snacks = [
       { id: "A1", name: "Chips", quantity: 8 },
       { id: "A2", name: "Cookies", quantity: 5 },
@@ -179,11 +411,13 @@
       { id: "B2", name: "Granola Bar", quantity: 3 },
       { id: "B3", name: "Trail Mix", quantity: 9 }
     ];
-    
-    // ----- Idle Timer Handling (90 seconds) -----
+
+    // ------------------- Idle Timer (90s) -------------------
     function resetIdleTimer() {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => { signOut(); }, 90 * 1000);
+      idleTimer = setTimeout(() => {
+        signOut();
+      }, 90 * 1000);
     }
     document.addEventListener("keydown", resetIdleTimer);
     document.addEventListener("click", resetIdleTimer);
@@ -191,12 +425,13 @@
     document.addEventListener("touchstart", resetIdleTimer);
     resetIdleTimer();
 
-    // ----- Utility: Show Screen -----
+    // ------------------- Show Screen Utility -------------------
     function showScreen(screenId) {
-      document.querySelectorAll('.screen').forEach(screen => { screen.classList.remove('active'); });
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
       currentScreen = screenId.split("-")[0];
-      // Disable Dev Button if not on logo or if user already signed in
+
+      // Disable dev button if not on logo or user is signed in
       if (currentScreen !== "logo" || studentId !== "") {
         devButton.disabled = true;
         devButton.style.pointerEvents = "none";
@@ -205,8 +440,8 @@
         devButton.style.pointerEvents = "auto";
       }
     }
-    
-    // ----- Dev Button -----
+
+    // ------------------- Dev Button -------------------
     const devButton = document.getElementById("devButton");
     devButton.addEventListener("click", () => {
       studentId = "DEV MODE";
@@ -214,28 +449,47 @@
       showScreen("snack-screen");
       initSnackScreen();
     });
-    
-    // ----- Logo Screen (Tap Anywhere) -----
+
+    // ------------------- Logo Screen -------------------
     const logoScreen = document.getElementById("logo-screen");
-    logoScreen.addEventListener("click", () => { showScreen("keypad-screen"); initKeypad(); });
-    window.addEventListener("keydown", (e) => { if (currentScreen === "logo") { showScreen("keypad-screen"); initKeypad(); } });
-    
-    // ----- Keypad Screen -----
+    logoScreen.addEventListener("click", () => {
+      showScreen("keypad-screen");
+      initKeypad();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (currentScreen === "logo") {
+        showScreen("keypad-screen");
+        initKeypad();
+      }
+    });
+
+    // ------------------- Keypad Screen -------------------
     const digitDisplay = document.getElementById("digit-display");
     const keypadButtons = document.getElementById("keypad-buttons");
     const maxDigits = 6;
+
+    // We also handle numpad keys
+    function isNumberKey(e) {
+      return (
+        (e.key >= "0" && e.key <= "9") ||         // top row
+        (e.code.startsWith("Numpad") && e.key.length === 1) // numpad
+      );
+    }
+
     const keypadLayout = [
       "1","2","3",
       "4","5","6",
       "7","8","9",
       "", "0", "backspace"
     ];
+
     function initKeypad() {
       studentId = "";
       renderDigits();
       if (keypadButtons.children.length === 0) {
         keypadLayout.forEach(value => {
           if (value === "") {
+            // Empty placeholder
             const placeholder = document.createElement("div");
             placeholder.style.width = "100px";
             placeholder.style.height = "100px";
@@ -256,6 +510,7 @@
         });
       }
     }
+
     function renderDigits() {
       digitDisplay.innerHTML = "";
       for (let i = 0; i < maxDigits; i++) {
@@ -265,23 +520,39 @@
         digitDisplay.appendChild(box);
       }
     }
+
     function handleDigitInput(digit) {
       if (studentId.length < maxDigits) {
         studentId += digit;
         renderDigits();
-        if (studentId.length === maxDigits) { validateStudentId(); }
+        if (studentId.length === maxDigits) {
+          validateStudentId();
+        }
       }
     }
+
     function handleBackspace() {
-      if (studentId.length > 0) { studentId = studentId.slice(0, -1); renderDigits(); }
+      if (studentId.length > 0) {
+        studentId = studentId.slice(0, -1);
+        renderDigits();
+      }
     }
+
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "keypad") {
-        if (/^\d$/.test(e.key)) { handleDigitInput(e.key); }
-        else if (e.key === "Backspace") { handleBackspace(); }
-        else if (e.key === "Enter" && studentId.length === maxDigits) { validateStudentId(); }
+        if (isNumberKey(e)) {
+          // e.key = "0"..."9" or numpad
+          handleDigitInput(e.key[e.key.length-1]); 
+        }
+        else if (e.key === "Backspace") {
+          handleBackspace();
+        }
+        else if ((e.key === "Enter" || e.key === "NumpadEnter") && studentId.length === maxDigits) {
+          validateStudentId();
+        }
       }
     });
+
     function validateStudentId() {
       if (STUDENTS[studentId]) {
         document.getElementById("student-name").textContent = STUDENTS[studentId];
@@ -289,102 +560,136 @@
         initSnackScreen();
       } else {
         digitDisplay.classList.add("shake");
-        setTimeout(() => { digitDisplay.classList.remove("shake"); studentId = ""; renderDigits(); }, 500);
+        setTimeout(() => {
+          digitDisplay.classList.remove("shake");
+          studentId = "";
+          renderDigits();
+        }, 500);
       }
     }
-    
-    // ----- Snack Screen -----
+
+    // ------------------- Snack Screen -------------------
     const snackGrid = document.getElementById("snack-grid");
     const dispenseButton = document.getElementById("dispense-button");
     const snackSignOut = document.getElementById("snack-signout");
+
     function initSnackScreen() {
       selectedItems.clear();
       renderSnackGrid();
       dispenseButton.style.display = "none";
     }
+
     function renderSnackGrid() {
       snackGrid.innerHTML = "";
       snacks.forEach(snack => {
         const snackDiv = document.createElement("div");
         snackDiv.classList.add("snack-item");
-        // No images; only text.
-        snackDiv.innerHTML = `<h4>${snack.name}</h4><p>ID: ${snack.id} | Qty: ${snack.quantity}</p>`;
-        snackDiv.addEventListener("click", () => { toggleSnackSelection(snack.id, snackDiv); });
+        snackDiv.innerHTML = `
+          <h4>${snack.name}</h4>
+          <p>ID: ${snack.id} | Qty: ${snack.quantity}</p>
+        `;
+        snackDiv.addEventListener("click", () => toggleSnackSelection(snack.id, snackDiv));
         snackGrid.appendChild(snackDiv);
       });
     }
+
     function toggleSnackSelection(snackId, element) {
-      if (selectedItems.has(snackId)) { selectedItems.delete(snackId); element.classList.remove("selected"); }
-      else { selectedItems.add(snackId); element.classList.add("selected"); }
+      if (selectedItems.has(snackId)) {
+        selectedItems.delete(snackId);
+        element.classList.remove("selected");
+      } else {
+        selectedItems.add(snackId);
+        element.classList.add("selected");
+      }
       if (selectedItems.size > 0) {
         dispenseButton.style.display = "block";
         dispenseButton.textContent = selectedItems.size === 1 ? "Dispense Snack" : "Dispense Snacks";
-      } else { dispenseButton.style.display = "none"; }
+      } else {
+        dispenseButton.style.display = "none";
+      }
     }
+
+    // Let users pick items with numeric keys + press Enter
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "snack") {
-        if (["1","2","3","4","5","6"].includes(e.key)) {
-          const index = parseInt(e.key, 10) - 1;
-          if (index < snacks.length) {
+        // "1"-"6" or "Numpad1"-"Numpad6" => toggle those items
+        if (isNumberKey(e)) {
+          const digit = +e.key[e.key.length-1]; // last char => "1"..."9"
+          const index = digit - 1;
+          if (index >= 0 && index < snacks.length) {
             const snackId = snacks[index].id;
             const snackDiv = snackGrid.children[index];
             toggleSnackSelection(snackId, snackDiv);
           }
-        } else if (e.key === "Enter" && selectedItems.size > 0) { proceedToDispense(); }
-        else if (e.key === "Escape") { signOut(); }
+        }
+        // Enter => dispense
+        else if ((e.key === "Enter" || e.key === "NumpadEnter") && selectedItems.size > 0) {
+          proceedToDispense();
+        }
+        // ESC => sign out
+        else if (e.key === "Escape") {
+          signOut();
+        }
       }
     });
+
     dispenseButton.addEventListener("click", proceedToDispense);
     snackSignOut.addEventListener("click", signOut);
-    
-    // ----- Firebase: Send Dispense Signal and Log -----
+
+    // ------------------- Firebase: Send Dispense Signal and Log -------------------
     function sendDispenseSignal() {
-      // Build data payload for /data
-      let dataPayload = { Status: true, User: STUDENTS[studentId] || studentId };
-      for (let i = 0; i < snacks.length; i++) {
-        let key = "Item" + (i+1);
-        dataPayload[key] = selectedItems.has(snacks[i].id);
-      }
+      // Build /data object
+      let dataPayload = { 
+        Status: true, 
+        User: STUDENTS[studentId] || studentId 
+      };
+      snacks.forEach((snack, idx) => {
+        dataPayload["Item" + (idx+1)] = selectedItems.has(snack.id);
+      });
       db.ref("data").set(dataPayload);
       
-      // Build log payload
+      // Build /Logs entry
       const now = new Date();
-      const dateKey = `${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getFullYear()).slice(2)}`;
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const seconds = now.getSeconds();
-      const ampm = hours >= 12 ? "pm" : "am";
-      const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-      const timeString = `${displayHour}h:${String(minutes).padStart(2,'0')}m:${String(seconds).padStart(2,'0')}s${ampm}`;
+      const dateKey = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getFullYear()).slice(-2)}`;
+      const hh = now.getHours();
+      const mm = now.getMinutes().toString().padStart(2,'0');
+      const ss = now.getSeconds().toString().padStart(2,'0');
+      const ampm = hh >= 12 ? "pm" : "am";
+      const hour = (hh % 12 === 0) ? 12 : hh % 12;
+      const timeString = `${hour}h:${mm}m:${ss}s${ampm}`;
       
-      let payloadArr = [];
-      for (let i = 0; i < snacks.length; i++) {
-        if (selectedItems.has(snacks[i].id)) { payloadArr.push(i+1); }
-      }
-      const payloadStr = payloadArr.join(", ");
-      
-      const logEntry = { Time: timeString, User: STUDENTS[studentId] || studentId, Payload: payloadStr };
+      const payloadArr = [];
+      snacks.forEach((snack, idx) => {
+        if (selectedItems.has(snack.id)) payloadArr.push(idx+1);
+      });
+      const logEntry = {
+        Time: timeString,
+        User: STUDENTS[studentId] || studentId,
+        Payload: payloadArr.join(", ")
+      };
       db.ref("Logs/" + dateKey).push(logEntry);
     }
-    
-    // ----- Dispense Process -----
+
+    // ------------------- Dispense Flow -------------------
     function proceedToDispense() {
-      // Send firebase signal before showing dispense screen
+      // Send data to Firebase
       sendDispenseSignal();
+      // Move to Dispense Screen
       showScreen("dispense-screen");
       initDispenseScreen();
     }
-    
+
     function signOut() {
       clearInterval(countdownTimer);
       countdownValue = 5;
       showScreen("logo-screen");
     }
-    
-    // ----- Dispense Screen -----
+
+    // Dispense Screen
     const thankYouMsg = document.getElementById("thank-you-msg");
     const countdownEl = document.getElementById("countdown");
     const staySignedBtn = document.getElementById("stay-signed-btn");
+
     function initDispenseScreen() {
       const name = STUDENTS[studentId] || studentId || "Student";
       const firstName = name.split(" ")[0];
@@ -393,23 +698,39 @@
       countdownEl.textContent = countdownValue;
       startCountdown();
     }
+
     function startCountdown() {
       countdownTimer = setInterval(() => {
         countdownValue--;
         countdownEl.textContent = countdownValue;
-        if (countdownValue <= 0) { clearInterval(countdownTimer); signOut(); }
+        if (countdownValue <= 0) {
+          clearInterval(countdownTimer);
+          signOut();
+        }
       }, 1000);
     }
+
     staySignedBtn.addEventListener("click", () => {
       clearInterval(countdownTimer);
       showScreen("snack-screen");
-      initSnackScreen(); // clear previous selections
+      initSnackScreen(); // Clear selections
     });
+
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "dispense") {
-        if (e.key === "Enter") { clearInterval(countdownTimer); showScreen("snack-screen"); initSnackScreen(); }
-        else if (e.key === "Escape") { clearInterval(countdownTimer); signOut(); }
-        else { clearInterval(countdownTimer); }
+        if (e.key === "Enter" || e.key === "NumpadEnter") {
+          clearInterval(countdownTimer);
+          showScreen("snack-screen");
+          initSnackScreen();
+        }
+        else if (e.key === "Escape") {
+          clearInterval(countdownTimer);
+          signOut();
+        }
+        else {
+          // Any other key stops countdown
+          clearInterval(countdownTimer);
+        }
       }
     });
   </script>
