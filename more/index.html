@@ -1,59 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vending Machine</title>
 
-  <!-- Firebase scripts -->
+  <!-- Firebase scripts (v8) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
-    /* Global Reset & Base Styles */
+    /* ---------------------------------------------------
+       GLOBAL STYLES / RESETS
+    --------------------------------------------------- */
     * {
-      margin: 0; 
-      padding: 0; 
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
     }
     html, body {
-      width: 100%; 
-      height: 100%; 
+      width: 100%;
+      height: 100%;
       font-family: Arial, sans-serif;
+      background: white;
     }
-    /* Hide cursor everywhere */
+    /* Hide all cursors (as requested) */
     html, body, button, a {
       cursor: none !important;
     }
-
-    /* Button clicking effect */
+    /* Basic button click effect */
     button {
-      transition: transform 0.1s ease-in-out; 
+      transition: transform 0.1s;
       user-select: none;
     }
     button:active {
       transform: scale(0.95);
     }
-    
-    /* App Container - White background */
+
+    /* ---------------------------------------------------
+       APP CONTAINER & VERSION
+    --------------------------------------------------- */
     #app {
       position: relative;
       width: 100%;
       height: 100%;
-      background: white;
     }
-    
-    /* Version Label in bottom-left */
+    /* Version label in bottom-left corner */
     #version-label {
       position: fixed;
       bottom: 10px;
       left: 10px;
       font-size: 1em;
       color: #555;
-      z-index: 10000;
+      z-index: 9999;
     }
-    
-    /* Invisible Dev Button in top-right corner */
+
+    /* Invisible Dev button at top-right */
     #devButton {
       position: fixed;
       top: 0;
@@ -63,11 +65,14 @@
       background: transparent;
       border: none;
       cursor: pointer;
-      z-index: 9999;
       opacity: 0;
+      z-index: 9999;
     }
-    
-    /* Screen Base Class */
+
+    /* ---------------------------------------------------
+       SCREENS
+       Each screen is absolutely positioned & centered
+    --------------------------------------------------- */
     .screen {
       position: absolute;
       top: 50%;
@@ -78,14 +83,13 @@
       text-align: center;
       display: none;
     }
-    .active {
+    .screen.active {
       display: block;
     }
-    
-    /* Logo Screen */
-    #logo-screen {
-      position: relative;
-    }
+
+    /* ---------------------------------------------------
+       LOGO SCREEN
+    --------------------------------------------------- */
     #logo-screen img {
       width: 300px;
       height: 300px;
@@ -102,8 +106,10 @@
       font-size: 2.5em;
       color: #333;
     }
-    
-    /* Keypad Screen */
+
+    /* ---------------------------------------------------
+       KEYPAD SCREEN
+    --------------------------------------------------- */
     #keypad-screen h2 {
       margin-bottom: 20px;
       font-size: 2.2em;
@@ -122,7 +128,6 @@
       font-size: 3em;
       line-height: 70px;
     }
-    /* Keypad Grid */
     .keypad-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -140,15 +145,12 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      user-select: none;
     }
     .keypad-btn.backspace {
       background: red;
       color: white;
-      font-size: 2.5em;
     }
-
-    /* Shake animation when ID is invalid */
+    /* Shake animation on invalid ID */
     .shake {
       animation: shake 0.5s;
     }
@@ -160,18 +162,23 @@
       80% { transform: translateX(10px); }
       100% { transform: translateX(0); }
     }
-    
-    /* Snack Screen */
+
+    /* ---------------------------------------------------
+       SNACK SCREEN
+    --------------------------------------------------- */
+    /* Absolutely positioned so it doesn't overlap Keypad or Logo screens */
     #snack-screen {
-      /* Center everything vertically */
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      position: relative;
-      padding-top: 120px; /* space below top bar */
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 800px;
+      text-align: center;
+      display: none;
+      /* Provide top spacing for name/sign-out */
+      padding-top: 100px;
     }
-    /* User Name at top-left */
     #student-name {
       position: absolute;
       top: 10px;
@@ -179,7 +186,6 @@
       font-size: 2em;
       color: #333;
     }
-    /* Sign Out button at top-right */
     #snack-signout {
       position: absolute;
       top: 10px;
@@ -194,16 +200,15 @@
     }
     #snack-screen h2 {
       font-size: 2.5em;
-      margin: 0 0 30px 0; /* no top margin, some bottom margin */
+      margin-bottom: 30px;
       color: #333;
     }
+    /* Grid of snacks */
     #snack-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 15px;
-      max-width: 700px;
-      width: 100%;
-      margin: 0 auto 140px auto; /* bottom space for the button */
+      margin-bottom: 120px; /* Leave space for the button */
       justify-items: center;
     }
     .snack-item {
@@ -240,15 +245,24 @@
       cursor: pointer;
       display: none;
     }
-    
-    /* Dispense Screen */
+
+    /* ---------------------------------------------------
+       DISPENSE SCREEN
+    --------------------------------------------------- */
     #dispense-screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
       max-width: 600px;
-      padding: 30px;
+      text-align: center;
+      display: none;
       background: rgba(0, 0, 139, 0.8);
       border-radius: 10px;
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
       color: white;
+      padding: 30px;
     }
     #dispense-screen img {
       width: 100px;
@@ -273,20 +287,22 @@
       cursor: pointer;
       font-size: 1.5em;
     }
-    
-    /* Mobile Adjustments */
+
+    /* ---------------------------------------------------
+       MOBILE ADJUSTMENTS
+    --------------------------------------------------- */
     @media (max-width: 600px) {
       #logo-screen img {
-        width: 250px; 
+        width: 250px;
         height: 250px;
       }
       #logo-screen h2 {
         font-size: 2.2em;
       }
       .digit-box {
-        width: 80px; 
-        height: 80px; 
-        font-size: 3.5em; 
+        width: 80px;
+        height: 80px;
+        font-size: 3.5em;
         line-height: 80px;
       }
       .keypad-btn {
@@ -322,25 +338,26 @@
 </head>
 <body>
   <div id="app">
-    <!-- Invisible Dev Button -->
+    
+    <!-- Invisible dev button (top-right) -->
     <button id="devButton"></button>
-
-    <!-- Logo Screen -->
+    
+    <!-- LOGO SCREEN -->
     <div id="logo-screen" class="screen active">
-      <img src="fchs-logo.png" alt="Logo">
+      <img src="fchs-logo.png" alt="Logo" />
       <h2>Tap to Begin</h2>
     </div>
     
-    <!-- Keypad Screen -->
+    <!-- KEYPAD SCREEN -->
     <div id="keypad-screen" class="screen">
       <h2>Enter Student ID</h2>
       <div id="digit-display"></div>
       <div class="keypad-grid" id="keypad-buttons">
-        <!-- Created dynamically -->
+        <!-- Keypad buttons built dynamically -->
       </div>
     </div>
     
-    <!-- Snack Screen -->
+    <!-- SNACK SCREEN -->
     <div id="snack-screen" class="screen">
       <div id="student-name">Student Name</div>
       <button class="sign-out" id="snack-signout">Sign Out</button>
@@ -349,23 +366,23 @@
       <button id="dispense-button">Dispense Snacks</button>
     </div>
     
-    <!-- Dispense Screen -->
+    <!-- DISPENSE SCREEN -->
     <div id="dispense-screen" class="screen">
-      <img src="fchs-logo.png" alt="Logo">
+      <img src="fchs-logo.png" alt="Logo" />
       <h2 id="thank-you-msg">Thank you, Student!</h2>
       <div id="dispense-info">
-         <h3 id="dispense-text">Your snack(s) will be dispensed shortly</h3>
-         <p>Signing you out in <span id="countdown">5</span></p>
+        <h3 id="dispense-text">Your snack(s) will be dispensed shortly</h3>
+        <p>Signing you out in <span id="countdown">5</span></p>
       </div>
       <button class="stay-signed" id="stay-signed-btn">Stay Signed In</button>
     </div>
     
-    <!-- Version Label -->
+    <!-- VERSION LABEL -->
     <div id="version-label">v2.4.2</div>
   </div>
 
   <script>
-    // ------------------- Firebase Init -------------------
+    /* ------------------- FIREBASE INIT ------------------- */
     const firebaseConfig = {
       apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain: "cyberflashvend.firebaseapp.com",
@@ -378,15 +395,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ------------------- Globals -------------------
-    let currentScreen = "logo"; 
-    let studentId = "";
-    let selectedItems = new Set();
-    let countdownTimer = null;
-    let countdownValue = 5;
-    let idleTimer = null;
+    /* ------------------- GLOBALS ------------------- */
+    let currentScreen = "logo";        // "logo", "keypad", "snack", "dispense"
+    let studentId = "";               // The user PIN
+    let selectedItems = new Set();    // Tracks selected snacks
+    let countdownTimer = null;        // For the "signing out" countdown
+    let countdownValue = 5;           // Starting countdown value
+    let idleTimer = null;             // Auto-logout after inactivity
 
-    // ------------------- Student Data (No Firebase Auth) -------------------
+    /* ------------------- STUDENT DATA (PIN) ------------------- */
     const STUDENTS = {
       "260514": "Gavin Molter",
       "250257": "Amit Ghumaan",
@@ -402,7 +419,7 @@
       "260627": "Mason Robbins"
     };
 
-    // Our snack data
+    /* ------------------- SNACK DATA ------------------- */
     const snacks = [
       { id: "A1", name: "Chips", quantity: 8 },
       { id: "A2", name: "Cookies", quantity: 5 },
@@ -412,11 +429,11 @@
       { id: "B3", name: "Trail Mix", quantity: 9 }
     ];
 
-    // ------------------- Idle Timer (90s) -------------------
+    /* ------------------- IDLE TIMER (90s) ------------------- */
     function resetIdleTimer() {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        signOut();
+        signOut(); // auto-logout after 90s inactivity
       }, 90 * 1000);
     }
     document.addEventListener("keydown", resetIdleTimer);
@@ -425,13 +442,15 @@
     document.addEventListener("touchstart", resetIdleTimer);
     resetIdleTimer();
 
-    // ------------------- Show Screen Utility -------------------
+    /* ------------------- SCREEN NAVIGATION ------------------- */
     function showScreen(screenId) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(screenId).classList.add('active');
+      // Hide all screens
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      // Show the desired screen
+      document.getElementById(screenId).classList.add("active");
       currentScreen = screenId.split("-")[0];
 
-      // Disable dev button if not on logo or user is signed in
+      // Disable dev button if user is signed in or if not on the logo screen
       if (currentScreen !== "logo" || studentId !== "") {
         devButton.disabled = true;
         devButton.style.pointerEvents = "none";
@@ -441,7 +460,7 @@
       }
     }
 
-    // ------------------- Dev Button -------------------
+    /* ------------------- DEV BUTTON (INVISIBLE) ------------------- */
     const devButton = document.getElementById("devButton");
     devButton.addEventListener("click", () => {
       studentId = "DEV MODE";
@@ -450,7 +469,7 @@
       initSnackScreen();
     });
 
-    // ------------------- Logo Screen -------------------
+    /* ------------------- LOGO SCREEN ------------------- */
     const logoScreen = document.getElementById("logo-screen");
     logoScreen.addEventListener("click", () => {
       showScreen("keypad-screen");
@@ -463,19 +482,20 @@
       }
     });
 
-    // ------------------- Keypad Screen -------------------
+    /* ------------------- KEYPAD SCREEN ------------------- */
     const digitDisplay = document.getElementById("digit-display");
     const keypadButtons = document.getElementById("keypad-buttons");
     const maxDigits = 6;
 
-    // We also handle numpad keys
+    // Check both top row & numpad
     function isNumberKey(e) {
       return (
-        (e.key >= "0" && e.key <= "9") ||         // top row
+        (e.key >= "0" && e.key <= "9") ||               // top row
         (e.code.startsWith("Numpad") && e.key.length === 1) // numpad
       );
     }
 
+    // Layout for keypad
     const keypadLayout = [
       "1","2","3",
       "4","5","6",
@@ -486,9 +506,10 @@
     function initKeypad() {
       studentId = "";
       renderDigits();
+      // If keypad isn't built yet, build it
       if (keypadButtons.children.length === 0) {
-        keypadLayout.forEach(value => {
-          if (value === "") {
+        keypadLayout.forEach((val) => {
+          if (val === "") {
             // Empty placeholder
             const placeholder = document.createElement("div");
             placeholder.style.width = "100px";
@@ -497,13 +518,13 @@
           } else {
             const btn = document.createElement("div");
             btn.classList.add("keypad-btn");
-            if (value === "backspace") {
+            if (val === "backspace") {
               btn.classList.add("backspace");
               btn.textContent = "←";
               btn.addEventListener("click", handleBackspace);
             } else {
-              btn.textContent = value;
-              btn.addEventListener("click", () => handleDigitInput(value));
+              btn.textContent = val;
+              btn.addEventListener("click", () => handleDigitInput(val));
             }
             keypadButtons.appendChild(btn);
           }
@@ -516,7 +537,7 @@
       for (let i = 0; i < maxDigits; i++) {
         const box = document.createElement("div");
         box.classList.add("digit-box");
-        box.textContent = i < studentId.length ? "•" : "_";
+        box.textContent = (i < studentId.length) ? "•" : "_";
         digitDisplay.appendChild(box);
       }
     }
@@ -541,13 +562,12 @@
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "keypad") {
         if (isNumberKey(e)) {
-          // e.key = "0"..."9" or numpad
-          handleDigitInput(e.key[e.key.length-1]); 
-        }
-        else if (e.key === "Backspace") {
+          // last character is the digit
+          let pressedDigit = e.key[e.key.length-1];
+          handleDigitInput(pressedDigit);
+        } else if (e.key === "Backspace") {
           handleBackspace();
-        }
-        else if ((e.key === "Enter" || e.key === "NumpadEnter") && studentId.length === maxDigits) {
+        } else if ((e.key === "Enter" || e.key === "NumpadEnter") && studentId.length === maxDigits) {
           validateStudentId();
         }
       }
@@ -555,10 +575,12 @@
 
     function validateStudentId() {
       if (STUDENTS[studentId]) {
+        // Valid ID
         document.getElementById("student-name").textContent = STUDENTS[studentId];
         showScreen("snack-screen");
         initSnackScreen();
       } else {
+        // Invalid ID => shake & reset
         digitDisplay.classList.add("shake");
         setTimeout(() => {
           digitDisplay.classList.remove("shake");
@@ -568,7 +590,7 @@
       }
     }
 
-    // ------------------- Snack Screen -------------------
+    /* ------------------- SNACK SCREEN ------------------- */
     const snackGrid = document.getElementById("snack-grid");
     const dispenseButton = document.getElementById("dispense-button");
     const snackSignOut = document.getElementById("snack-signout");
@@ -581,7 +603,7 @@
 
     function renderSnackGrid() {
       snackGrid.innerHTML = "";
-      snacks.forEach(snack => {
+      snacks.forEach((snack) => {
         const snackDiv = document.createElement("div");
         snackDiv.classList.add("snack-item");
         snackDiv.innerHTML = `
@@ -601,33 +623,30 @@
         selectedItems.add(snackId);
         element.classList.add("selected");
       }
+      // Show/hide the Dispense button
       if (selectedItems.size > 0) {
         dispenseButton.style.display = "block";
-        dispenseButton.textContent = selectedItems.size === 1 ? "Dispense Snack" : "Dispense Snacks";
+        dispenseButton.textContent = (selectedItems.size === 1) ? "Dispense Snack" : "Dispense Snacks";
       } else {
         dispenseButton.style.display = "none";
       }
     }
 
-    // Let users pick items with numeric keys + press Enter
+    // Let user pick items & press Enter
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "snack") {
-        // "1"-"6" or "Numpad1"-"Numpad6" => toggle those items
         if (isNumberKey(e)) {
-          const digit = +e.key[e.key.length-1]; // last char => "1"..."9"
-          const index = digit - 1;
-          if (index >= 0 && index < snacks.length) {
-            const snackId = snacks[index].id;
-            const snackDiv = snackGrid.children[index];
+          // Key 1..6 => toggle items 1..6
+          let digit = +e.key[e.key.length-1];
+          let idx = digit - 1;
+          if (idx >= 0 && idx < snacks.length) {
+            const snackId = snacks[idx].id;
+            const snackDiv = snackGrid.children[idx];
             toggleSnackSelection(snackId, snackDiv);
           }
-        }
-        // Enter => dispense
-        else if ((e.key === "Enter" || e.key === "NumpadEnter") && selectedItems.size > 0) {
+        } else if ((e.key === "Enter" || e.key === "NumpadEnter") && selectedItems.size > 0) {
           proceedToDispense();
-        }
-        // ESC => sign out
-        else if (e.key === "Escape") {
+        } else if (e.key === "Escape") {
           signOut();
         }
       }
@@ -636,63 +655,83 @@
     dispenseButton.addEventListener("click", proceedToDispense);
     snackSignOut.addEventListener("click", signOut);
 
-    // ------------------- Firebase: Send Dispense Signal and Log -------------------
-    function sendDispenseSignal() {
-      // Build /data object
+    /* ------------------- FIREBASE: SEND SIGNAL & LOGS ------------------- */
+    async function sendDispenseSignal() {
+      // Construct /data payload
+      const userName = STUDENTS[studentId] || studentId;
       let dataPayload = { 
-        Status: true, 
-        User: STUDENTS[studentId] || studentId 
+        Status: true,
+        User: userName
       };
-      snacks.forEach((snack, idx) => {
-        dataPayload["Item" + (idx+1)] = selectedItems.has(snack.id);
+      snacks.forEach((snack, i) => {
+        dataPayload[`Item${i+1}`] = selectedItems.has(snack.id);
       });
-      db.ref("data").set(dataPayload);
-      
-      // Build /Logs entry
+
+      // Write /data
+      try {
+        await db.ref("data").set(dataPayload);
+        console.log("Firebase => /data set:", dataPayload);
+      } catch (err) {
+        console.error("Error writing /data:", err);
+      }
+
+      // Create log entry => /Logs
       const now = new Date();
-      const dateKey = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getFullYear()).slice(-2)}`;
-      const hh = now.getHours();
-      const mm = now.getMinutes().toString().padStart(2,'0');
-      const ss = now.getSeconds().toString().padStart(2,'0');
-      const ampm = hh >= 12 ? "pm" : "am";
-      const hour = (hh % 12 === 0) ? 12 : hh % 12;
-      const timeString = `${hour}h:${mm}m:${ss}s${ampm}`;
-      
+      const mon = String(now.getMonth()+1).padStart(2,'0');
+      const day = String(now.getDate()).padStart(2,'0');
+      const yr = String(now.getFullYear()).slice(-2);
+      const dateKey = `${mon}-${day}-${yr}`;
+
+      const hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2,'0');
+      const seconds = String(now.getSeconds()).padStart(2,'0');
+      const ampm = hours >= 12 ? "pm" : "am";
+      const hour = hours % 12 === 0 ? 12 : (hours % 12);
+      const timeString = `${hour}h:${minutes}m:${seconds}s${ampm}`;
+
       const payloadArr = [];
       snacks.forEach((snack, idx) => {
         if (selectedItems.has(snack.id)) payloadArr.push(idx+1);
       });
+
       const logEntry = {
         Time: timeString,
-        User: STUDENTS[studentId] || studentId,
+        User: userName,
         Payload: payloadArr.join(", ")
       };
-      db.ref("Logs/" + dateKey).push(logEntry);
+      try {
+        const logRef = await db.ref(`Logs/${dateKey}`).push(logEntry);
+        console.log("Firebase => /Logs entry added:", logEntry, "key=", logRef.key);
+      } catch (err) {
+        console.error("Error writing /Logs:", err);
+      }
     }
 
-    // ------------------- Dispense Flow -------------------
+    /* ------------------- DISPENSE FLOW ------------------- */
     function proceedToDispense() {
-      // Send data to Firebase
-      sendDispenseSignal();
-      // Move to Dispense Screen
-      showScreen("dispense-screen");
-      initDispenseScreen();
+      // 1) Write to Firebase
+      sendDispenseSignal().then(() => {
+        // 2) Show Dispense screen
+        showScreen("dispense-screen");
+        initDispenseScreen();
+      });
     }
 
     function signOut() {
       clearInterval(countdownTimer);
       countdownValue = 5;
       showScreen("logo-screen");
+      console.log("Signed out => returning to logo screen.");
     }
 
-    // Dispense Screen
+    /* ------------------- DISPENSE SCREEN ------------------- */
     const thankYouMsg = document.getElementById("thank-you-msg");
     const countdownEl = document.getElementById("countdown");
     const staySignedBtn = document.getElementById("stay-signed-btn");
 
     function initDispenseScreen() {
-      const name = STUDENTS[studentId] || studentId || "Student";
-      const firstName = name.split(" ")[0];
+      const userName = STUDENTS[studentId] || studentId || "Student";
+      const firstName = userName.split(" ")[0];
       thankYouMsg.textContent = `Thank you, ${firstName}!`;
       countdownValue = 5;
       countdownEl.textContent = countdownValue;
@@ -713,22 +752,24 @@
     staySignedBtn.addEventListener("click", () => {
       clearInterval(countdownTimer);
       showScreen("snack-screen");
-      initSnackScreen(); // Clear selections
+      initSnackScreen();
     });
 
     window.addEventListener("keydown", (e) => {
       if (currentScreen === "dispense") {
+        // Enter => back to snack screen
         if (e.key === "Enter" || e.key === "NumpadEnter") {
           clearInterval(countdownTimer);
           showScreen("snack-screen");
           initSnackScreen();
         }
+        // Escape => sign out
         else if (e.key === "Escape") {
           clearInterval(countdownTimer);
           signOut();
         }
+        // Any other key => stop countdown
         else {
-          // Any other key stops countdown
           clearInterval(countdownTimer);
         }
       }
