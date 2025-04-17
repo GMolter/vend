@@ -232,7 +232,41 @@
     const userModal=document.getElementById("userModal"),userList=document.getElementById("userList"),userModalClose=document.getElementById("userModalClose"),transModal=document.getElementById("transModal"),txnList=document.getElementById("txnList"),transModalClose=document.getElementById("transModalClose");
     function openTxnFlow(){if(studentId==="DEV MODE"){openUserSelect();}else{fetchAndShowTxns(studentId);}}
     async function openUserSelect(){userList.innerHTML="";userModal.style.display="block";const snap=await db.ref("Logs").once("value"),users=new Set();snap.forEach(d=>d.forEach(tx=>users.add(tx.val().User)));users.forEach(u=>{const btn=document.createElement("div");btn.textContent=u;btn.style.padding="8px";btn.style.cursor="pointer";btn.onclick=()=>{userModal.style.display="none";fetchAndShowTxns(u);};userList.appendChild(btn);});}
-    async function fetchAndShowTxns(user){txnList.innerHTML="";transModal.style.display="block";const snap=await db.ref("Logs").once("value");snap.forEach((d,dKey)=>{d.forEach(txSnap=>{const tx=txSnap.val();if(tx.User===user){const div=document.createElement("div");div.className="txn-item";div.innerHTML=`<span>${dKey} ${tx.Time}: ${tx.Payload}</span>`;if(studentId==="DEV MODE"){const del=document.createElement("button");del.className="delete-btn";del.textContent="Delete";del.onclick=async()=>{const pin=prompt("Enter delete PIN:");if(pin!="69420"){showToast("Wrong PIN");return;}await db.ref(`Logs/${dKey}/${txSnap.key}`).remove();div.remove();showToast("Deleted");};div.appendChild(del);}txnList.appendChild(div);}});} }
+    async function fetchAndShowTxns(user) {
+      txnList.innerHTML = "";
+      transModal.style.display = "block";
+      const snap = await db.ref("Logs").once("value");
+      snap.forEach((dateSnap, dateKey) => {
+        dateSnap.forEach(txSnap => {
+          const tx = txSnap.val();
+          if (tx.User === user) {
+            const div = document.createElement("div");
+            div.className = "txn-item";
+            div.innerHTML = `<span>${dateKey} ${tx.Time}: ${tx.Payload}</span>`;
+
+            if (studentId === "DEV MODE") {
+              const del = document.createElement("button");
+              del.className = "delete-btn";
+              del.textContent = "Delete";
+              del.onclick = async () => {
+                const pin = prompt("Enter delete PIN:");
+                if (pin !== "69420") {
+                  showToast("Wrong PIN");
+                  return;
+                }
+                await db.ref(`Logs/${dateKey}/${txSnap.key}`).remove();
+                div.remove();
+                showToast("Deleted");
+              };
+              div.appendChild(del);
+            }
+
+            txnList.appendChild(div);
+          }
+        });
+      });
+    }
+${tx.Time}: ${tx.Payload}</span>`;if(studentId==="DEV MODE"){const del=document.createElement("button");del.className="delete-btn";del.textContent="Delete";del.onclick=async()=>{const pin=prompt("Enter delete PIN:");if(pin!="69420"){showToast("Wrong PIN");return;}await db.ref(`Logs/${dKey}/${txSnap.key}`).remove();div.remove();showToast("Deleted");};div.appendChild(del);}txnList.appendChild(div);}});} }
 
     // dispense screen
     const thankYouMsg=document.getElementById("thank-you-msg"),countdownEl=document.getElementById("countdown"),stayBtn=document.getElementById("stay-signed-btn");
