@@ -2,81 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vending Machine</title>
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
-    /* RESET & GLOBALS */
     * { margin:0; padding:0; box-sizing:border-box; }
-    html,body { width:100%; height:100%; font-family:Arial,sans-serif; background:#fff; }
+    html, body { width:100%; height:100%; font-family:Arial, sans-serif; background:#fff; }
     html, body, button, a { cursor: none !important; }
-    button { transition:transform .1s; user-select:none; }
-    button:active { transform:scale(.95); }
-
-    /* APP & VERSION */
-    #app { position:relative; width:100%; height:100%; }
-    #version-label { position:fixed; bottom:10px; left:10px; color:#555; z-index:9999; }
-    #devButton { position:fixed; top:0; right:0; width:50px; height:50px; background:transparent; border:none; opacity:0; z-index:9999; }
-
-    /* SCREENS */
-    .screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:800px; text-align:center; display:none; }
-    .screen.active { display:block; }
-
-    /* LOGO */
-    #logo-screen img { width:300px; height:300px; border-radius:50%; box-shadow:0 0 20px rgba(0,0,0,.5); animation:pulse 2s infinite alternate; cursor:pointer; }
-    @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.05)}}
-    #logo-screen h2{margin-top:20px;font-size:2.5em;color:#333;}
-
-    /* KEYPAD */
-    #keypad-screen h2{margin-bottom:20px;font-size:2.2em;color:#333;}
-    #digit-display{display:flex;justify-content:center;margin-bottom:20px;}
-    .digit-box{width:70px;height:70px;margin:0 5px;border-bottom:2px solid #333;font-size:3em;line-height:70px;}
-    .keypad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;justify-items:center;}
-    .keypad-btn{width:100px;height:100px;border-radius:50%;background:rgba(0,0,0,.1);color:#333;font-size:2.5em;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-    .keypad-btn.backspace{background:red;color:#fff;}
-    .shake{animation:shake .5s;}
-    @keyframes shake{0%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-10px)}80%{transform:translateX(10px)}100%{transform:translateX(0)}}
-
-    /* SNACK */
-    #snack-screen{width:90%;max-width:800px;padding-top:100px;text-align:center;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
-    #student-name{position:absolute;top:10px;left:20px;font-size:2em;color:#333;}
-    #snack-signout,#openConfigBtn,#openShowKeyBtn{position:absolute;top:10px;padding:8px 12px;border:none;border-radius:4px;font-size:0.9em;cursor:pointer;}
-    #snack-signout{right:20px;background:#e74c3c;color:#fff;}
-    #openConfigBtn{left:50%;transform:translateX(-150%);background:#007bff;color:#fff;}
-    #openShowKeyBtn{left:50%;transform:translateX(50%);background:#007bff;color:#fff;}
-    #snack-screen h2{font-size:2.5em;margin-bottom:30px;color:#333;display:inline-block;}
-    .receipt-btn{display:inline-block;margin-left:10px;width:40px;height:40px;border-radius:50%;background:#007bff;color:#fff;font-size:1.5em;line-height:40px;cursor:pointer;vertical-align:middle;}
-    #snack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-bottom:120px;justify-items:center;}
-    .snack-item{background:rgba(0,0,0,.05);border:2px solid transparent;padding:15px;border-radius:8px;cursor:pointer;transition:background .3s,border-color .3s;text-align:center;}
-    .snack-item.selected{background:rgba(52,152,219,.4);border-color:#3498db;}
-    .snack-item h4{margin-bottom:5px;font-size:1.6em;}
-    .snack-item p{font-size:1.2em;}
-    #dispense-button{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);padding:25px 35px;font-size:1.8em;background:#2ecc71;border:none;border-radius:8px;color:#fff;cursor:pointer;display:none;}
-
-    /* TRANSACTIONS MODAL */
-    #userModal,#transModal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:400px;padding:20px;background:#fefefe;border-radius:8px;box-shadow:0 5px 15px rgba(0,0,0,.2);z-index:10000;}
-    .modal-header{margin-bottom:15px;font-size:1.4em;font-weight:bold;}
-    .modal-body{max-height:300px;overflow-y:auto;margin-bottom:15px;}
-    .modal-footer{text-align:right;}
-    .modal-footer button{margin-left:8px;}
-    .txn-item{padding:8px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;}
-    .delete-btn{background:#e74c3c;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;}
-
-    /* TOAST */
-    #toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;}
-    .toast{display:inline-block;background:rgba(0,0,0,.8);color:#fff;padding:10px 20px;margin-top:10px;border-radius:4px;opacity:0;animation:fadein .3s forwards,fadeout .3s forwards 2.7s;}
-    @keyframes fadein{to{opacity:1;}}@keyframes fadeout{to{opacity:0;}}
-
-    /* MOBILE */
-    @media(max-width:600px){#snack-screen h2{display:block;}.receipt-btn{margin:10px auto;}#userModal,#transModal{width:90%;}}
+    button { transition: transform .1s; }
+    button:active { transform: scale(.95); }
+    #version-label { position:fixed; bottom:10px; left:10px; color:#555; }
+    .screen { display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:800px; text-align:center; }
+    .active { display:block; }
+    #logo-screen img { width:250px; height:250px; border-radius:50%; animation:pulse 2s infinite alternate; }
+    @keyframes pulse { from{transform:scale(1);} to{transform:scale(1.05);} }
+    h2 { color:#333; }
+    /* Keypad */
+    .digit-box { display:inline-block; width:60px; border-bottom:2px solid #333; font-size:2.5em; margin:0 5px; }
+    .keypad-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:20px; }
+    .keypad-btn { width:80px; height:80px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; font-size:2em; }
+    .backspace { background:#e74c3c; color:#fff; }
+    /* Snack */
+    #snack-screen { width:100%; }
+    #student-name { position:absolute; top:10px; left:20px; font-size:1.8em; }
+    #snack-signout { position:absolute; top:10px; right:20px; padding:8px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; }
+    #snack-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:15px; margin-top:60px; }
+    .snack-item { padding:15px; background:#f4f4f4; border-radius:8px; cursor:pointer; }
+    .selected { border:2px solid #2ecc71; }
+    #dispense-button { margin-top:30px; padding:15px 30px; font-size:1.5em; background:#2ecc71; color:#fff; border:none; border-radius:4px; }
+    /* Modals */
+    .modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.3); }
+    .modal.active { display:block; }
+    .modal-header { font-weight:bold; margin-bottom:10px; }
+    .modal-body { max-height:200px; overflow-y:auto; margin-bottom:10px; }
+    .modal-footer { text-align:right; }
+    /* Toast */
+    #toast-container { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10000; }
+    .toast { background:rgba(0,0,0,.8); color:#fff; padding:10px 20px; border-radius:4px; margin-top:5px; opacity:0; animation:fadein .3s forwards, fadeout .3s forwards 2.5s; }
+    @keyframes fadein { to{opacity:1;} } @keyframes fadeout { to{opacity:0;} }
   </style>
 </head>
 <body>
   <div id="app">
-    <button id="devButton"></button>
-
     <div id="logo-screen" class="screen active">
       <img src="fchs-logo.png" alt="Logo" />
       <h2>Tap to Begin</h2>
@@ -89,48 +58,25 @@
     </div>
 
     <div id="snack-screen" class="screen">
-      <div id="student-name">Student Name</div>
+      <div id="student-name"></div>
       <button id="snack-signout">Sign Out</button>
-      <button id="openConfigBtn">Set Local Key</button>
-      <button id="openShowKeyBtn">View Local Key</button>
       <h2>Select a Snack</h2>
       <div class="receipt-btn" id="viewTxnBtn">📄</div>
       <div id="snack-grid"></div>
-      <button id="dispense-button">Dispense Snacks</button>
+      <button id="dispense-button">Dispense</button>
     </div>
 
     <div id="dispense-screen" class="screen">
-      <h2 id="thank-you-msg">Thank you, Student!</h2>
-      <div id="dispense-text">Your snack(s) will be dispensed shortly</div>
-      <p>Signing you out in <span id="countdown">5</span></p>
+      <h2 id="thank-you-msg"></h2>
+      <p id="dispense-text"></p>
+      <p>Signing you out in <span id="countdown"></span></p>
       <button id="stay-signed-btn">Stay Signed In</button>
     </div>
 
-    <div id="configModal" class="modal screen">
-      <div class="modal-header">Set Local Secret Key</div>
-      <div class="modal-body"><input id="configInput" placeholder="New local key" /></div>
-      <div class="modal-footer">
-        <button id="configClose">Close</button>
-        <button id="configSave">Save</button>
-      </div>
-    </div>
-
-    <div id="showKeyModal" class="modal screen">
-      <div class="modal-header">Local Secret Key</div>
-      <div class="modal-body"><strong id="savedKeyText"></strong></div>
-      <div class="modal-footer"><button id="showKeyClose">Close</button></div>
-    </div>
-
-    <div id="userModal" class="modal screen">
-      <div class="modal-header">Select User</div>
-      <div class="modal-body" id="userList"></div>
-      <div class="modal-footer"><button id="userModalClose">Close</button></div>
-    </div>
-
-    <div id="transModal" class="modal screen">
+    <div id="transModal" class="modal">
       <div class="modal-header">Transactions</div>
       <div class="modal-body" id="txnList"></div>
-      <div class="modal-footer"><button id="transModalClose">Close</button></div>
+      <div class="modal-footer"><button id="transClose">Close</button></div>
     </div>
 
     <div id="toast-container"></div>
@@ -138,9 +84,164 @@
   </div>
 
   <script>
-    const APP_VERSION = "v2.6.6";
-    document.getElementById("version-label").textContent = APP_VERSION;
-    // Initialization omitted for brevity
+    // FULL JS implementation
+    const APP_VERSION = 'v2.6.7';
+    document.getElementById('version-label').textContent = APP_VERSION;
+
+    // Firebase init
+    const firebaseConfig = {
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
+      projectId: "cyberflashvend",
+      storageBucket: "cyberflashvend.firebasestorage.app",
+      messagingSenderId: "63786658773",
+      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // State & data
+    let currentScreen = 'logo';
+    let studentId = '';
+    let selectedItems = new Set();
+    let countdownTimer;
+    let idleTimer;
+
+    const STUDENTS = {
+      '260514':'Gavin Molter','250257':'Amit Ghumaan','251022':'Sun Bawi',
+      '250202':'Mitchell Douglass','250298':'Heyden Halstead','270391':'Nate Jones',
+      '280335':'Calli Justice','260913':'Levi Kane','280508':'Colden Oakley',
+      '250606':'Madeline Penney','250639':'Rohan Rajanahalli','260627':'Mason Robbins'
+    };
+    const snacks = [
+      {id:'A1',name:'Chips'}, {id:'A2',name:'Cookies'}, {id:'A3',name:'Pretzels'},
+      {id:'B1',name:'Candy Bar'},{id:'B2',name:'Granola Bar'},{id:'B3',name:'Trail Mix'}
+    ];
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      currentScreen = id.replace('-screen','');
+    }
+
+    function resetIdle() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => signOut(), 90*1000);
+    }
+    ['mousemove','keydown','click','touchstart'].forEach(evt=>document.addEventListener(evt,resetIdle));
+    resetIdle();
+
+    // Logo
+    document.getElementById('logo-screen').addEventListener('click',()=>{
+      showScreen('keypad-screen'); initKeypad();
+    });
+    window.addEventListener('keydown',e=>{
+      if(currentScreen==='logo'){
+        showScreen('keypad-screen'); initKeypad();
+      }
+    });
+
+    // Keypad
+    const digitDisplay = document.getElementById('digit-display');
+    const keypadButtons = document.getElementById('keypad-buttons');
+    function initKeypad() {
+      studentId = '';
+      renderDigits();
+      if(keypadButtons.children.length===0) {
+        ['1','2','3','4','5','6','7','8','9','0','back'].forEach(val=>{
+          const btn = document.createElement('div');
+          btn.className = 'keypad-btn'+(val==='back'?' backspace':'');
+          btn.textContent = val==='back'?'←':val;
+          btn.addEventListener('click',()=>val==='back'?backspace():addDigit(val));
+          keypadButtons.appendChild(btn);
+        });
+      }
+    }
+    function renderDigits() {
+      digitDisplay.innerHTML='';
+      for(let i=0;i<6;i++){
+        const d = document.createElement('div'); d.className='digit-box';
+        d.textContent = i<studentId.length?'•':'_';
+        digitDisplay.appendChild(d);
+      }
+    }
+    function addDigit(num){ if(studentId.length<6){ studentId+=num; renderDigits(); if(studentId.length===6) validateID(); }}
+    function backspace(){ studentId=studentId.slice(0,-1); renderDigits(); }
+    window.addEventListener('keydown',e=>{
+      if(currentScreen==='keypad'){ resetIdle(); if(e.key.match(/^[0-9]$/))addDigit(e.key);
+        else if(e.key==='Backspace')backspace();
+      }
+    });
+    function validateID(){
+      if(STUDENTS[studentId]){
+        document.getElementById('student-name').textContent = STUDENTS[studentId];
+        showScreen('snack-screen'); initSnack();
+      } else {
+        digitDisplay.classList.add('shake');
+        setTimeout(()=>digitDisplay.classList.remove('shake'),500);
+      }
+    }
+
+    // Snack
+    const grid=document.getElementById('snack-grid');
+    function initSnack(){
+      selectedItems.clear(); grid.innerHTML='';
+      snacks.forEach(s=>{
+        const div=document.createElement('div'); div.className='snack-item';
+        div.textContent = s.name;
+        div.addEventListener('click',()=>{
+          if(selectedItems.has(s.id)){ selectedItems.delete(s.id); div.classList.remove('selected'); }
+          else { selectedItems.add(s.id); div.classList.add('selected'); }
+          document.getElementById('dispense-button').style.display = selectedItems.size?'block':'none';
+        });
+        grid.appendChild(div);
+      });
+    }
+    document.getElementById('dispense-button').addEventListener('click',()=>{
+      sendDispense(); showScreen('dispense-screen'); initDispense();
+    });
+
+    // Dispense logic
+    function sendDispense(){
+      const data = { Status:true, User: STUDENTS[studentId] };
+      snacks.forEach((s,i)=> data['Item'+(i+1)] = selectedItems.has(s.id));
+      db.ref('data').set(data);
+      const now=new Date(), key=now.toISOString().slice(0,10);
+      const log={ Time: now.toISOString(), User: STUDENTS[studentId], Payload:Array.from(selectedItems).join(',') };
+      db.ref('Logs/'+key).push(log);
+    }
+    function initDispense(){
+      let count=5; document.getElementById('countdown').textContent = count;
+      countdownTimer=setInterval(()=>{
+        count--; document.getElementById('countdown').textContent = count;
+        if(count<=0){ clearInterval(countdownTimer); signOut(); }
+      },1000);
+    }
+    document.getElementById('stay-signed-btn').addEventListener('click',()=>{
+      clearInterval(countdownTimer); showScreen('snack-screen'); initSnack();
+    });
+
+    function signOut(){ clearInterval(countdownTimer); showScreen('logo-screen'); }
+
+    // Transactions modal
+    document.getElementById('viewTxnBtn').addEventListener('click',async()=>{
+      const list=document.getElementById('txnList'); list.innerHTML='';
+      const snap=await db.ref('Logs').once('value');
+      snap.forEach(day=> day.forEach(tx=>{
+        const val=tx.val(); if(val.User===STUDENTS[studentId]){
+          const row=document.createElement('div'); row.textContent = `${day.key} ${val.Time} ${val.Payload}`;
+          list.appendChild(row);
+        }
+      }));
+      document.getElementById('transModal').classList.add('active');
+    });
+    document.getElementById('transClose').addEventListener('click',()=>{
+      document.getElementById('transModal').classList.remove('active');
+    });
+
+    // Initialize
+    showScreen('logo-screen');
   </script>
 </body>
 </html>
