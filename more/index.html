@@ -1,25 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Vending Machine</title>
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; height:100%; font-family:Arial, sans-serif; background:#fff; }
-    html, body, button, a { cursor: none !important; }
-    button { transition: transform .1s; }
-    button:active { transform: scale(.95); }
-
+    html,body { width:100%; height:100%; font-family:Arial,sans-serif; background:#fff; }
+    html,body,button,a { cursor:none!important; }
+    button { transition:transform .1s; }
+    button:active { transform:scale(.95); }
     #version-label { position:fixed; bottom:10px; left:10px; color:#555; }
 
     .screen {
       display:none;
-      position:absolute;
-      top:50%; left:50%;
+      position:absolute; top:50%; left:50%;
       transform:translate(-50%,-50%);
       width:90%; max-width:800px;
       text-align:center;
@@ -68,6 +66,11 @@
     #snack-screen h2 {
       margin-top:50px; font-size:2em; color:#333;
     }
+    #viewTxnBtn {
+      display:inline-block; margin-left:10px;
+      cursor:pointer; font-size:1.5em;
+      vertical-align:middle;
+    }
     #snack-grid {
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
@@ -84,8 +87,7 @@
       margin-top:30px; padding:15px 30px;
       font-size:1.5em; background:#2ecc71;
       color:#fff; border:none; border-radius:4px;
-      cursor:pointer;
-      display:none;
+      cursor:pointer; display:none;
     }
 
     /* Dispense */
@@ -126,29 +128,30 @@
 </head>
 <body>
   <div id="app">
-    <!-- Logo Screen -->
+    <!-- Logo -->
     <div id="logo-screen" class="screen active">
-      <img src="fchs-logo.png" alt="Logo" />
+      <img src="fchs-logo.png" alt="Logo"/>
       <h2>Tap to Begin</h2>
     </div>
 
-    <!-- Keypad Screen -->
+    <!-- Keypad -->
     <div id="keypad-screen" class="screen">
       <h2>Enter Student ID</h2>
       <div id="digit-display"></div>
       <div class="keypad-grid" id="keypad-buttons"></div>
     </div>
 
-    <!-- Snack Screen -->
+    <!-- Snack -->
     <div id="snack-screen" class="screen">
       <div id="student-name"></div>
       <button id="snack-signout">Sign Out</button>
       <h2>Select a Snack</h2>
+      <div id="viewTxnBtn">📄</div>
       <div id="snack-grid"></div>
       <button id="dispense-button">Dispense</button>
     </div>
 
-    <!-- Dispense Screen -->
+    <!-- Dispense -->
     <div id="dispense-screen" class="screen">
       <h2 id="thank-you-msg"></h2>
       <p id="dispense-text"></p>
@@ -165,16 +168,16 @@
       </div>
     </div>
 
-    <!-- Toast & Version -->
     <div id="toast-container"></div>
     <div id="version-label"></div>
   </div>
 
   <script>
-    // ---- CONFIG ----
+    // CONFIG
     const APP_VERSION = 'v2.6.7';
     document.getElementById('version-label').textContent = APP_VERSION;
 
+    // FIREBASE INIT
     firebase.initializeApp({
       apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain: "cyberflashvend.firebaseapp.com",
@@ -186,11 +189,11 @@
     });
     const db = firebase.database();
 
-    // ---- STATE ----
-    let currentScreen = 'logo';
-    let studentId = '';
-    let selectedItems = new Set();
-    let countdownTimer, idleTimer;
+    // STATE
+    let currentScreen = 'logo',
+        studentId = '',
+        selectedItems = new Set(),
+        countdownTimer, idleTimer;
 
     const STUDENTS = {
       '260514':'Gavin Molter','250257':'Amit Ghumaan','251022':'Sun Bawi',
@@ -207,189 +210,180 @@
       {id:'B3',name:'Trail Mix'}
     ];
 
-    // ---- UTILITIES ----
-    function showScreen(id) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    // UTIL
+    function showScreen(id){
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       currentScreen = id.replace('-screen','');
     }
-
-    function resetIdle() {
+    function resetIdle(){
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(signOut, 90*1000);
+      idleTimer = setTimeout(signOut,90*1000);
     }
-    ['mousemove','keydown','click','touchstart'].forEach(e => document.addEventListener(e, resetIdle));
+    ['mousemove','keydown','click','touchstart']
+      .forEach(e=>document.addEventListener(e,resetIdle));
     resetIdle();
-
-    function showToast(msg) {
+    function showToast(msg){
       const t = document.createElement('div');
-      t.className = 'toast';
-      t.textContent = msg;
+      t.className='toast'; t.textContent=msg;
       document.getElementById('toast-container').appendChild(t);
-      setTimeout(() => t.remove(), 3000);
+      setTimeout(()=>t.remove(),3000);
     }
 
-    // ---- LOGO SCREEN ----
-    document.getElementById('logo-screen').addEventListener('click', () => {
-      showScreen('keypad-screen');
-      initKeypad();
-    });
-    window.addEventListener('keydown', e => {
-      if (currentScreen === 'logo') {
+    // LOGO
+    document.getElementById('logo-screen')
+      .addEventListener('click',()=>{
+        showScreen('keypad-screen');
+        initKeypad();
+      });
+    window.addEventListener('keydown',e=>{
+      if(currentScreen==='logo'){
         showScreen('keypad-screen');
         initKeypad();
       }
     });
 
-    // ---- KEYPAD SCREEN ----
-    const digitDisplay = document.getElementById('digit-display');
-    const keypadButtons = document.getElementById('keypad-buttons');
-
-    function initKeypad() {
-      studentId = '';
-      renderDigits();
-      if (!keypadButtons.children.length) {
-        ['1','2','3','4','5','6','7','8','9','0','back'].forEach(val => {
-          const btn = document.createElement('div');
-          btn.className = 'keypad-btn' + (val === 'back' ? ' backspace' : '');
-          btn.textContent = val === 'back' ? '←' : val;
-          btn.addEventListener('click', () => val === 'back' ? backspace() : addDigit(val));
+    // KEYPAD
+    const digitDisplay = document.getElementById('digit-display'),
+          keypadButtons= document.getElementById('keypad-buttons');
+    function initKeypad(){
+      studentId=''; renderDigits();
+      if(!keypadButtons.children.length) {
+        ['1','2','3','4','5','6','7','8','9','0','back']
+        .forEach(v=>{
+          const btn=document.createElement('div');
+          btn.className='keypad-btn'+(v==='back'?' backspace':'');
+          btn.textContent=v==='back'?'←':v;
+          btn.addEventListener('click',()=>v==='back'?backspace():addDigit(v));
           keypadButtons.appendChild(btn);
         });
       }
     }
-
-    function renderDigits() {
-      digitDisplay.innerHTML = '';
-      for (let i = 0; i < 6; i++) {
-        const d = document.createElement('div');
-        d.className = 'digit-box';
-        d.textContent = i < studentId.length ? '•' : '_';
+    function renderDigits(){
+      digitDisplay.innerHTML='';
+      for(let i=0;i<6;i++){
+        const d=document.createElement('div');
+        d.className='digit-box';
+        d.textContent=i<studentId.length?'•':'_';
         digitDisplay.appendChild(d);
       }
     }
-
-    function addDigit(num) {
-      if (studentId.length < 6) {
-        studentId += num;
-        renderDigits();
-        if (studentId.length === 6) validateID();
+    function addDigit(n){
+      if(studentId.length<6){
+        studentId+=n; renderDigits();
+        if(studentId.length===6) validateID();
       }
     }
-    function backspace() {
-      studentId = studentId.slice(0, -1);
+    function backspace(){
+      studentId=studentId.slice(0,-1);
       renderDigits();
     }
-    window.addEventListener('keydown', e => {
-      if (currentScreen === 'keypad') {
+    window.addEventListener('keydown',e=>{
+      if(currentScreen==='keypad'){
         resetIdle();
-        if (/^[0-9]$/.test(e.key)) addDigit(e.key);
-        else if (e.key === 'Backspace') backspace();
+        if(/^[0-9]$/.test(e.key)) addDigit(e.key);
+        else if(e.key==='Backspace') backspace();
       }
     });
-
-    function validateID() {
-      if (STUDENTS[studentId]) {
-        document.getElementById('student-name').textContent = STUDENTS[studentId];
+    function validateID(){
+      if(STUDENTS[studentId]){
+        document.getElementById('student-name').textContent=STUDENTS[studentId];
         showScreen('snack-screen');
         initSnack();
       } else {
         digitDisplay.classList.add('shake');
-        setTimeout(() => digitDisplay.classList.remove('shake'), 500);
+        setTimeout(()=>digitDisplay.classList.remove('shake'),500);
         showToast('Invalid ID');
       }
     }
 
-    // ---- SNACK SCREEN ----
-    const grid = document.getElementById('snack-grid');
-    function initSnack() {
+    // SNACK
+    function initSnack(){
       selectedItems.clear();
-      grid.innerHTML = '';
-      snacks.forEach(s => {
-        const div = document.createElement('div');
-        div.className = 'snack-item';
-        div.textContent = s.name;
-        div.addEventListener('click', () => {
-          if (selectedItems.has(s.id)) {
+      const grid=document.getElementById('snack-grid');
+      grid.innerHTML='';
+      snacks.forEach(s=>{
+        const c=document.createElement('div');
+        c.className='snack-item';
+        c.textContent=s.name;
+        c.addEventListener('click',()=>{
+          if(selectedItems.has(s.id)){
             selectedItems.delete(s.id);
-            div.classList.remove('selected');
+            c.classList.remove('selected');
           } else {
             selectedItems.add(s.id);
-            div.classList.add('selected');
+            c.classList.add('selected');
           }
-          document.getElementById('dispense-button').style.display =
-            selectedItems.size ? 'block' : 'none';
+          document.getElementById('dispense-button')
+            .style.display=selectedItems.size?'block':'none';
         });
-        grid.appendChild(div);
+        grid.appendChild(c);
       });
     }
-    document.getElementById('dispense-button').addEventListener('click', () => {
-      sendDispense();
-      showScreen('dispense-screen');
-      initDispense();
-    });
-    document.getElementById('snack-signout').addEventListener('click', signOut);
+    document.getElementById('dispense-button')
+      .addEventListener('click',()=>{
+        sendDispense();
+        showScreen('dispense-screen');
+        initDispense();
+      });
+    document.getElementById('snack-signout')
+      .addEventListener('click',signOut);
 
-    // ---- DISPENSE SCREEN ----
-    function sendDispense() {
-      const data = { Status: true, User: STUDENTS[studentId] };
-      snacks.forEach((s, i) => (data['Item'+(i+1)] = selectedItems.has(s.id)));
-      db.ref('data').set(data);
-
-      const now = new Date();
-      const key = now.toISOString().slice(0,10);
-      const log = {
-        Time: now.toISOString(),
-        User: STUDENTS[studentId],
-        Payload: Array.from(selectedItems).join(',')
-      };
+    // DISPENSE
+    function sendDispense(){
+      const d={Status:true,User:STUDENTS[studentId]};
+      snacks.forEach((s,i)=>d['Item'+(i+1)]=selectedItems.has(s.id));
+      db.ref('data').set(d);
+      const now=new Date(),
+            key=now.toISOString().slice(0,10),
+            log={Time:now.toISOString(),
+                 User:STUDENTS[studentId],
+                 Payload:Array.from(selectedItems).join(',')};
       db.ref('Logs/'+key).push(log);
     }
-    function initDispense() {
-      let cnt = 5;
-      document.getElementById('countdown').textContent = cnt;
-      countdownTimer = setInterval(()=>{
-        cnt--;
-        document.getElementById('countdown').textContent = cnt;
-        if (cnt <= 0) {
-          clearInterval(countdownTimer),
-          signOut();
-        }
+    function initDispense(){
+      let cnt=5;
+      document.getElementById('countdown').textContent=cnt;
+      countdownTimer=setInterval(()=>{
+        cnt--; document.getElementById('countdown').textContent=cnt;
+        if(cnt<=0){ clearInterval(countdownTimer); signOut(); }
       },1000);
     }
-    document.getElementById('stay-signed-btn').addEventListener('click', ()=>{
-      clearInterval(countdownTimer);
-      showScreen('snack-screen');
-      initSnack();
-    });
+    document.getElementById('stay-signed-btn')
+      .addEventListener('click',()=>{
+        clearInterval(countdownTimer);
+        showScreen('snack-screen');
+        initSnack();
+      });
 
-    function signOut() {
+    // TRANSACTIONS
+    document.getElementById('viewTxnBtn')
+      .addEventListener('click',async ()=>{
+        const list=document.getElementById('txnList');
+        list.innerHTML='';
+        const snap=await db.ref('Logs').once('value');
+        snap.forEach(day=>day.forEach(tx=>{
+          const v=tx.val();
+          if(v.User===STUDENTS[studentId]){
+            const r=document.createElement('div');
+            r.textContent=`${day.key} ${v.Time} ${v.Payload}`;
+            list.appendChild(r);
+          }
+        }));
+        document.getElementById('transModal').classList.add('active');
+      });
+    document.getElementById('transClose')
+      .addEventListener('click',()=>{
+        document.getElementById('transModal').classList.remove('active');
+      });
+
+    // SIGN OUT
+    function signOut(){
       clearInterval(countdownTimer);
       showScreen('logo-screen');
     }
 
-    // ---- TRANSACTIONS MODAL ----
-    document.getElementById('viewTxnBtn').addEventListener('click', async ()=>{
-      const list = document.getElementById('txnList');
-      list.innerHTML = '';
-      const snap = await db.ref('Logs').once('value');
-      snap.forEach(day=>{
-        day.forEach(tx=>{
-          const v = tx.val();
-          if (v.User === STUDENTS[studentId]) {
-            const row = document.createElement('div');
-            row.textContent = `${day.key} ${v.Time} ${v.Payload}`;
-            list.appendChild(row);
-          }
-        });
-      });
-      document.getElementById('transModal').classList.add('active');
-    });
-    document.getElementById('transClose').addEventListener('click', ()=>{
-      document.getElementById('transModal').classList.remove('active');
-    });
-
-    // ---- INIT ----
+    // START
     showScreen('logo-screen');
   </script>
 </body>
