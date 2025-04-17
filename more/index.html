@@ -51,11 +51,12 @@
     #snack-signout { right:20px; background:#e74c3c; color:#fff; }
     #openConfigBtn  { left:50%; transform:translateX(-150%); background:#007bff; color:#fff; }
     #openShowKeyBtn { left:50%; transform:translateX(50%);  background:#007bff; color:#fff; }
-    #snack-screen h2 { font-size:2.5em; margin-bottom:10px; color:#333; display:inline-block; }
+    #snack-screen h2 { font-size:2.5em; margin-bottom:10px; color:#333; display:inline-block; vertical-align:middle; }
     #viewReceiptBtn {
-      background:#007bff; color:#fff; border:none; border-radius:50%;
-      width:36px; height:36px; font-size:1.2em; margin-left:8px; cursor:pointer;
-      vertical-align:middle;
+      background:transparent; border:none; padding:0; margin-left:8px; vertical-align:middle;
+    }
+    #viewReceiptBtn img {
+      width:32px; height:32px;
     }
     #snack-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:15px; margin-bottom:120px; justify-items:center; }
     .snack-item { background:rgba(0,0,0,.05); border:2px solid transparent; padding:15px; border-radius:8px; cursor:pointer; transition:background .3s,border-color .3s; text-align:center; }
@@ -73,13 +74,22 @@
     #stay-signed-btn { background:#2980b9; border:none; padding:12px 24px; font-size:1.2em; color:#fff; border-radius:8px; cursor:pointer; }
 
     /* MODALS */
-    .modal { width:300px; padding:20px; background:#fefefe; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.2); display:none; }
+    .modal { width:90%; max-width:400px; padding:20px; background:#fefefe; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.2); display:none; text-align:left; }
     .modal.screen.active { display:block; }
     .modal-header { margin-bottom:15px; font-size:1.4em; font-weight:bold; }
-    .modal-body { margin-bottom:15px; }
-    .modal input { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:1em; }
+    .modal-body { margin-bottom:15px; max-height:200px; overflow-y:auto; }
+    .modal-body div { margin-bottom:8px; }
     .modal-footer { text-align:right; }
-    .modal-footer button { margin-left:8px; }
+    .modal-footer button {
+      padding:10px 20px;
+      font-size:1.1em;
+      border:none;
+      background:#007bff;
+      color:#fff;
+      border-radius:4px;
+      cursor:pointer;
+      margin-left:8px;
+    }
 
     /* TOAST */
     #toast-container { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10000; }
@@ -128,7 +138,9 @@
       <button id="openShowKeyBtn">View Local Key</button>
       <h2>
         Select a Snack
-        <button id="viewReceiptBtn">🧾</button>
+        <button id="viewReceiptBtn">
+          <img src="0c1ebf05-5f1d-41a2-8e5c-22c8ea820801.png" alt="Receipt" />
+        </button>
       </h2>
       <div id="snack-grid"></div>
       <button id="dispense-button">Dispense Snacks</button>
@@ -165,9 +177,9 @@
 
     <div id="receiptModal" class="modal screen">
       <div class="modal-header">Your Transactions</div>
-      <div class="modal-body" id="receiptList" style="max-height:200px;overflow-y:auto"></div>
+      <div class="modal-body" id="receiptList"></div>
       <div class="modal-footer">
-        <button onclick="document.getElementById('receiptModal').style.display='none'">Close</button>
+        <button onclick="document.getElementById('receiptModal').classList.remove('active')">Close</button>
       </div>
     </div>
 
@@ -197,9 +209,7 @@
     async function checkSecret(){
       try {
         serverSecret = (await db.ref("Config").once("value")).val();
-      } catch(e) {
-        console.error(e);
-      }
+      } catch(e) { console.error(e); }
       initApp();
     }
     checkSecret();
@@ -212,13 +222,13 @@
         countdownTimer,
         countdownValue=5;
 
-    const STUDENTS={
+    const STUDENTS = {
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
       "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
       "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
       "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins"
     };
-    const snacks=[
+    const snacks = [
       {id:"A1",name:"Chips",quantity:8},
       {id:"A2",name:"Cookies",quantity:5},
       {id:"A3",name:"Pretzels",quantity:12},
@@ -230,18 +240,17 @@
     // Idle logout
     function resetIdle(){
       clearTimeout(idleTimer);
-      idleTimer=setTimeout(signOut,90*1000);
+      idleTimer = setTimeout(signOut, 90*1000);
     }
-    ["keydown","click","mousemove","touchstart"]
-      .forEach(e=>document.addEventListener(e,resetIdle));
+    ["keydown","click","mousemove","touchstart"].forEach(e=>document.addEventListener(e,resetIdle));
     resetIdle();
 
     // Show screen helper
     function showScreen(id){
       document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
-      currentScreen=id.split("-")[0];
-      const devBtn=document.getElementById("devButton");
+      currentScreen = id.split("-")[0];
+      const devBtn = document.getElementById("devButton");
       if(currentScreen!=="logo"||studentId!==""){
         devBtn.disabled=true; devBtn.style.pointerEvents="none";
       } else {
@@ -272,7 +281,7 @@
 
     // Enable cursor in dev
     function enableCursor(){
-      if(document.getElementById("cursorOverride"))return;
+      if(document.getElementById("cursorOverride")) return;
       const s=document.createElement("style");
       s.id="cursorOverride";
       s.innerHTML="html,body,button,a{cursor:auto!important}";
@@ -281,7 +290,7 @@
 
     // Dev mode via 'd'
     function setupDevKey(){
-      window.addEventListener("keydown",e=>{
+      window.addEventListener("keydown", e=>{
         if(e.key.toLowerCase()==="d") activateDev();
       });
       document.getElementById("devButton").addEventListener("click",activateDev);
@@ -296,12 +305,11 @@
 
     // Logo screen
     function setupLogo(){
-      document.getElementById("logo-screen")
-        .addEventListener("click",()=>{
-          showScreen("keypad-screen");
-          initKeypad();
-        });
-      window.addEventListener("keydown",e=>{
+      document.getElementById("logo-screen").addEventListener("click",()=>{
+        showScreen("keypad-screen");
+        initKeypad();
+      });
+      window.addEventListener("keydown", e=>{
         if(currentScreen==="logo"){
           showScreen("keypad-screen");
           initKeypad();
@@ -310,27 +318,29 @@
     }
 
     // Keypad screen
-    const digitDisplay=document.getElementById("digit-display"),
-          keypadButtons=document.getElementById("keypad-buttons"),
-          maxDigits=6;
+    const digitDisplay = document.getElementById("digit-display"),
+          keypadButtons = document.getElementById("keypad-buttons"),
+          maxDigits = 6;
     function setupKeypad(){
       initKeypad();
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="keypad"&&!e.repeat){
+      window.addEventListener("keydown", e=>{
+        if(currentScreen==="keypad" && !e.repeat){
           if(/^\d$/.test(e.key)){
             e.preventDefault();
             handleDigit(e.key);
           } else if(e.key==="Backspace"){
             e.preventDefault();
             handleBack();
-          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&studentId.length===maxDigits){
+          } else if((e.key==="Enter"||e.code==="NumpadEnter") && studentId.length===maxDigits){
             e.preventDefault();
             validateID();
+          } else if(e.key==="Escape"){
+            signOut();
           }
         }
       });
     }
-    const layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
+    const layout = ["1","2","3","4","5","6","7","8","9","","0","backspace"];
     function initKeypad(){
       studentId="";
       renderDigits();
@@ -361,7 +371,7 @@
       for(let i=0;i<maxDigits;i++){
         const d=document.createElement("div");
         d.classList.add("digit-box");
-        d.textContent=i<studentId.length?"•":"_";
+        d.textContent = i<studentId.length ? "•" : "_";
         digitDisplay.appendChild(d);
       }
     }
@@ -405,17 +415,19 @@
       dispenseBtn.addEventListener("click",proceedToDispense);
       cfgBtn.addEventListener("click",openConfigModal);
       showBtn.addEventListener("click",openShowKeyModal);
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="snack"&&!e.repeat){
+      window.addEventListener("keydown", e=>{
+        if(currentScreen==="snack" && !e.repeat){
           if(/^\d$/.test(e.key)){
-            const idx=+e.key-1;
-            if(idx>=0&&idx<snacks.length){
+            const idx = +e.key - 1;
+            if(idx>=0 && idx<snacks.length){
               toggleSnack(snacks[idx].id,snackGrid.children[idx]);
             }
-          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
+          } else if((e.key==="Enter"||e.code==="NumpadEnter") && selectedItems.size){
             proceedToDispense();
           } else if(e.key==="Escape"){
             signOut();
+          } else if(e.key.toLowerCase()==="r"){
+            document.getElementById("viewReceiptBtn").click();
           }
         }
       });
@@ -442,12 +454,8 @@
         selectedItems.add(id);
         el.classList.add("selected");
       }
-      if(selectedItems.size){
-        dispenseBtn.style.display="block";
-        dispenseBtn.textContent=selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
-      } else {
-        dispenseBtn.style.display="none";
-      }
+      dispenseBtn.style.display = selectedItems.size ? "block" : "none";
+      dispenseBtn.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
     }
 
     // Config modals
@@ -492,7 +500,6 @@
           const v=tx.val();
           if(v.User===me){
             const row=document.createElement("div");
-            row.style.marginBottom="8px";
             row.textContent=`${day.key} • ${v.Time} • Items: ${v.Payload}`;
             list.appendChild(row);
           }
@@ -559,6 +566,8 @@
           } else if(e.key==="Escape"){
             clearInterval(countdownTimer);
             signOut();
+          } else if(e.key.toLowerCase()==="r"){
+            document.getElementById("viewReceiptBtn").click();
           } else {
             clearInterval(countdownTimer);
           }
