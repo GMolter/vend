@@ -7,11 +7,6 @@
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <!-- iOS fullscreen -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="/manifest.json">
-
   <style>
     /* RESET & GLOBALS */
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -23,7 +18,13 @@
     /* APP & VERSION */
     #app { position:relative; width:100%; height:100%; }
     #version-label { position:fixed; bottom:10px; left:10px; color:#555; z-index:9999; }
-    #devButton { position:fixed; top:0; right:0; width:50px; height:50px; background:transparent; border:none; opacity:0; z-index:9999; }
+    #devButton {
+      position:fixed; top:0; right:0;
+      width:50px; height:50px;
+      background:transparent; border:none;
+      opacity:0; z-index:10001;
+      pointer-events:auto; cursor:pointer;
+    }
 
     /* SCREENS */
     .screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:800px; text-align:center; display:none; }
@@ -52,17 +53,21 @@
     /* SNACK */
     #snack-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:800px; padding-top:100px; text-align:center; }
     #student-name { position:absolute; top:10px; left:20px; font-size:2em; color:#333; }
-    #snack-signout, #openConfigBtn, #openShowKeyBtn { position:absolute; top:10px; padding:8px 12px; border:none; border-radius:4px; font-size:0.9em; cursor:pointer; }
-    #snack-signout { right:20px; background:#e74c3c; color:#fff; }
-    #openConfigBtn  { left:50%; transform:translateX(-150%); background:#007bff; color:#fff; }
-    #openShowKeyBtn { left:50%; transform:translateX(50%);  background:#007bff; color:#fff; }
+    #snack-signout {
+      position:absolute; top:10px; right:20px;
+      background:#e74c3c; color:#fff;
+      padding:12px 24px; font-size:1.3em; border:none; border-radius:4px; cursor:pointer;
+    }
+    #openConfigBtn, #openShowKeyBtn {
+      position:absolute; top:10px; padding:8px 12px; border:none; border-radius:4px; font-size:0.9em; cursor:pointer; background:#007bff; color:#fff;
+    }
+    #openConfigBtn  { left:20%; transform:translateX(-50%); }
+    #openShowKeyBtn { left:80%; transform:translateX(-50%); }
     #snack-screen h2 { font-size:2.5em; margin-bottom:10px; color:#333; display:inline-block; vertical-align:middle; }
     #viewReceiptBtn {
       background:transparent; border:none; padding:0; margin-left:8px; vertical-align:middle;
     }
-    #viewReceiptBtn img {
-      width:32px; height:32px;
-    }
+    #viewReceiptBtn img { width:32px; height:32px; }
     #snack-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:15px; margin-bottom:120px; justify-items:center; }
     .snack-item { background:rgba(0,0,0,.05); border:2px solid transparent; padding:15px; border-radius:8px; cursor:pointer; transition:background .3s,border-color .3s; text-align:center; }
     .snack-item.selected { background:rgba(52,152,219,.4); border-color:#3498db; }
@@ -82,18 +87,14 @@
     .modal { width:90%; max-width:400px; padding:20px; background:#fefefe; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.2); display:none; text-align:left; }
     .modal.screen.active { display:block; }
     .modal-header { margin-bottom:15px; font-size:1.4em; font-weight:bold; }
-    .modal-body { margin-bottom:15px; max-height:200px; overflow-y:auto; }
-    .modal-body div { margin-bottom:8px; }
+    .modal-body { padding:0 10px; max-height:240px; overflow-y:auto; font-size:1em; }
+    .modal-body .tx-item { margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #ddd; }
+    .modal-body .tx-item:last-child { border:none; }
+    .modal-body .tx-date { font-weight:bold; font-size:1.1em; }
+    .modal-body .tx-items { margin-left:10px; }
     .modal-footer { text-align:right; }
     .modal-footer button {
-      padding:10px 20px;
-      font-size:1.1em;
-      border:none;
-      background:#007bff;
-      color:#fff;
-      border-radius:4px;
-      cursor:pointer;
-      margin-left:8px;
+      padding:10px 20px; font-size:1.1em; border:none; background:#2980b9; color:#fff; border-radius:4px; cursor:pointer; margin-left:8px;
     }
 
     /* TOAST */
@@ -109,7 +110,8 @@
       .digit-box{width:80px;height:80px;font-size:3.5em;line-height:80px;}
       .keypad-btn{width:90px;height:90px;font-size:2.2em;}
       #student-name{font-size:1.8em;}
-      #snack-signout,#openConfigBtn,#openShowKeyBtn{font-size:1.2em;padding:8px;}
+      #snack-signout{font-size:1.1em;padding:10px 20px;}
+      #openConfigBtn,#openShowKeyBtn{font-size:1.2em;padding:8px;}
       #snack-screen h2{font-size:2.2em;}
       .snack-item h4{font-size:1.8em;}
       #dispense-button{font-size:2em;padding:30px 40px;}
@@ -144,7 +146,7 @@
       <h2>
         Select a Snack
         <button id="viewReceiptBtn">
-          <img src="download.png" alt="Receipt" />
+          <img src="032701a1-10c1-44d8-878a-f010220f53a5.png" alt="Receipt" />
         </button>
       </h2>
       <div id="snack-grid"></div>
@@ -159,6 +161,25 @@
       <button id="stay-signed-btn">Stay Signed In</button>
     </div>
 
+    <!-- Dev user selector -->
+    <div id="userSelectModal" class="modal screen">
+      <div class="modal-header">Select User</div>
+      <div class="modal-body" id="userList"></div>
+      <div class="modal-footer">
+        <button onclick="closeUserSelect()">Close</button>
+      </div>
+    </div>
+
+    <!-- Receipt modal -->
+    <div id="receiptModal" class="modal screen">
+      <div class="modal-header">Receipt for <span id="receiptUser"></span></div>
+      <div class="modal-body" id="receiptList"></div>
+      <div class="modal-footer">
+        <button onclick="document.getElementById('receiptModal').classList.remove('active')">Close</button>
+      </div>
+    </div>
+
+    <!-- Config modals -->
     <div id="configModal" class="modal screen">
       <div class="modal-header">Set Local Secret Key</div>
       <div class="modal-body">
@@ -177,14 +198,6 @@
       </div>
       <div class="modal-footer">
         <button id="showKeyClose">Close</button>
-      </div>
-    </div>
-
-    <div id="receiptModal" class="modal screen">
-      <div class="modal-header">Your Transactions</div>
-      <div class="modal-body" id="receiptList"></div>
-      <div class="modal-footer">
-        <button onclick="document.getElementById('receiptModal').classList.remove('active')">Close</button>
       </div>
     </div>
 
@@ -209,12 +222,12 @@
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // Read server key
+    // Server key fetch
     let serverSecret = null;
     async function checkSecret(){
       try {
         serverSecret = (await db.ref("Config").once("value")).val();
-      } catch(e) { console.error(e); }
+      } catch(e){ console.error(e); }
       initApp();
     }
     checkSecret();
@@ -223,9 +236,7 @@
     let currentScreen="logo",
         studentId="",
         selectedItems=new Set(),
-        idleTimer,
-        countdownTimer,
-        countdownValue=5;
+        idleTimer, countdownTimer, countdownValue=5;
 
     const STUDENTS = {
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
@@ -242,7 +253,7 @@
       {id:"B3",name:"Trail Mix",quantity:9}
     ];
 
-    // Idle logout
+    // Auto‑logout after 90s idle
     function resetIdle(){
       clearTimeout(idleTimer);
       idleTimer = setTimeout(signOut, 90*1000);
@@ -250,7 +261,7 @@
     ["keydown","click","mousemove","touchstart"].forEach(e=>document.addEventListener(e,resetIdle));
     resetIdle();
 
-    // Show screen helper
+    // Show/hide screens
     function showScreen(id){
       document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
@@ -263,9 +274,9 @@
       }
     }
 
-    // Init app
+    // Initialization
     function initApp(){
-      document.getElementById("version-label").textContent=APP_VERSION;
+      document.getElementById("version-label").textContent = APP_VERSION;
       setupDevKey();
       setupLogo();
       setupKeypad();
@@ -276,7 +287,7 @@
       showScreen("logo-screen");
     }
 
-    // Toast
+    // Simple toast
     function showToast(msg){
       const t=document.createElement("div");
       t.className="toast"; t.textContent=msg;
@@ -286,14 +297,14 @@
 
     // Enable cursor in dev
     function enableCursor(){
-      if(document.getElementById("cursorOverride")) return;
+      if(document.getElementById("cursorOverride"))return;
       const s=document.createElement("style");
       s.id="cursorOverride";
       s.innerHTML="html,body,button,a{cursor:auto!important}";
       document.head.appendChild(s);
     }
 
-    // Dev mode via 'd'
+    // DEV MODE via 'd'
     function setupDevKey(){
       window.addEventListener("keydown", e=>{
         if(e.key.toLowerCase()==="d") activateDev();
@@ -308,7 +319,7 @@
       enableCursor();
     }
 
-    // Logo screen
+    // LOGO screen
     function setupLogo(){
       document.getElementById("logo-screen").addEventListener("click",()=>{
         showScreen("keypad-screen");
@@ -322,7 +333,7 @@
       });
     }
 
-    // Keypad screen
+    // KEYPAD screen
     const digitDisplay = document.getElementById("digit-display"),
           keypadButtons = document.getElementById("keypad-buttons"),
           maxDigits = 6;
@@ -409,12 +420,12 @@
       }
     }
 
-    // Snack screen
-    const snackGrid=document.getElementById("snack-grid"),
-          dispenseBtn=document.getElementById("dispense-button"),
-          signOutBtn=document.getElementById("snack-signout"),
-          cfgBtn=document.getElementById("openConfigBtn"),
-          showBtn=document.getElementById("openShowKeyBtn");
+    // SNACK screen
+    const snackGrid = document.getElementById("snack-grid"),
+          dispenseBtn = document.getElementById("dispense-button"),
+          signOutBtn = document.getElementById("snack-signout"),
+          cfgBtn     = document.getElementById("openConfigBtn"),
+          showBtn    = document.getElementById("openShowKeyBtn");
     function setupSnack(){
       signOutBtn.addEventListener("click",signOut);
       dispenseBtn.addEventListener("click",proceedToDispense);
@@ -425,7 +436,7 @@
           if(/^\d$/.test(e.key)){
             const idx = +e.key - 1;
             if(idx>=0 && idx<snacks.length){
-              toggleSnack(snacks[idx].id,snackGrid.children[idx]);
+              toggleSnack(snacks[idx].id, snackGrid.children[idx]);
             }
           } else if((e.key==="Enter"||e.code==="NumpadEnter") && selectedItems.size){
             proceedToDispense();
@@ -460,10 +471,10 @@
         el.classList.add("selected");
       }
       dispenseBtn.style.display = selectedItems.size ? "block" : "none";
-      dispenseBtn.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
+      dispenseBtn.textContent = selectedItems.size===1 ? "Dispense Snack" : "Dispense Snacks";
     }
 
-    // Config modals
+    // CONFIG modals
     const configModal=document.getElementById("configModal"),
           configInput=document.getElementById("configInput"),
           configSave=document.getElementById("configSave"),
@@ -494,40 +505,74 @@
       document.getElementById("showKeyModal").style.display="block";
     }
 
-    // Receipt system
+    // RECEIPT & DEV user
     function setupReceipt(){
-      document.getElementById("viewReceiptBtn").addEventListener("click", async ()=>{
-        const list=document.getElementById("receiptList");
-        list.innerHTML="";
-        const me=STUDENTS[studentId]||studentId;
-        const snap=await db.ref("Logs").once("value");
-        snap.forEach(day=>day.forEach(tx=>{
-          const v=tx.val();
-          if(v.User===me){
-            const row=document.createElement("div");
-            row.textContent=`${day.key} • ${v.Time} • Items: ${v.Payload}`;
-            list.appendChild(row);
+      document.getElementById("viewReceiptBtn")
+        .addEventListener("click", async ()=>{
+          if(studentId==="DEV MODE"){
+            // show all users
+            const ul = document.getElementById("userList");
+            ul.innerHTML="";
+            Object.values(STUDENTS).forEach(name=>{
+              const b=document.createElement("button");
+              b.textContent=name;
+              b.style.display="block";
+              b.style.margin="6px 0";
+              b.style.padding="8px";
+              b.style.width="100%";
+              b.onclick=()=>{
+                document.getElementById("userSelectModal").classList.remove("active");
+                showReceiptsFor(name);
+              };
+              ul.appendChild(b);
+            });
+            document.getElementById("userSelectModal").classList.add("active");
+          } else {
+            showReceiptsFor(STUDENTS[studentId]||studentId);
           }
-        }));
-        document.getElementById("receiptModal").classList.add("active");
+        });
+    }
+    function closeUserSelect(){
+      document.getElementById("userSelectModal").classList.remove("active");
+    }
+    async function showReceiptsFor(name){
+      document.getElementById("receiptUser").textContent = name;
+      const list = document.getElementById("receiptList");
+      list.innerHTML="";
+      const snap = await db.ref("Logs").once("value");
+      snap.forEach(daySnap=>{
+        daySnap.forEach(txSnap=>{
+          const tx = txSnap.val();
+          if(tx.User===name){
+            // map numbers to snack names
+            const nums = tx.Payload.split(",").map(s=>+s.trim()),
+                  names = nums.map(i=>snacks[i-1]?.name||`Item${i}`);
+            const itm=document.createElement("div");
+            itm.classList.add("tx-item");
+            itm.innerHTML = 
+              `<div class="tx-date">${daySnap.key} @ ${tx.Time}</div>
+               <div class="tx-items">You got: ${names.join(", ")}</div>`;
+            list.appendChild(itm);
+          }
+        });
       });
+      document.getElementById("receiptModal").classList.add("active");
     }
 
-    // Dispense flow
+    // DISPENSE flow
     async function proceedToDispense(){
       if(!selectedItems.size) return;
       await sendDispenseSignal();
       showScreen("dispense-screen");
       initDispense();
     }
-
     function signOut(){
       clearInterval(countdownTimer);
       countdownValue=5;
       showScreen("logo-screen");
     }
 
-    // Send data & log
+    // send to RTDB + log
     async function sendDispenseSignal(){
       const localKey=localStorage.getItem("secretKey");
       if(localKey!==serverSecret){
@@ -552,7 +597,7 @@
       try{ await db.ref(`Logs/${key}`).push(log);}catch(e){console.error(e);}
     }
 
-    // Dispense screen
+    // DISPENSE screen
     const thankYouMsg=document.getElementById("thank-you-msg"),
           countdownEl=document.getElementById("countdown"),
           stayBtn=document.getElementById("stay-signed-btn");
@@ -562,7 +607,7 @@
         showScreen("snack-screen");
         initSnack();
       });
-      window.addEventListener("keydown",e=>{
+      window.addEventListener("keydown", e=>{
         if(currentScreen==="dispense"){
           if(e.key==="Enter"||e.code==="NumpadEnter"){
             clearInterval(countdownTimer);
