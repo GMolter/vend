@@ -10,7 +10,13 @@
   <style>
     /* RESET & GLOBALS */
     * { margin:0; padding:0; box-sizing:border-box; }
-    html,body { width:100%; height:100%; font-family:Arial,sans-serif; background:#fff; }
+    html, body {
+      width:100%; height:100%;
+      font-family:Arial,sans-serif;
+      background:#fff;
+      overflow: hidden;           /* REMOVE ALL SCROLLING */
+    }
+    /* hide cursor by default */
     html, body, button, a { cursor: none !important; }
     button { transition:transform .1s; user-select:none; }
     button:active { transform:scale(.95); }
@@ -22,12 +28,20 @@
       position:fixed; top:0; right:0;
       width:50px; height:50px;
       background:transparent; border:none;
-      opacity:0; z-index:10001;
-      pointer-events:auto; cursor:pointer;
+      opacity:0;
+      z-index:10002;
+      pointer-events:auto;
+      cursor:pointer;
     }
 
     /* SCREENS */
-    .screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:800px; text-align:center; display:none; }
+    .screen {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:90%; max-width:800px;
+      text-align:center;
+      display:none;
+    }
     .screen.active { display:block; }
 
     /* LOGO */
@@ -38,71 +52,135 @@
       cursor:pointer;
     }
     @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.05)} }
-    #logo-screen h2 { margin-top:20px; font-size:2.5em; color:#333; }
+    #logo-screen h2 {
+      margin-top:20px; font-size:2.5em; color:#333;
+      cursor:pointer;
+    }
 
     /* KEYPAD */
     #keypad-screen h2 { margin-bottom:20px; font-size:2.2em; color:#333; }
     #digit-display { display:flex; justify-content:center; margin-bottom:20px; }
-    .digit-box { width:70px; height:70px; margin:0 5px; border-bottom:2px solid #333; font-size:3em; line-height:70px; }
-    .keypad-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; justify-items:center; }
-    .keypad-btn { width:100px; height:100px; border-radius:50%; background:rgba(0,0,0,.1); color:#333; font-size:2.5em; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .digit-box {
+      width:70px; height:70px; margin:0 5px;
+      border-bottom:2px solid #333;
+      font-size:3em; line-height:70px;
+    }
+    .keypad-grid {
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:10px; justify-items:center;
+    }
+    .keypad-btn {
+      width:100px; height:100px; border-radius:50%;
+      background:rgba(0,0,0,.1); color:#333;
+      font-size:2.5em; display:flex;
+      align-items:center; justify-content:center;
+      cursor:pointer;
+    }
     .keypad-btn.backspace { background:red; color:#fff; }
     .shake { animation:shake .5s; }
-    @keyframes shake { 0%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-10px)}80%{transform:translateX(10px)}100%{transform:translateX(0)} }
+    @keyframes shake {
+      0%{transform:translateX(0)}20%{transform:translateX(-10px)}
+      40%{transform:translateX(10px)}60%{transform:translateX(-10px)}
+      80%{transform:translateX(10px)}100%{transform:translateX(0)}
+    }
 
     /* SNACK */
-    #snack-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:800px; padding-top:100px; text-align:center; }
-    #student-name { position:absolute; top:10px; left:20px; font-size:2em; color:#333; }
+    #snack-screen {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:90%; max-width:800px;
+      padding-top:100px; text-align:center;
+    }
+    #student-name {
+      position:absolute; top:10px; left:20px;
+      font-size:2em; color:#333;
+    }
     #snack-signout {
-      padding: 16px 32px !important;
-      font-size: 1.6em !important;
-      border-radius: 6px !important;
       position:absolute; top:10px; right:20px;
       background:#e74c3c; color:#fff;
-      padding:12px 24px; font-size:1.3em; border:none; border-radius:4px; cursor:pointer;
+      padding:16px 32px; font-size:1.6em;
+      border:none; border-radius:6px;
+      cursor:pointer;
     }
     #openConfigBtn, #openShowKeyBtn {
-      position:absolute; top:10px; padding:8px 12px; border:none; border-radius:4px; font-size:0.9em; cursor:pointer; background:#007bff; color:#fff;
+      position:absolute; top:10px; padding:8px 12px;
+      border:none; border-radius:4px; font-size:0.9em;
+      cursor:pointer; background:#007bff; color:#fff;
     }
-    #openConfigBtn  { left:20%; transform:translateX(-50%); }
-    #openShowKeyBtn { left:80%; transform:translateX(-50%); }
-    #snack-screen h2 { font-size:2.5em; margin-bottom:10px; color:#333; display:inline-block; vertical-align:middle; }
-    #viewReceiptBtn {
-      background:transparent; border:none; padding:0; margin-left:8px; vertical-align:middle;
+    #openConfigBtn  { left:50%; transform:translateX(-150%); }
+    #openShowKeyBtn { left:50%; transform:translateX(50%);  }
+    #snack-screen h2 {
+      font-size:2.5em; margin-bottom:30px; color:#333;
     }
-    #viewReceiptBtn img { width:32px; height:32px; }
-    #snack-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:15px; margin-bottom:120px; justify-items:center; }
-    .snack-item { background:rgba(0,0,0,.05); border:2px solid transparent; padding:15px; border-radius:8px; cursor:pointer; transition:background .3s,border-color .3s; text-align:center; }
-    .snack-item.selected { background:rgba(52,152,219,.4); border-color:#3498db; }
+    #snack-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+      gap:15px; margin-bottom:120px; justify-items:center;
+    }
+    .snack-item {
+      background:rgba(0,0,0,.05); border:2px solid transparent;
+      padding:15px; border-radius:8px; cursor:pointer;
+      transition:background .3s,border-color .3s; text-align:center;
+    }
+    .snack-item.selected {
+      background:rgba(52,152,219,.4); border-color:#3498db;
+    }
     .snack-item h4 { margin-bottom:5px; font-size:1.6em; }
     .snack-item p  { font-size:1.2em; }
-    #dispense-button { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); padding:25px 35px; font-size:1.8em; background:#2ecc71; border:none; border-radius:8px; color:#fff; cursor:pointer; display:none; }
+    #dispense-button {
+      position:absolute; bottom:20px; left:50%;
+      transform:translateX(-50%);
+      padding:25px 35px; font-size:1.8em;
+      background:#2ecc71; border:none;
+      border-radius:8px; color:#fff; cursor:pointer;
+      display:none;
+    }
 
     /* DISPENSE */
-    #dispense-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:600px; background:#2e3192; border-radius:15px; padding:40px; box-shadow:0 10px 30px rgba(0,0,0,.3); color:#fff; text-align:center; }
+    #dispense-screen {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:90%; max-width:600px;
+      background:#2e3192; border-radius:15px;
+      padding:40px; box-shadow:0 10px 30px rgba(0,0,0,.3);
+      color:#fff; text-align:center;
+    }
     #dispense-screen img { width:100px; height:100px; margin-bottom:20px; }
     #dispense-screen h2 { font-size:2.8em; margin-bottom:10px; font-weight:bold; }
     #dispense-screen #dispense-text { font-size:1.2em; margin-bottom:10px; }
     #dispense-screen p { font-size:1.4em; margin-bottom:20px; }
-    #stay-signed-btn { background:#2980b9; border:none; padding:12px 24px; font-size:1.2em; color:#fff; border-radius:8px; cursor:pointer; }
-
-    /* MODALS */
-    .modal { width:90%; max-width:400px; padding:20px; background:#fefefe; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.2); display:none; text-align:left; }
-    .modal.screen.active { display:block; }
-    .modal-header { margin-bottom:15px; font-size:1.4em; font-weight:bold; }
-    .modal-body { padding:0 10px; max-height:240px; overflow-y:auto; font-size:1em; }
-    .modal-body .tx-item { margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid #ddd; }
-    .modal-body .tx-item:last-child { border:none; }
-    .modal-body .tx-date { font-weight:bold; font-size:1.1em; }
-    .modal-body .tx-items { margin-left:10px; }
-    .modal-footer { text-align:right; }
-    .modal-footer button {
-      padding:10px 20px; font-size:1.1em; border:none; background:#2980b9; color:#fff; border-radius:4px; cursor:pointer; margin-left:8px;
+    #stay-signed-btn {
+      background:#2980b9; border:none; padding:12px 24px;
+      font-size:1.2em; color:#fff; border-radius:8px;
+      cursor:pointer;
     }
 
+    /* MODALS */
+    .modal {
+      width:300px; padding:20px; background:#fefefe;
+      border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.2);
+      display:none;
+    }
+    .modal.screen.active { display:block; }
+    .modal-header { margin-bottom:15px; font-size:1.4em; font-weight:bold; }
+    .modal-body { margin-bottom:15px; }
+    .modal input {
+      width:100%; padding:8px; border:1px solid #ccc;
+      border-radius:4px; font-size:1em;
+    }
+    .modal-footer { text-align:right; }
+    .modal-footer button { margin-left:8px; }
+
     /* TOAST */
-    #toast-container { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10000; }
-    .toast { display:inline-block; background:rgba(0,0,0,.8); color:#fff; padding:10px 20px; margin-top:10px; border-radius:4px; opacity:0; animation:fadein .3s forwards, fadeout .3s forwards 2.7s; }
+    #toast-container {
+      position:fixed; bottom:20px; left:50%;
+      transform:translateX(-50%); z-index:10000;
+    }
+    .toast {
+      display:inline-block; background:rgba(0,0,0,.8);
+      color:#fff; padding:10px 20px; margin-top:10px;
+      border-radius:4px; opacity:0;
+      animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
+    }
     @keyframes fadein { to { opacity:1; } }
     @keyframes fadeout { to { opacity:0; } }
 
@@ -113,7 +191,7 @@
       .digit-box{width:80px;height:80px;font-size:3.5em;line-height:80px;}
       .keypad-btn{width:90px;height:90px;font-size:2.2em;}
       #student-name{font-size:1.8em;}
-      #snack-signout{font-size:1.1em;padding:10px 20px;}
+      #snack-signout{font-size:1.4em;padding:14px 28px;}
       #openConfigBtn,#openShowKeyBtn{font-size:1.2em;padding:8px;}
       #snack-screen h2{font-size:2.2em;}
       .snack-item h4{font-size:1.8em;}
@@ -146,12 +224,7 @@
       <button id="snack-signout">Sign Out</button>
       <button id="openConfigBtn">Set Local Key</button>
       <button id="openShowKeyBtn">View Local Key</button>
-      <h2>
-        Select a Snack
-        <button id="viewReceiptBtn">
-          <img src="032701a1-10c1-44d8-878a-f010220f53a5.png" alt="Receipt" />
-        </button>
-      </h2>
+      <h2>Select a Snack</h2>
       <div id="snack-grid"></div>
       <button id="dispense-button">Dispense Snacks</button>
     </div>
@@ -164,30 +237,9 @@
       <button id="stay-signed-btn">Stay Signed In</button>
     </div>
 
-    <!-- Dev user selector -->
-    <div id="userSelectModal" class="modal screen">
-      <div class="modal-header">Select User</div>
-      <div class="modal-body" id="userList"></div>
-      <div class="modal-footer">
-        <button onclick="closeUserSelect()">Close</button>
-      </div>
-    </div>
-
-    <!-- Receipt modal -->
-    <div id="receiptModal" class="modal screen">
-      <div class="modal-header">Receipt for <span id="receiptUser"></span></div>
-      <div class="modal-body" id="receiptList"></div>
-      <div class="modal-footer">
-        <button onclick="document.getElementById('receiptModal').classList.remove('active')">Close</button>
-      </div>
-    </div>
-
-    <!-- Config modals -->
     <div id="configModal" class="modal screen">
       <div class="modal-header">Set Local Secret Key</div>
-      <div class="modal-body">
-        <input id="configInput" placeholder="New local key" />
-      </div>
+      <div class="modal-body"><input id="configInput" placeholder="New local key" /></div>
       <div class="modal-footer">
         <button id="configClose">Close</button>
         <button id="configSave">Save</button>
@@ -196,12 +248,8 @@
 
     <div id="showKeyModal" class="modal screen">
       <div class="modal-header">Local Secret Key</div>
-      <div class="modal-body">
-        <strong id="savedKeyText"></strong>
-      </div>
-      <div class="modal-footer">
-        <button id="showKeyClose">Close</button>
-      </div>
+      <div class="modal-body"><strong id="savedKeyText"></strong></div>
+      <div class="modal-footer"><button id="showKeyClose">Close</button></div>
     </div>
 
     <div id="toast-container"></div>
@@ -225,12 +273,14 @@
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // Server key fetch
+    // Read server key
     let serverSecret = null;
-    async function checkSecret(){
+    async function checkSecret() {
       try {
         serverSecret = (await db.ref("Config").once("value")).val();
-      } catch(e){ console.error(e); }
+      } catch(e) {
+        console.error(e);
+      }
       initApp();
     }
     checkSecret();
@@ -239,7 +289,9 @@
     let currentScreen="logo",
         studentId="",
         selectedItems=new Set(),
-        idleTimer, countdownTimer, countdownValue=5;
+        idleTimer,
+        countdownTimer,
+        countdownValue=5;
 
     const STUDENTS = {
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
@@ -256,29 +308,31 @@
       {id:"B3",name:"Trail Mix",quantity:9}
     ];
 
-    // Auto‑logout after 90s idle
-    function resetIdle(){
+    // Idle logout
+    function resetIdle() {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(signOut, 90*1000);
     }
-    ["keydown","click","mousemove","touchstart"].forEach(e=>document.addEventListener(e,resetIdle));
+    ["keydown","click","mousemove","touchstart"].forEach(e => document.addEventListener(e, resetIdle));
     resetIdle();
 
-    // Show/hide screens
-    function showScreen(id){
-      document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    // Show screen
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       currentScreen = id.split("-")[0];
       const devBtn = document.getElementById("devButton");
-      if(currentScreen!=="logo"||studentId!==""){
-        devBtn.disabled=true; devBtn.style.pointerEvents="none";
+      if (currentScreen !== "logo" || studentId !== "") {
+        devBtn.disabled = true;
+        devBtn.style.pointerEvents = "none";
       } else {
-        devBtn.disabled=false; devBtn.style.pointerEvents="auto";
+        devBtn.disabled = false;
+        devBtn.style.pointerEvents = "auto";
       }
     }
 
-    // Initialization
-    function initApp(){
+    // Init App
+    function initApp() {
       document.getElementById("version-label").textContent = APP_VERSION;
       setupDevKey();
       setupLogo();
@@ -286,35 +340,35 @@
       setupSnack();
       setupDispense();
       setupModals();
-      setupReceipt();
-      showScreen("logo-screen");
     }
 
-    // Simple toast
-    function showToast(msg){
-      const t=document.createElement("div");
-      t.className="toast"; t.textContent=msg;
+    // Toast
+    function showToast(msg) {
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = msg;
       document.getElementById("toast-container").appendChild(t);
-      setTimeout(()=>t.remove(),3000);
+      setTimeout(() => t.remove(), 3000);
     }
 
     // Enable cursor in dev
-    function enableCursor(){
-      if(document.getElementById("cursorOverride"))return;
-      const s=document.createElement("style");
-      s.id="cursorOverride";
-      s.innerHTML="html,body,button,a{cursor:auto!important}";
+    function enableCursor() {
+      if (document.getElementById("cursorOverride")) return;
+      const s = document.createElement("style");
+      s.id = "cursorOverride";
+      s.innerHTML = "html,body,button,a{cursor:auto!important}";
       document.head.appendChild(s);
     }
 
-    // DEV MODE via 'd'
-    function setupDevKey(){
-      window.addEventListener("keydown", e=>{
-        if(e.key.toLowerCase()==="d") activateDev();
+    // Dev via 'd'
+    const devButton =document.getElementById("devButton");
+    function setupDevKey() {
+      window.addEventListener("keydown", e => {
+        if (e.key.toLowerCase()==="d") activateDev();
       });
-      document.getElementById("devButton").addEventListener("click",activateDev);
+      devButton.addEventListener("click", activateDev);
     }
-    function activateDev(){
+    function activateDev() {
       studentId="DEV MODE";
       document.getElementById("student-name").textContent="DEV MODE";
       showScreen("snack-screen");
@@ -322,45 +376,46 @@
       enableCursor();
     }
 
-    // LOGO screen
-    function setupLogo(){
-      document.getElementById("logo-screen").addEventListener("click",()=>{
-        showScreen("keypad-screen");
-        initKeypad();
-      });
+    // Logo
+    function setupLogo() {
+      const logoImg = document.querySelector("#logo-screen img");
+      const logoTxt = document.querySelector("#logo-screen h2");
+      logoImg.addEventListener("click", ()=>{ showScreen("keypad-screen"); initKeypad(); });
+      logoTxt.addEventListener("click", ()=>{ showScreen("keypad-screen"); initKeypad(); });
       window.addEventListener("keydown", e=>{
-        if(currentScreen==="logo"){
+        if (currentScreen==="logo") {
           showScreen("keypad-screen");
           initKeypad();
         }
       });
     }
 
-    // KEYPAD screen
-    const digitDisplay = document.getElementById("digit-display"),
-          keypadButtons = document.getElementById("keypad-buttons"),
-          maxDigits = 6;
-    function setupKeypad(){
+    // Keypad
+    const digitDisplay =document.getElementById("digit-display"),
+          keypadButtons=document.getElementById("keypad-buttons"),
+          maxDigits=6;
+    function isNumKey(e) {
+      return /^\d$/.test(e.key) || (e.code.startsWith("Numpad") && e.key.length===1);
+    }
+    const layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
+    function setupKeypad() {
       initKeypad();
       window.addEventListener("keydown", e=>{
         if(currentScreen==="keypad" && !e.repeat){
-          if(/^\d$/.test(e.key)){
+          if(isNumKey(e)){
             e.preventDefault();
-            handleDigit(e.key);
+            handleDigit(e.key.slice(-1));
           } else if(e.key==="Backspace"){
             e.preventDefault();
             handleBack();
           } else if((e.key==="Enter"||e.code==="NumpadEnter") && studentId.length===maxDigits){
             e.preventDefault();
             validateID();
-          } else if(e.key==="Escape"){
-            signOut();
           }
         }
       });
     }
-    const layout = ["1","2","3","4","5","6","7","8","9","","0","backspace"];
-    function initKeypad(){
+    function initKeypad() {
       studentId="";
       renderDigits();
       if(!keypadButtons.children.length){
@@ -375,22 +430,22 @@
             if(val==="backspace"){
               btn.classList.add("backspace");
               btn.textContent="←";
-              btn.addEventListener("click",handleBack);
+              btn.addEventListener("click", handleBack);
             } else {
               btn.textContent=val;
-              btn.addEventListener("click",()=>handleDigit(val));
+              btn.addEventListener("click", ()=>handleDigit(val));
             }
             keypadButtons.appendChild(btn);
           }
         });
       }
     }
-    function renderDigits(){
+    function renderDigits() {
       digitDisplay.innerHTML="";
       for(let i=0;i<maxDigits;i++){
         const d=document.createElement("div");
         d.classList.add("digit-box");
-        d.textContent = i<studentId.length ? "•" : "_";
+        d.textContent=i<studentId.length?"•":"_";
         digitDisplay.appendChild(d);
       }
     }
@@ -423,30 +478,26 @@
       }
     }
 
-    // SNACK screen
-    const snackGrid = document.getElementById("snack-grid"),
-          dispenseBtn = document.getElementById("dispense-button"),
-          signOutBtn = document.getElementById("snack-signout"),
-          cfgBtn     = document.getElementById("openConfigBtn"),
-          showBtn    = document.getElementById("openShowKeyBtn");
+    // Snack
+    const snackGrid=document.getElementById("snack-grid"),
+          dispenseBtn=document.getElementById("dispense-button"),
+          signOutBtn=document.getElementById("snack-signout"),
+          cfgBtn=document.getElementById("openConfigBtn"),
+          showBtn=document.getElementById("openShowKeyBtn");
     function setupSnack(){
-      signOutBtn.addEventListener("click",signOut);
-      dispenseBtn.addEventListener("click",proceedToDispense);
-      cfgBtn.addEventListener("click",openConfigModal);
-      showBtn.addEventListener("click",openShowKeyModal);
+      signOutBtn.addEventListener("click", signOut);
+      dispenseBtn.addEventListener("click", proceedToDispense);
+      cfgBtn.addEventListener("click", openConfigModal);
+      showBtn.addEventListener("click", openShowKeyModal);
       window.addEventListener("keydown", e=>{
         if(currentScreen==="snack" && !e.repeat){
-          if(/^\d$/.test(e.key)){
-            const idx = +e.key - 1;
-            if(idx>=0 && idx<snacks.length){
-              toggleSnack(snacks[idx].id, snackGrid.children[idx]);
-            }
+          if(isNumKey(e)){
+            const idx=+e.key-1;
+            if(idx>=0 && idx<snacks.length) toggleSnack(snacks[idx].id, snackGrid.children[idx]);
           } else if((e.key==="Enter"||e.code==="NumpadEnter") && selectedItems.size){
             proceedToDispense();
           } else if(e.key==="Escape"){
             signOut();
-          } else if(e.key.toLowerCase()==="r"){
-            document.getElementById("viewReceiptBtn").click();
           }
         }
       });
@@ -458,7 +509,7 @@
         const d=document.createElement("div");
         d.classList.add("snack-item");
         d.innerHTML=`<h4>${s.name}</h4><p>ID: ${s.id} | Qty: ${s.quantity}</p>`;
-        d.addEventListener("click",()=>toggleSnack(s.id,d));
+        d.addEventListener("click", ()=>toggleSnack(s.id, d));
         snackGrid.appendChild(d);
       });
       dispenseBtn.style.display="none";
@@ -473,96 +524,45 @@
         selectedItems.add(id);
         el.classList.add("selected");
       }
-      dispenseBtn.style.display = selectedItems.size ? "block" : "none";
-      dispenseBtn.textContent = selectedItems.size===1 ? "Dispense Snack" : "Dispense Snacks";
+      if(selectedItems.size){
+        dispenseBtn.style.display="block";
+        dispenseBtn.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
+      } else {
+        dispenseBtn.style.display="none";
+      }
     }
 
-    // CONFIG modals
+    // Config modals
     const configModal=document.getElementById("configModal"),
           configInput=document.getElementById("configInput"),
           configSave=document.getElementById("configSave"),
           configClose=document.getElementById("configClose");
     function setupModals(){
-      configClose.addEventListener("click",()=>configModal.style.display="none");
-      configSave.addEventListener("click",saveLocalKey);
-      configInput.addEventListener("keydown",e=>{
+      configClose.addEventListener("click", ()=>configModal.style.display="none");
+      configSave.addEventListener("click", saveLocalKey);
+      configInput.addEventListener("keydown", e=>{
         if(e.key==="Enter") saveLocalKey();
       });
       document.getElementById("showKeyClose")
-        .addEventListener("click",()=>document.getElementById("showKeyModal").style.display="none");
+        .addEventListener("click", ()=>document.getElementById("showKeyModal").style.display="none");
     }
     function saveLocalKey(){
-      const k=configInput.value.trim();
+      const k = configInput.value.trim();
       if(!k){ showToast("Please enter a key"); return; }
-      localStorage.setItem("secretKey",k);
+      localStorage.setItem("secretKey", k);
       showToast("Local key updated");
       configModal.style.display="none";
     }
     function openConfigModal(){
-      configInput.value=localStorage.getItem("secretKey")||"";
+      configInput.value = localStorage.getItem("secretKey") || "";
       configModal.style.display="block";
     }
     function openShowKeyModal(){
-      document.getElementById("savedKeyText").textContent=
-        localStorage.getItem("secretKey")||"(none)";
+      document.getElementById("savedKeyText").textContent = localStorage.getItem("secretKey") || "(none)";
       document.getElementById("showKeyModal").style.display="block";
     }
 
-    // RECEIPT & DEV user
-    function setupReceipt(){
-      document.getElementById("viewReceiptBtn")
-        .addEventListener("click", async ()=>{
-          if(studentId==="DEV MODE"){
-            // show all users
-            const ul = document.getElementById("userList");
-            ul.innerHTML="";
-            Object.values(STUDENTS).forEach(name=>{
-              const b=document.createElement("button");
-              b.textContent=name;
-              b.style.display="block";
-              b.style.margin="6px 0";
-              b.style.padding="8px";
-              b.style.width="100%";
-              b.onclick=()=>{
-                document.getElementById("userSelectModal").classList.remove("active");
-                showReceiptsFor(name);
-              };
-              ul.appendChild(b);
-            });
-            document.getElementById("userSelectModal").classList.add("active");
-          } else {
-            showReceiptsFor(STUDENTS[studentId]||studentId);
-          }
-        });
-    }
-    function closeUserSelect(){
-      document.getElementById("userSelectModal").classList.remove("active");
-    }
-    async function showReceiptsFor(name){
-      document.getElementById("receiptUser").textContent = name;
-      const list = document.getElementById("receiptList");
-      list.innerHTML="";
-      const snap = await db.ref("Logs").once("value");
-      snap.forEach(daySnap=>{
-        daySnap.forEach(txSnap=>{
-          const tx = txSnap.val();
-          if(tx.User===name){
-            // map numbers to snack names
-            const nums = tx.Payload.split(",").map(s=>+s.trim()),
-                  names = nums.map(i=>snacks[i-1]?.name||`Item${i}`);
-            const itm=document.createElement("div");
-            itm.classList.add("tx-item");
-            itm.innerHTML = 
-              `<div class="tx-date">${daySnap.key} @ ${tx.Time}</div>
-               <div class="tx-items">You got: ${names.join(", ")}</div>`;
-            list.appendChild(itm);
-          }
-        });
-      });
-      document.getElementById("receiptModal").classList.add("active");
-    }
-
-    // DISPENSE flow
+    // Dispense flow
     async function proceedToDispense(){
       if(!selectedItems.size) return;
       await sendDispenseSignal();
@@ -575,37 +575,48 @@
       showScreen("logo-screen");
     }
 
-    // send to RTDB + log
+    // Send data & log
     async function sendDispenseSignal(){
-      const localKey=localStorage.getItem("secretKey");
-      if(localKey!==serverSecret){
+      const localKey = localStorage.getItem("secretKey");
+      if(localKey !== serverSecret){
         showToast("Unauthorized");
         return;
       }
-      const user=STUDENTS[studentId]||studentId;
-      const data={Status:true,User:user};
-      snacks.forEach((s,i)=>data[`Item${i+1}`]=selectedItems.has(s.id));
-      try{ await db.ref("data").update(data); }catch(e){console.error(e);}
-      const now=new Date(),
-            mm=("0"+(now.getMonth()+1)).slice(-2),
-            dd=("0"+now.getDate()).slice(-2),
-            yy=(""+now.getFullYear()).slice(-2).slice(-2),
-            key=`${mm}-${dd}-${yy}`,
-            h=now.getHours(), m=("0"+now.getMinutes()).slice(-2),
-            s=("0"+now.getSeconds()).slice(-2),
-            ap=h>=12?"pm":"am", hr=h%12||12,
-            time=`${hr}h:${m}m:${s}s${ap}`, payload=[];
+      const user = STUDENTS[studentId] || studentId;
+      const data = { Status:true, User:user };
+      snacks.forEach((s,i)=> data[`Item${i+1}`] = selectedItems.has(s.id));
+      try {
+        await db.ref("data").update(data);
+      } catch(e){
+        console.error(e);
+      }
+      const now = new Date(),
+            mm = ("0"+(now.getMonth()+1)).slice(-2),
+            dd = ("0"+now.getDate()).slice(-2),
+            yy = (""+now.getFullYear()).slice(-2).slice(-2),
+            key = `${mm}-${dd}-${yy}`,
+            h = now.getHours(),
+            m = ("0"+now.getMinutes()).slice(-2),
+            s = ("0"+now.getSeconds()).slice(-2),
+            ap = h>=12?"pm":"am",
+            hr = h%12||12,
+            time = `${hr}h:${m}m:${s}s${ap}`,
+            payload = [];
       snacks.forEach((_,i)=> selectedItems.has(snacks[i].id) && payload.push(i+1));
-      const log={Time:time,User:user,Payload:payload.join(", ")};
-      try{ await db.ref(`Logs/${key}`).push(log);}catch(e){console.error(e);}
+      const log = { Time:time, User:user, Payload:payload.join(", ") };
+      try {
+        await db.ref(`Logs/${key}`).push(log);
+      } catch(e){
+        console.error(e);
+      }
     }
 
-    // DISPENSE screen
-    const thankYouMsg=document.getElementById("thank-you-msg"),
-          countdownEl=document.getElementById("countdown"),
-          stayBtn=document.getElementById("stay-signed-btn");
+    // Dispense screen
+    const thankYouMsg = document.getElementById("thank-you-msg"),
+          countdownEl = document.getElementById("countdown"),
+          stayBtn     = document.getElementById("stay-signed-btn");
     function setupDispense(){
-      stayBtn.addEventListener("click",()=>{
+      stayBtn.addEventListener("click", ()=>{
         clearInterval(countdownTimer);
         showScreen("snack-screen");
         initSnack();
@@ -619,8 +630,6 @@
           } else if(e.key==="Escape"){
             clearInterval(countdownTimer);
             signOut();
-          } else if(e.key.toLowerCase()==="r"){
-            document.getElementById("viewReceiptBtn").click();
           } else {
             clearInterval(countdownTimer);
           }
@@ -628,14 +637,14 @@
       });
     }
     function initDispense(){
-      const user=STUDENTS[studentId]||studentId||"Student";
-      thankYouMsg.textContent=`Thank you, ${user.split(" ")[0]}!`;
-      countdownValue=5;
-      countdownEl.textContent=countdownValue;
-      countdownTimer=setInterval(()=>{
+      const user = STUDENTS[studentId]||studentId||"Student";
+      thankYouMsg.textContent = `Thank you, ${user.split(" ")[0]}!`;
+      countdownValue = 5;
+      countdownEl.textContent = countdownValue;
+      countdownTimer = setInterval(()=>{
         countdownValue--;
-        countdownEl.textContent=countdownValue;
-        if(countdownValue<=0){
+        countdownEl.textContent = countdownValue;
+        if(countdownValue <= 0){
           clearInterval(countdownTimer);
           signOut();
         }
