@@ -93,13 +93,13 @@
       padding:16px 32px; font-size:1.6em;
       border:none; border-radius:6px; cursor:pointer;
     }
-    #openConfigBtn, #openShowKeyBtn {
-      position:absolute; top:10px; padding:8px 12px;
-      border:none; border-radius:4px; font-size:0.9em;
-      cursor:pointer; background:#007bff; color:#fff;
+    #openConfigBtn {
+      position:absolute; top:10px; left:50%;
+      transform:translateX(-150%);
+      padding:8px 12px; border:none; border-radius:4px;
+      font-size:0.9em; cursor:pointer;
+      background:#007bff; color:#fff;
     }
-    #openConfigBtn  { left:50%; transform:translateX(-150%); }
-    #openShowKeyBtn { left:50%; transform:translateX(50%);  }
     #snack-screen h2 {
       font-size:2.5em; margin-bottom:30px; color:#333;
     }
@@ -187,7 +187,7 @@
       .keypad-btn{width:90px;height:90px;font-size:2.2em;}
       #student-name{font-size:1.8em;}
       #snack-signout{font-size:1.4em;padding:14px 28px;}
-      #openConfigBtn,#openShowKeyBtn{font-size:1.2em;padding:8px;}
+      #openConfigBtn{font-size:1.2em;padding:8px;}
       #snack-screen h2{font-size:2.2em;}
       .snack-item h4{font-size:1.8em;}
       #dispense-button{font-size:2em;padding:30px 40px;}
@@ -218,7 +218,6 @@
       <div id="student-name">Student Name</div>
       <button id="snack-signout">Sign Out</button>
       <button id="openConfigBtn">Set Local Key</button>
-      <button id="openShowKeyBtn">View Local Key</button>
       <h2>Select a Snack</h2>
       <div id="snack-grid"></div>
       <button id="dispense-button">Dispense Snacks</button>
@@ -243,23 +242,13 @@
       </div>
     </div>
 
-    <div id="showKeyModal" class="modal screen">
-      <div class="modal-header">Local Secret Key</div>
-      <div class="modal-body">
-        <strong id="savedKeyText"></strong>
-      </div>
-      <div class="modal-footer">
-        <button id="showKeyClose">Close</button>
-      </div>
-    </div>
-
     <div id="toast-container"></div>
     <div id="version-label"></div>
   </div>
 
   <script>
-    // prevent all touch‐drag scrolling
-    document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+    // prevent any touch‐drag scroll
+    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
     // APP VERSION
     const APP_VERSION = "v2.6.6";
@@ -280,9 +269,11 @@
     // get server key then init
     let serverSecret = null;
     async function checkSecret(){
-      try{
+      try {
         serverSecret = (await db.ref("Config").once("value")).val();
-      }catch(e){ console.error(e) }
+      } catch(e) {
+        console.error(e);
+      }
       initApp();
     }
     checkSecret();
@@ -313,23 +304,25 @@
       clearTimeout(idleTimer);
       idleTimer = setTimeout(signOut, 90*1000);
     }
-    ["keydown","click","mousemove","touchstart"].forEach(e=>document.addEventListener(e, resetIdle));
+    ["keydown","click","mousemove","touchstart"].forEach(e => document.addEventListener(e, resetIdle));
     resetIdle();
 
-    // show/hide screens
+    // screen switcher
     function showScreen(id){
-      document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       currentScreen = id.split("-")[0];
       const btn = document.getElementById("devButton");
       if(currentScreen!=="logo" || studentId!==""){
-        btn.disabled = true; btn.style.pointerEvents = "none";
+        btn.disabled = true;
+        btn.style.pointerEvents = "none";
       } else {
-        btn.disabled = false; btn.style.pointerEvents = "auto";
+        btn.disabled = false;
+        btn.style.pointerEvents = "auto";
       }
     }
 
-    // init all
+    // init routine
     function initApp(){
       document.getElementById("version-label").textContent = APP_VERSION;
       setupDevKey();
@@ -340,20 +333,21 @@
       setupModals();
     }
 
-    // tiny toast
+    // toast helper
     function showToast(msg){
       const t = document.createElement("div");
-      t.className="toast"; t.textContent=msg;
+      t.className="toast";
+      t.textContent=msg;
       document.getElementById("toast-container").appendChild(t);
-      setTimeout(()=>t.remove(),3000);
+      setTimeout(() => t.remove(), 3000);
     }
 
-    // allow pointer in dev mode
+    // enable pointer when in dev
     function enableCursor(){
       if(document.getElementById("cursorOverride")) return;
-      const s=document.createElement("style");
-      s.id="cursorOverride";
-      s.innerHTML="html,body,button,a{cursor:auto!important}";
+      const s = document.createElement("style");
+      s.id = "cursorOverride";
+      s.innerHTML = "html,body,button,a{cursor:auto!important}";
       document.head.appendChild(s);
     }
 
@@ -367,26 +361,26 @@
       devButton.addEventListener("click", activateDev);
     }
     function activateDev(){
-      studentId="DEV MODE";
-      document.getElementById("student-name").textContent="DEV MODE";
+      studentId = "DEV MODE";
+      document.getElementById("student-name").textContent = "DEV MODE";
       showScreen("snack-screen");
       initSnack();
       enableCursor();
     }
 
-    // logo screen → keypad
+    // logo → keypad
     function setupLogo(){
-      const img=document.querySelector("#logo-screen img"),
-            txt=document.querySelector("#logo-screen h2");
+      const img = document.querySelector("#logo-screen img"),
+            txt = document.querySelector("#logo-screen h2");
       ["click","touchstart"].forEach(evt=>{
         img.addEventListener(evt, e=>{
           if(evt==="touchstart") e.preventDefault();
           showScreen("keypad-screen"); initKeypad();
-        },{passive:false});
+        }, {passive:false});
         txt.addEventListener(evt, e=>{
           if(evt==="touchstart") e.preventDefault();
           showScreen("keypad-screen"); initKeypad();
-        },{passive:false});
+        }, {passive:false});
       });
       window.addEventListener("keydown", e=>{
         if(currentScreen==="logo"){
@@ -396,13 +390,13 @@
     }
 
     // KEYPAD
-    const digitDisplay=document.getElementById("digit-display"),
-          keypadButtons=document.getElementById("keypad-buttons"),
-          maxDigits=6;
+    const digitDisplay = document.getElementById("digit-display"),
+          keypadButtons = document.getElementById("keypad-buttons"),
+          maxDigits = 6;
     function isNumKey(e){
       return /^\d$/.test(e.key)||(e.code.startsWith("Numpad")&&e.key.length===1);
     }
-    const layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
+    const layout = ["1","2","3","4","5","6","7","8","9","","0","backspace"];
     function setupKeypad(){
       initKeypad();
       window.addEventListener("keydown", e=>{
@@ -411,7 +405,7 @@
             e.preventDefault(); handleDigit(e.key.slice(-1));
           } else if(e.key==="Backspace"){
             e.preventDefault(); handleBack();
-          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&studentId.length===maxDigits){
+          } else if((e.key==="Enter"||e.code==="NumpadEnter") && studentId.length===maxDigits){
             e.preventDefault(); validateID();
           }
         }
@@ -422,21 +416,21 @@
       if(!keypadButtons.children.length){
         layout.forEach(val=>{
           if(!val){
-            const ph=document.createElement("div");
-            ph.style.width="100px";ph.style.height="100px";
+            const ph = document.createElement("div");
+            ph.style.width="100px"; ph.style.height="100px";
             keypadButtons.appendChild(ph);
           } else {
-            const btn=document.createElement("div");
+            const btn = document.createElement("div");
             btn.classList.add("keypad-btn");
             if(val==="backspace"){
               btn.classList.add("backspace");
               btn.textContent="←";
-              btn.addEventListener("touchstart",e=>{e.preventDefault();handleBack();},{passive:false});
-              btn.addEventListener("click",handleBack);
+              btn.addEventListener("touchstart", e=>{ e.preventDefault(); handleBack(); },{passive:false});
+              btn.addEventListener("click", handleBack);
             } else {
               btn.textContent=val;
-              btn.addEventListener("touchstart",e=>{e.preventDefault();handleDigit(val);},{passive:false});
-              btn.addEventListener("click",()=>handleDigit(val));
+              btn.addEventListener("touchstart", e=>{ e.preventDefault(); handleDigit(val); },{passive:false});
+              btn.addEventListener("click", ()=>handleDigit(val));
             }
             keypadButtons.appendChild(btn);
           }
@@ -446,7 +440,7 @@
     function renderDigits(){
       digitDisplay.innerHTML="";
       for(let i=0;i<maxDigits;i++){
-        const d=document.createElement("div");
+        const d = document.createElement("div");
         d.classList.add("digit-box");
         d.textContent = i<studentId.length?"•":"_";
         digitDisplay.appendChild(d);
@@ -460,7 +454,7 @@
     }
     function handleBack(){
       if(studentId.length){
-        studentId=studentId.slice(0,-1); renderDigits();
+        studentId = studentId.slice(0,-1); renderDigits();
       }
     }
     function validateID(){
@@ -477,25 +471,23 @@
       }
     }
 
-    // SNACK
-    const snackGrid=document.getElementById("snack-grid"),
-          dispenseBtn=document.getElementById("dispense-button"),
-          signOutBtn=document.getElementById("snack-signout"),
-          cfgBtn=document.getElementById("openConfigBtn"),
-          showBtn=document.getElementById("openShowKeyBtn");
+    // SNACK SCREEN
+    const snackGrid = document.getElementById("snack-grid"),
+          dispenseBtn = document.getElementById("dispense-button"),
+          signOutBtn = document.getElementById("snack-signout"),
+          cfgBtn     = document.getElementById("openConfigBtn");
     function setupSnack(){
-      signOutBtn.addEventListener("click",signOut);
-      signOutBtn.addEventListener("touchstart",e=>{e.preventDefault();signOut();},{passive:false});
-      dispenseBtn.addEventListener("click",proceedToDispense);
-      dispenseBtn.addEventListener("touchstart",e=>{e.preventDefault();proceedToDispense();},{passive:false});
-      cfgBtn.addEventListener("click",openConfigModal);
-      showBtn.addEventListener("click",openShowKeyModal);
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="snack"&&!e.repeat){
+      signOutBtn.addEventListener("click", signOut);
+      signOutBtn.addEventListener("touchstart", e=>{ e.preventDefault(); signOut(); },{passive:false});
+      dispenseBtn.addEventListener("click", proceedToDispense);
+      dispenseBtn.addEventListener("touchstart", e=>{ e.preventDefault(); proceedToDispense(); },{passive:false});
+      cfgBtn.addEventListener("click", openConfigModal);
+      window.addEventListener("keydown", e=>{
+        if(currentScreen==="snack" && !e.repeat){
           if(isNumKey(e)){
-            const idx=+e.key-1;
-            if(idx>=0&&idx<snacks.length) toggleSnack(snacks[idx].id,snackGrid.children[idx]);
-          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
+            const idx = +e.key-1;
+            if(idx>=0 && idx<snacks.length) toggleSnack(snacks[idx].id, snackGrid.children[idx]);
+          } else if((e.key==="Enter"||e.code==="NumpadEnter") && selectedItems.size){
             proceedToDispense();
           } else if(e.key==="Escape"){
             signOut();
@@ -507,19 +499,18 @@
       selectedItems.clear();
       snackGrid.innerHTML="";
       snacks.forEach(s=>{
-        const d=document.createElement("div");
+        const d = document.createElement("div");
         d.classList.add("snack-item");
-        d.innerHTML=`<h4>${s.name}</h4><p>ID: ${s.id} | Qty: ${s.quantity}</p>`;
-        d.addEventListener("touchstart",e=>{e.preventDefault();toggleSnack(s.id,d);},{passive:false});
-        d.addEventListener("click",()=>toggleSnack(s.id,d));
+        d.innerHTML = `<h4>${s.name}</h4><p>ID: ${s.id} | Qty: ${s.quantity}</p>`;
+        d.addEventListener("touchstart", e=>{ e.preventDefault(); toggleSnack(s.id, d); },{passive:false});
+        d.addEventListener("click", ()=>toggleSnack(s.id, d));
         snackGrid.appendChild(d);
       });
       dispenseBtn.style.display="none";
-      // show config/view-key only if in DEV MODE
-      cfgBtn.style.display   = (studentId==="DEV MODE") ? "block" : "none";
-      showBtn.style.display  = (studentId==="DEV MODE") ? "block" : "none";
+      // only show Set Key when in DEV MODE
+      cfgBtn.style.display = (studentId==="DEV MODE") ? "block" : "none";
     }
-    function toggleSnack(id,el){
+    function toggleSnack(id, el){
       if(selectedItems.has(id)){
         selectedItems.delete(id); el.classList.remove("selected");
       } else {
@@ -533,28 +524,24 @@
       }
     }
 
-    // CONFIG MODALS
-    const configModal=document.getElementById("configModal"),
-          configInput=document.getElementById("configInput"),
-          configSave=document.getElementById("configSave"),
-          configClose=document.getElementById("configClose");
+    // CONFIG MODAL
+    const configModal = document.getElementById("configModal"),
+          configInput = document.getElementById("configInput"),
+          configSave  = document.getElementById("configSave"),
+          configClose = document.getElementById("configClose");
     function setupModals(){
-      configClose.addEventListener("click",()=>configModal.style.display="none");
-      configClose.addEventListener("touchstart",e=>{e.preventDefault();configModal.style.display="none";},{passive:false});
-      configSave.addEventListener("click",saveLocalKey);
-      configSave.addEventListener("touchstart",e=>{e.preventDefault();saveLocalKey();},{passive:false});
-      configInput.addEventListener("keydown",e=>{
+      configClose.addEventListener("click", ()=>configModal.style.display="none");
+      configClose.addEventListener("touchstart", e=>{ e.preventDefault(); configModal.style.display="none"; },{passive:false});
+      configSave.addEventListener("click", saveLocalKey);
+      configSave.addEventListener("touchstart", e=>{ e.preventDefault(); saveLocalKey(); },{passive:false});
+      configInput.addEventListener("keydown", e=>{
         if(e.key==="Enter") saveLocalKey();
       });
-      document.getElementById("showKeyClose")
-        .addEventListener("click",()=>document.getElementById("showKeyModal").style.display="none");
-      document.getElementById("showKeyClose")
-        .addEventListener("touchstart",e=>{e.preventDefault();document.getElementById("showKeyModal").style.display="none";},{passive:false});
     }
     function saveLocalKey(){
-      const k=configInput.value.trim();
+      const k = configInput.value.trim();
       if(!k){ showToast("Please enter a key"); return; }
-      localStorage.setItem("secretKey",k);
+      localStorage.setItem("secretKey", k);
       showToast("Local key updated");
       configModal.style.display="none";
     }
@@ -562,14 +549,10 @@
       configInput.value = localStorage.getItem("secretKey")||"";
       configModal.style.display="block";
     }
-    function openShowKeyModal(){
-      document.getElementById("savedKeyText").textContent = localStorage.getItem("secretKey")||"(none)";
-      document.getElementById("showKeyModal").style.display="block";
-    }
 
     // DISPENSE FLOW
     async function proceedToDispense(){
-      if(!selectedItems.size)return;
+      if(!selectedItems.size) return;
       await sendDispenseSignal();
       showScreen("dispense-screen");
       initDispense();
@@ -579,49 +562,55 @@
     function signOut(){
       clearInterval(countdownTimer);
       countdownValue = 5;
-      // reset ID so DEV MODE can be reactivated
+      // reset so DEV can re-enable
       studentId = "";
       document.getElementById("student-name").textContent = "Student Name";
       showScreen("logo-screen");
     }
 
-    // SEND & LOG
+    // FIREBASE UPDATE + LOG
     async function sendDispenseSignal(){
       const localKey = localStorage.getItem("secretKey");
-      if(localKey!==serverSecret){
+      if(localKey !== serverSecret){
         showToast("Unauthorized");
         return;
       }
-      const user = STUDENTS[studentId]||studentId;
+      const user = STUDENTS[studentId] || studentId;
       const data = { Status:true, User:user };
-      snacks.forEach((s,i)=>data[`Item${i+1}`] = selectedItems.has(s.id));
-      try{ await db.ref("data").update(data); }catch(e){console.error(e);}
-      const now=new Date(),
-            mm=("0"+(now.getMonth()+1)).slice(-2),
-            dd=("0"+now.getDate()).slice(-2),
-            yy=(""+now.getFullYear()).slice(-2).slice(-2),
-            key=`${mm}-${dd}-${yy}`,
-            h=now.getHours(), m=("0"+now.getMinutes()).slice(-2),
-            s=("0"+now.getSeconds()).slice(-2),
-            ap=h>=12?"pm":"am", hr=h%12||12,
-            time=`${hr}h:${m}m:${s}s${ap}`, payload=[];
-      snacks.forEach((_,i)=>selectedItems.has(snacks[i].id)&&payload.push(i+1));
-      const log={Time:time,User:user,Payload:payload.join(", ")};
-      try{ await db.ref(`Logs/${key}`).push(log);}catch(e){console.error(e);}
+      snacks.forEach((s,i)=> data[`Item${i+1}`] = selectedItems.has(s.id));
+      try { await db.ref("data").update(data); }
+      catch(e){ console.error(e); }
+
+      const now = new Date(),
+            mm  = ("0"+(now.getMonth()+1)).slice(-2),
+            dd  = ("0"+now.getDate()).slice(-2),
+            yy  = (""+now.getFullYear()).slice(-2).slice(-2),
+            key = `${mm}-${dd}-${yy}`,
+            h   = now.getHours(),
+            m   = ("0"+now.getMinutes()).slice(-2),
+            s   = ("0"+now.getSeconds()).slice(-2),
+            ap  = h>=12?"pm":"am",
+            hr  = h%12||12,
+            time = `${hr}h:${m}m:${s}s${ap}`,
+            payload=[];
+      snacks.forEach((_,i)=> selectedItems.has(snacks[i].id) && payload.push(i+1));
+      const log = { Time:time, User:user, Payload:payload.join(", ") };
+      try { await db.ref(`Logs/${key}`).push(log); }
+      catch(e){ console.error(e); }
     }
 
     // DISPENSE SCREEN
-    const thankYouMsg=document.getElementById("thank-you-msg"),
-          countdownEl=document.getElementById("countdown"),
-          stayBtn=document.getElementById("stay-signed-btn");
+    const thankYouMsg = document.getElementById("thank-you-msg"),
+          countdownEl = document.getElementById("countdown"),
+          stayBtn     = document.getElementById("stay-signed-btn");
     function setupDispense(){
-      stayBtn.addEventListener("click",()=>{
+      stayBtn.addEventListener("click", ()=>{
         clearInterval(countdownTimer);
         showScreen("snack-screen");
         initSnack();
       });
-      stayBtn.addEventListener("touchstart",e=>{e.preventDefault();clearInterval(countdownTimer);showScreen("snack-screen");initSnack();},{passive:false});
-      window.addEventListener("keydown",e=>{
+      stayBtn.addEventListener("touchstart", e=>{ e.preventDefault(); clearInterval(countdownTimer); showScreen("snack-screen"); initSnack(); },{passive:false});
+      window.addEventListener("keydown", e=>{
         if(currentScreen==="dispense"){
           if(e.key==="Enter"||e.code==="NumpadEnter"){
             clearInterval(countdownTimer);
@@ -638,12 +627,13 @@
     }
     function initDispense(){
       const user = STUDENTS[studentId]||studentId||"Student";
-      thankYouMsg.textContent=`Thank you, ${user.split(" ")[0]}!`;
-      countdownValue=5; countdownEl.textContent=countdownValue;
-      countdownTimer=setInterval(()=>{
+      thankYouMsg.textContent = `Thank you, ${user.split(" ")[0]}!`;
+      countdownValue = 5;
+      countdownEl.textContent = countdownValue;
+      countdownTimer = setInterval(()=>{
         countdownValue--;
-        countdownEl.textContent=countdownValue;
-        if(countdownValue<=0){
+        countdownEl.textContent = countdownValue;
+        if(countdownValue <= 0){
           clearInterval(countdownTimer);
           signOut();
         }
