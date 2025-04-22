@@ -2,19 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport"    content="width=device-width,initial-scale=1" />
   <title>Vending Machine</title>
-
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
   <style>
     /* RESET & GLOBALS */
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html, body {
-      width:100%; height:100vh;
-      overflow:hidden; overscroll-behavior:none; touch-action:none;
+      width:100%; height:100vh; overflow:hidden; overscroll-behavior:none; touch-action:none;
       font-family:Arial,sans-serif; background:#fff;
     }
     html, body, button, a { cursor:none!important; }
@@ -23,7 +20,10 @@
 
     /* APP & VERSION */
     #app { position:relative; width:100%; height:100%; }
-    #version-label { position:fixed; bottom:10px; left:10px; color:#555; z-index:9999; }
+    #version-label {
+      position:fixed; bottom:10px; left:10px; color:#555; z-index:9999;
+      font-size:0.9em;
+    }
     #devButton {
       position:fixed; top:0; right:0; width:50px; height:50px;
       background:transparent; border:none; opacity:0;
@@ -34,7 +34,8 @@
     .screen {
       position:absolute; top:50%; left:50%;
       transform:translate(-50%,-50%);
-      width:90%; max-width:800px; text-align:center; display:none;
+      width:90%; max-width:800px; text-align:center;
+      display:none;
     }
     .screen.active { display:block; }
 
@@ -42,7 +43,8 @@
     #logo-screen img {
       width:300px; height:300px; border-radius:50%;
       box-shadow:0 0 20px rgba(0,0,0,.5);
-      animation:pulse 2s infinite alternate; cursor:pointer;
+      animation:pulse 2s infinite alternate;
+      cursor:pointer;
     }
     @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.05)} }
     #logo-screen h2 {
@@ -54,7 +56,8 @@
     #digit-display { display:flex; justify-content:center; margin-bottom:20px; }
     .digit-box {
       width:70px; height:70px; margin:0 5px;
-      border-bottom:2px solid #333; font-size:3em; line-height:70px;
+      border-bottom:2px solid #333;
+      font-size:3em; line-height:70px;
     }
     .keypad-grid {
       display:grid; grid-template-columns:repeat(3,1fr);
@@ -95,8 +98,8 @@
     }
     #menuBtn {
       position:absolute; top:10px; right:150px;
-      background:#2c3e50; color:#fff;
-      padding:16px 32px; font-size:1.6em;
+      background:#34495e; color:#fff;
+      padding:12px 20px; font-size:1.1em;
       border:none; border-radius:6px; cursor:pointer;
       touch-action:manipulation;
     }
@@ -112,18 +115,22 @@
       padding:15px; border-radius:8px; cursor:pointer;
       transition:background .3s,border-color .3s;
       text-align:center; touch-action:manipulation;
-      position:relative;
-      opacity:1;
+    }
+    .snack-item.selected {
+      background:rgba(52,152,219,.4); border-color:#3498db;
     }
     .snack-item.disabled {
-      opacity:0.4;
-      cursor:not-allowed;
+      opacity:0.4; cursor:not-allowed;
     }
     .snack-item h4 { margin-bottom:5px; font-size:1.6em; }
     .snack-item p  { font-size:1.2em; }
-    .snack-item .stock-count {
-      position:absolute; bottom:8px; right:8px;
-      font-size:.9em; color:#555;
+    #dispense-button {
+      position:absolute; bottom:20px; left:50%;
+      transform:translateX(-50%);
+      padding:25px 35px; font-size:1.8em;
+      background:#2ecc71; border:none; border-radius:8px;
+      color:#fff; cursor:pointer; display:none;
+      touch-action:manipulation;
     }
 
     /* DISPENSE */
@@ -149,45 +156,48 @@
     .modal {
       position:fixed; top:50%; left:50%;
       transform:translate(-50%,-50%);
-      background:#fefefe; border-radius:8px;
-      box-shadow:0 5px 15px rgba(0,0,0,.2);
-      z-index:10000; width:90%; max-width:400px;
-      display:none; padding:20px; text-align:left;
+      width:320px; max-width:90%; max-height:80vh;
+      background:#fff; overflow-y:auto;
+      border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.2);
+      display:none; padding:20px; z-index:10001;
     }
     .modal.active { display:block; }
-    .modal-header { margin-bottom:15px; font-size:1.4em; font-weight:bold; }
+    .modal-header {
+      font-size:1.4em; font-weight:bold; margin-bottom:15px;
+    }
     .modal-body { margin-bottom:15px; }
     .modal-footer { text-align:right; }
     .modal-footer button {
-      margin-left:8px; padding:8px 16px; font-size:1em; cursor:pointer;
-      touch-action:manipulation;
+      margin-left:8px; padding:8px 16px; font-size:1em;
+      cursor:pointer; touch-action:manipulation;
     }
-    .modal input, .modal select {
-      width:100%; padding:8px; margin-bottom:10px;
-      border:1px solid #ccc; border-radius:4px; font-size:1em;
+    /* Menu & Stock modals */
+    #menuModal .modal-body button {
+      display:block; width:100%; margin:8px 0;
+      padding:10px; font-size:1em; border:none; border-radius:4px;
+      background:#3498db; color:#fff; cursor:pointer;
     }
-
-    /* STOCK MGMT: grid layout */
-    #stockModal .modal-body {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
-      gap:16px;
-      max-height:60vh;
-      overflow-y:auto;
-      padding:8px 0;
+    #stockModal .stock-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+      gap:12px;
     }
     .stock-card {
-      border:1px solid #ddd; border-radius:6px; padding:12px;
-      background:#fafafa;
+      border:1px solid #ccc; border-radius:6px; padding:10px;
+      text-align:left; background:#f9f9f9;
     }
-    .stock-card h4 { margin-bottom:8px; font-size:1.1em; }
-    .stock-card label { font-size:.9em; }
-    .stock-card input[type="checkbox"] { transform:scale(1.2); margin-right:6px; }
+    .stock-card h4 { margin-bottom:8px; font-size:1em; }
+    .stock-card label { font-size:0.9em; display:block; margin:4px 0 2px; }
+    .stock-card input[type="text"],
+    .stock-card input[type="number"] {
+      width:100%; padding:4px; font-size:0.9em; margin-bottom:6px;
+      box-sizing:border-box;
+    }
+    .stock-card input[type="checkbox"] { margin-right:6px; }
 
     /* TOAST */
     #toast-container {
       position:fixed; bottom:20px; left:50%;
-      transform:translateX(-50%); z-index:10001;
+      transform:translateX(-50%); z-index:10000;
     }
     .toast {
       display:inline-block; background:rgba(0,0,0,.8);
@@ -196,35 +206,46 @@
       animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
     }
     @keyframes fadein { to{opacity:1} }
-    @keyframes fadeout { to{opacity:0} }
+    @keyframes fadeout{ to{opacity:0} }
 
     /* MOBILE */
     @media(max-width:600px){
-      #snack-signout,#menuBtn{ padding:12px 24px; font-size:1.4em; }
-      .snack-item{ min-width:140px; }
-      #stockModal .modal-body{ grid-template-columns:1fr; }
+      #logo-screen img { width:250px; height:250px; }
+      #logo-screen h2 { font-size:2.2em; }
+      .digit-box { width:80px; height:80px; font-size:3.5em; }
+      .keypad-btn { width:90px; height:90px; font-size:2.2em; }
+      #student-name { font-size:1.8em; }
+      #snack-signout, #menuBtn { font-size:1.2em; padding:12px 24px; }
+      #snack-screen h2 { font-size:2.2em; }
+      .snack-item h4 { font-size:1.8em; }
+      #dispense-button { font-size:2em; padding:30px 40px; }
+      #dispense-screen { padding:30px; border-radius:12px; }
+      #dispense-screen h2 { font-size:2.4em; }
+      #dispense-screen #dispense-text{ font-size:1.1em; }
+      #dispense-screen p { font-size:1.2em; }
+      #stay-signed-btn { font-size:1.4em; padding:10px 20px; }
+      .modal { width:90%; max-width:360px; }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <!-- hidden but clickable -->
     <button id="devButton"></button>
 
-    <!-- LOGO screen -->
+    <!-- LOGO -->
     <div id="logo-screen" class="screen active">
       <img src="fchs-logo.png" alt="Logo" />
       <h2>Tap to Begin</h2>
     </div>
 
-    <!-- KEYPAD screen -->
+    <!-- KEYPAD -->
     <div id="keypad-screen" class="screen">
       <h2>Enter Student ID</h2>
       <div id="digit-display"></div>
       <div class="keypad-grid" id="keypad-buttons"></div>
     </div>
 
-    <!-- SNACK screen -->
+    <!-- SNACKS -->
     <div id="snack-screen" class="screen">
       <div id="student-name">Student Name</div>
       <button id="menuBtn">Menu</button>
@@ -234,7 +255,7 @@
       <button id="dispense-button">Dispense Snacks</button>
     </div>
 
-    <!-- DISPENSE screen -->
+    <!-- DISPENSE CONFIRM -->
     <div id="dispense-screen" class="screen">
       <img src="fchs-logo.png" alt="Logo" />
       <h2 id="thank-you-msg">Thank you, Student!</h2>
@@ -243,38 +264,38 @@
       <button id="stay-signed-btn">Stay Signed In</button>
     </div>
 
-    <!-- CONFIG modal -->
+    <!-- MENU MODAL -->
+    <div id="menuModal" class="modal">
+      <div class="modal-header">Dev Menu</div>
+      <div class="modal-body">
+        <button id="openConfigBtn">Set Local Key</button>
+        <button id="openStockBtn">Stock Management</button>
+      </div>
+      <div class="modal-footer">
+        <button id="menuClose">Close</button>
+      </div>
+    </div>
+
+    <!-- CONFIG MODAL -->
     <div id="configModal" class="modal">
       <div class="modal-header">Set Local Secret Key</div>
       <div class="modal-body">
-        <input id="configInput" placeholder="New local key" />
+        <input id="configInput" placeholder="Enter new local key" />
       </div>
       <div class="modal-footer">
-        <button id="configClose">Close</button>
+        <button id="configClose">Cancel</button>
         <button id="configSave">Save</button>
       </div>
     </div>
 
-    <!-- STOCK MANAGEMENT modal -->
+    <!-- STOCK MANAGEMENT MODAL -->
     <div id="stockModal" class="modal">
       <div class="modal-header">Stock Management</div>
       <div class="modal-body">
-        <!-- cards injected here -->
+        <div class="stock-grid" id="stock-grid"></div>
       </div>
       <div class="modal-footer">
         <button id="stockClose">Close</button>
-      </div>
-    </div>
-
-    <!-- MENU modal -->
-    <div id="menuModal" class="modal">
-      <div class="modal-header">Menu</div>
-      <div class="modal-body">
-        <button id="openConfigBtn">Set Local Key</button>
-        <button id="openStockBtn">Manage Stock</button>
-      </div>
-      <div class="modal-footer">
-        <button id="menuClose">Close</button>
       </div>
     </div>
 
@@ -283,91 +304,93 @@
   </div>
 
   <script>
-    // prevent any touch scrolling
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive:false });
+    // prevent any touch‐drag scrolling
+    document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
 
     // APP VERSION
-    const APP_VERSION = "v2.7.2";
+    const APP_VERSION = "v2.7.3";
 
     // Firebase init
     const cfg = {
-      apiKey: "...", authDomain: "...",
-      databaseURL: "...",
-      projectId: "...", storageBucket: "...",
-      messagingSenderId: "...", appId: "..."
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/",
+      projectId:"cyberflashvend",
+      storageBucket:"cyberflashvend.firebasestorage.app",
+      messagingSenderId:"63786658773",
+      appId:"1:63786658773:web:7792d3693ef45e9ec4eb5c"
     };
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // server‐side secretKey
-    let serverSecret = null;
-    async function loadServerKey(){
-      serverSecret = (await db.ref("Config").once("value")).val();
+    // Read server key & machine settings
+    let serverSecret = null,
+        machineConfig = {};
+
+    async function loadServerData(){
+      const snap = await db.ref("Config").once("value");
+      serverSecret = snap.val();
+      const mSnap = await db.ref("machineManagement").once("value");
+      machineConfig = mSnap.val()||{};
       initApp();
     }
-    loadServerKey();
-
-    // machineManagement cache
-    let management = {};
-
-    // load machine management & snacks data
-    async function loadMachineManagement(){
-      const snap = await db.ref("machineManagement").once("value");
-      management = snap.val()||{};
-      renderStockCards();
-      renderSnacks();
-    }
+    loadServerData();
 
     // Globals
-    let currentScreen="logo", studentId="", selectedItems=new Set();
-    let idleTimer, countdownTimer, countdownValue=5;
+    let currentScreen="logo", studentId="", selectedItems=new Set(),
+        idleTimer, countdownTimer, countdownValue=5;
 
-    const STUDENTS = { /* ... same as before ... */ };
-    // default snack layout (order corresponds to A1,A2,A3,B1,B2,B3)
-    const defaultSnacks = [
-      { slot:"A1", name:"Chips" },
-      { slot:"A2", name:"Cookies" },
-      { slot:"A3", name:"Pretzels" },
-      { slot:"B1", name:"Candy Bar" },
-      { slot:"B2", name:"Granola Bar" },
-      { slot:"B3", name:"Trail Mix" },
+    const STUDENTS = {
+      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
+      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
+      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
+      "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins"
+    };
+    const SNACK_SLOTS = [
+      { slot:"A1", name:"Chips"        , quantity:8 },
+      { slot:"A2", name:"Cookies"      , quantity:5 },
+      { slot:"A3", name:"Pretzels"     , quantity:12},
+      { slot:"B1", name:"Candy Bar"    , quantity:7 },
+      { slot:"B2", name:"Granola Bar"  , quantity:3 },
+      { slot:"B3", name:"Trail Mix"    , quantity:9 }
     ];
 
-    // IDLE logout
+    // Idle logout
     function resetIdle(){
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(signOut, 90*1000);
+      idleTimer = setTimeout(signOut,90*1000);
     }
-    ["keydown","click","mousemove","touchstart"].forEach(evt=>document.addEventListener(evt, resetIdle));
+    ["keydown","click","mousemove","touchstart"].forEach(evt=>{
+      document.addEventListener(evt, resetIdle);
+    });
     resetIdle();
 
-    // Show screen helper
+    // screen switching
     function showScreen(id){
       document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
-      currentScreen = id.replace("-screen","");
-      // dev button only active on logo
+      currentScreen = id.split("-")[0];
+      // dev button only enabled on logo
       const dbtn = document.getElementById("devButton");
-      if(currentScreen!=="logo" || studentId) {
-        dbtn.style.pointerEvents="none";
+      if(currentScreen!=="logo"||studentId) {
+        dbtn.disabled=true; dbtn.style.pointerEvents="none";
       } else {
-        dbtn.style.pointerEvents="auto";
+        dbtn.disabled=false; dbtn.style.pointerEvents="auto";
       }
     }
 
-    // INIT APP
     function initApp(){
-      document.getElementById("version-label").textContent = APP_VERSION;
-      setupDev();
+      document.getElementById("version-label").textContent=APP_VERSION;
+      setupDevKey();
       setupLogo();
       setupKeypad();
       setupSnack();
       setupDispense();
-      setupMenus();
-      loadMachineManagement();    // load stock + enforce enable/disable
+      setupMenu();
+      setupModals();
     }
 
-    // TOAST
+    // Toast
     function showToast(msg){
       const t=document.createElement("div");
       t.className="toast"; t.textContent=msg;
@@ -375,210 +398,377 @@
       setTimeout(()=>t.remove(),3000);
     }
 
-    // DEV MODE
-    function setupDev(){
-      const dbtn = document.getElementById("devButton");
-      window.addEventListener("keydown",e=>{ if(e.key==="d") activateDev(); });
-      dbtn.addEventListener("click",activateDev);
+    // Dev Mode
+    const devButton = document.getElementById("devButton");
+    function setupDevKey(){
+      window.addEventListener("keydown",e=>{
+        if(e.key.toLowerCase()==="d") activateDev();
+      });
+      ["click","touchstart"].forEach(evt=>{
+        devButton.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          activateDev();
+        },{passive:false});
+      });
     }
     function activateDev(){
       studentId="DEV MODE";
       document.getElementById("student-name").textContent="DEV MODE";
       showScreen("snack-screen");
+      renderSnackGrid();
     }
 
-    // LOGO
+    // Logo handlers
     function setupLogo(){
-      ["img","h2"].forEach(sel=>{
-        const el = document.querySelector("#logo-screen "+sel);
-        el.addEventListener("click", ()=>{ showScreen("keypad-screen"); });
-        el.addEventListener("touchstart", e=>{ e.preventDefault(); showScreen("keypad-screen"); },{passive:false});
+      const img = document.querySelector("#logo-screen img"),
+            txt = document.querySelector("#logo-screen h2");
+      ["click","touchstart"].forEach(evt=>{
+        img.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          showScreen("keypad-screen"); initKeypad();
+        },{passive:false});
+        txt.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          showScreen("keypad-screen"); initKeypad();
+        },{passive:false});
       });
       window.addEventListener("keydown",e=>{
-        if(currentScreen==="logo") showScreen("keypad-screen");
+        if(currentScreen==="logo") showScreen("keypad-screen"), initKeypad();
       });
     }
 
-    // KEYPAD
+    // Keypad
+    const digitDisplay = document.getElementById("digit-display"),
+          keypadButtons= document.getElementById("keypad-buttons"),
+          maxDigits   = 6;
+    const layout = ["1","2","3","4","5","6","7","8","9","","0","backspace"];
+    function isNumKey(e){
+      return /^\d$/.test(e.key) || (e.code.startsWith("Numpad")&&e.key.length===1);
+    }
     function setupKeypad(){
-      const layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
-      const container = document.getElementById("keypad-buttons");
-      document.getElementById("digit-display").innerHTML="";
-      for(let i=0;i<6;i++){
-        const d=document.createElement("div");
-        d.className="digit-box"; d.textContent="_";
-        document.getElementById("digit-display").appendChild(d);
-      }
-      layout.forEach(val=>{
-        const cell=document.createElement(val?"div":"div");
-        if(!val){
-          cell.style.width="100px"; cell.style.height="100px";
-        } else {
-          cell.className="keypad-btn"+(val==="backspace"?" backspace":"");
-          cell.textContent= val==="backspace"?"←":val;
-          cell.addEventListener("click", ()=> handleKey(val));
-          cell.addEventListener("touchstart", e=>{ e.preventDefault(); handleKey(val); },{passive:false});
-        }
-        container.appendChild(cell);
-      });
+      initKeypad();
       window.addEventListener("keydown",e=>{
-        if(currentScreen==="keypad"){
-          if(/^\d$/.test(e.key)) { handleKey(e.key); }
-          else if(e.key==="Backspace") handleKey("backspace");
-          else if(e.key==="Enter" && studentId.length===6) validateID();
+        if(currentScreen==="keypad" && !e.repeat){
+          if(isNumKey(e)){ e.preventDefault(); handleDigit(e.key.slice(-1)); }
+          else if(e.key==="Backspace"){ e.preventDefault(); handleBack(); }
+          else if((e.key==="Enter"||e.code==="NumpadEnter")&&studentId.length===maxDigits){
+            e.preventDefault(); validateID();
+          }
         }
       });
     }
-
-    function handleKey(k){
-      if(k==="backspace"){
-        studentId=studentId.slice(0,-1);
-      } else if(studentId.length<6){
-        studentId+=k;
+    function initKeypad(){
+      studentId=""; renderDigits();
+      if(!keypadButtons.childElementCount){
+        layout.forEach(val=>{
+          if(!val){
+            const ph=document.createElement("div");
+            ph.style.width="100px"; ph.style.height="100px";
+            keypadButtons.appendChild(ph);
+          } else {
+            const btn=document.createElement("div");
+            btn.className="keypad-btn"+(val==="backspace"?" backspace":"");
+            btn.textContent = val==="backspace"?"←":val;
+            if(val==="backspace"){
+              btn.addEventListener("touchstart",e=>{e.preventDefault();handleBack()},{passive:false});
+              btn.addEventListener("click",handleBack);
+            } else {
+              btn.addEventListener("touchstart",e=>{e.preventDefault();handleDigit(val)},{passive:false});
+              btn.addEventListener("click",()=>handleDigit(val));
+            }
+            keypadButtons.appendChild(btn);
+          }
+        });
       }
-      renderDigits();
-      if(studentId.length===6) validateID();
     }
     function renderDigits(){
-      const boxes = document.querySelectorAll(".digit-box");
-      boxes.forEach((b,i)=>b.textContent = i<studentId.length?"•":"_");
+      digitDisplay.innerHTML="";
+      for(let i=0;i<maxDigits;i++){
+        const d=document.createElement("div");
+        d.className="digit-box";
+        d.textContent = i<studentId.length?"•":"_";
+        digitDisplay.appendChild(d);
+      }
+    }
+    function handleDigit(ch){
+      if(studentId.length<maxDigits){
+        studentId+=ch; renderDigits();
+        if(studentId.length===maxDigits) validateID();
+      }
+    }
+    function handleBack(){
+      if(studentId.length){
+        studentId=studentId.slice(0,-1);
+        renderDigits();
+      }
     }
     function validateID(){
-      if(STUDENTS[studentId]|| studentId==="DEV MODE"){
-        const name = STUDENTS[studentId]|| studentId;
-        document.getElementById("student-name").textContent=name;
-        showScreen("snack-screen");
+      if(STUDENTS[studentId]){
+        document.getElementById("student-name").textContent = STUDENTS[studentId];
+        showScreen("snack-screen"); renderSnackGrid();
       } else {
-        document.querySelector(".digit-box").classList.add("shake");
-        setTimeout(()=>document.querySelector(".digit-box").classList.remove("shake"),500);
-        studentId="";
-        renderDigits();
+        digitDisplay.classList.add("shake");
+        setTimeout(()=>{
+          digitDisplay.classList.remove("shake");
+          studentId=""; renderDigits();
+        },500);
         showToast("Invalid ID");
       }
     }
 
-    // SNACK screen
+    // Snack rendering & selection
+    const snackGrid    = document.getElementById("snack-grid"),
+          dispenseBtn  = document.getElementById("dispense-button"),
+          signOutBtn   = document.getElementById("snack-signout");
     function setupSnack(){
-      document.getElementById("snack-signout").addEventListener("click",signOut);
-      document.getElementById("snack-signout").addEventListener("touchstart",e=>{ e.preventDefault(); signOut(); },{passive:false});
-      document.getElementById("dispense-button").addEventListener("click",proceedToDispense);
-      document.getElementById("dispense-button").addEventListener("touchstart",e=>{ e.preventDefault(); proceedToDispense(); },{passive:false});
+      ["click","touchstart"].forEach(evt=>{
+        signOutBtn.addEventListener(evt,e=>{ if(evt==="touchstart") e.preventDefault(); signOut(); },{passive:false});
+      });
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="snack" && !e.repeat){
+          if(isNumKey(e)){
+            const idx = +e.key-1;
+            if(idx>=0 && idx<SNACK_SLOTS.length) toggleSnack(SNACK_SLOTS[idx].slot, snackGrid.children[idx]);
+          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
+            proceedToDispense();
+          } else if(e.key==="Escape"){
+            signOut();
+          }
+        }
+      });
+      dispenseBtn.addEventListener("click",proceedToDispense);
+      dispenseBtn.addEventListener("touchstart",e=>{e.preventDefault(); proceedToDispense()},{passive:false});
     }
-
-    function renderSnacks(){
-      const grid=document.getElementById("snack-grid");
-      grid.innerHTML="";
-      defaultSnacks.forEach((s,i)=>{
-        const cfg = management[s.slot]||{ name:s.name, stock:0, enabled:true};
-        const card=document.createElement("div");
-        card.className="snack-item"+(cfg.enabled?"":" disabled");
-        card.innerHTML = `
-          <h4>${cfg.name}</h4>
-          <p>ID: ${s.slot} | Qty: ${cfg.stock}</p>
-          <div class="stock-count">${cfg.enabled?"":"(Disabled)"}</div>
-        `;
-        if(cfg.enabled){
-          card.addEventListener("click",()=>{
-            if(selectedItems.has(s.slot)){
-              selectedItems.delete(s.slot);
-              card.classList.remove("selected");
-            } else {
-              selectedItems.add(s.slot);
-              card.classList.add("selected");
-            }
-            document.getElementById("dispense-button").style.display= selectedItems.size?"block":"none";
+    function renderSnackGrid(){
+      selectedItems.clear();
+      snackGrid.innerHTML="";
+      SNACK_SLOTS.forEach((slt,i)=>{
+        const cfgItem = machineConfig[slt.slot]||{};
+        const enabled = cfgItem.enabled!==false;  // default true
+        const stock   = (cfgItem.stock!=null?cfgItem.stock:slt.quantity);
+        const name    = cfgItem.name||slt.name;
+        const card = document.createElement("div");
+        card.className="snack-item"+(enabled?"":" disabled");
+        card.innerHTML = `<h4>${name}</h4><p>ID: ${slt.slot} | Qty: ${stock}</p>`;
+        if(enabled){
+          ["click","touchstart"].forEach(evt=>{
+            card.addEventListener(evt,e=>{ if(evt==="touchstart") e.preventDefault(); toggleSnack(slt.slot,card) },{passive:false});
           });
         }
+        snackGrid.appendChild(card);
+      });
+      dispenseBtn.style.display="none";
+    }
+    function toggleSnack(slot,el){
+      if(el.classList.contains("disabled"))return;
+      if(selectedItems.has(slot)){
+        selectedItems.delete(slot); el.classList.remove("selected");
+      } else {
+        selectedItems.add(slot); el.classList.add("selected");
+      }
+      if(selectedItems.size){
+        dispenseBtn.style.display="block";
+        dispenseBtn.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
+      } else {
+        dispenseBtn.style.display="none";
+      }
+    }
+
+    // Menu & Stock
+    function setupMenu(){
+      const menuBtn = document.getElementById("menuBtn"),
+            menuModal= document.getElementById("menuModal"),
+            stockBtn = document.getElementById("openStockBtn"),
+            menuClose= document.getElementById("menuClose");
+      ["click","touchstart"].forEach(evt=>{
+        menuBtn.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          document.getElementById("menuModal").classList.add("active");
+        },{passive:false});
+        menuClose.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          menuModal.classList.remove("active");
+        },{passive:false});
+        stockBtn.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          openStockModal();
+        },{passive:false});
+      });
+    }
+    function openStockModal(){
+      document.getElementById("stockModal").classList.add("active");
+      renderStockGrid();
+    }
+    function renderStockGrid(){
+      const grid = document.getElementById("stock-grid");
+      grid.innerHTML="";
+      SNACK_SLOTS.forEach(slt=>{
+        const cfgItem = machineConfig[slt.slot]||{};
+        const card = document.createElement("div"); card.className="stock-card";
+        card.innerHTML=`
+          <h4>Slot ${slt.slot}</h4>
+          <label>Name:</label>
+          <input type="text" data-slot="${slt.slot}" class="stock-name" value="${cfgItem.name||slt.name}" />
+          <label>Stock:</label>
+          <input type="number" data-slot="${slt.slot}" class="stock-qty" value="${cfgItem.stock!=null?cfgItem.stock:slt.quantity}" min="0" />
+          <label><input type="checkbox" data-slot="${slt.slot}" class="stock-enabled" ${cfgItem.enabled!==false?"checked":""} /> Enabled</label>
+        `;
         grid.appendChild(card);
+      });
+      // save on blur or change
+      grid.querySelectorAll(".stock-name,.stock-qty,.stock-enabled").forEach(inp=>{
+        inp.addEventListener("change",async e=>{
+          const slot = e.target.dataset.slot;
+          if(!localStorage.getItem("secretKey")===serverSecret) { showToast("Unauthorized"); return; }
+          // update local object
+          const nameEl = grid.querySelector(`.stock-name[data-slot="${slot}"]`);
+          const qtyEl  = grid.querySelector(`.stock-qty[data-slot="${slot}"]`);
+          const enEl   = grid.querySelector(`.stock-enabled[data-slot="${slot}"]`);
+          machineConfig[slot] = {
+            name: nameEl.value,
+            stock: parseInt(qtyEl.value),
+            enabled: enEl.checked
+          };
+          // push to firebase
+          try {
+            await db.ref(`machineManagement/${slot}`).set(machineConfig[slot]);
+            renderSnackGrid();
+            showToast("Saved");
+          } catch(err){
+            console.error(err);
+            showToast("Save failed");
+          }
+        });
+      });
+      // close stock modal
+      ["click","touchstart"].forEach(evt=>{
+        document.getElementById("stockClose").addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          document.getElementById("stockModal").classList.remove("active");
+        },{passive:false});
       });
     }
 
-    // DISPENSE
-    function proceedToDispense(){
-      if(!selectedItems.size) return;
-      // ... your existing sendDispenseSignal + countdown ...
-      // then after sending, clear selectedItems
-      selectedItems.clear();
-      document.getElementById("dispense-button").style.display="none";
+    // CONFIG modal
+    function setupModals(){
+      const cfgModal  = document.getElementById("configModal"),
+            cfgInput  = document.getElementById("configInput"),
+            cfgSave   = document.getElementById("configSave"),
+            cfgClose  = document.getElementById("configClose");
+
+      ["click","touchstart"].forEach(evt=>{
+        document.getElementById("openConfigBtn").addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          cfgInput.value = localStorage.getItem("secretKey")||"";
+          cfgModal.classList.add("active");
+        },{passive:false});
+        cfgSave.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          const k=cfgInput.value.trim();
+          if(!k){ showToast("Enter key"); return; }
+          localStorage.setItem("secretKey",k);
+          showToast("Key set");
+          cfgModal.classList.remove("active");
+        },{passive:false});
+        cfgClose.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          cfgModal.classList.remove("active");
+        },{passive:false});
+      });
+      // also enter key
+      cfgInput.addEventListener("keydown",e=>{
+        if(e.key==="Enter") cfgSave.click();
+      });
     }
 
-    // SIGN OUT
+    // Dispense flow
+    function proceedToDispense(){
+      if(!selectedItems.size) return;
+      sendDispenseSignal();
+      showScreen("dispense-screen");
+      initDispense();
+    }
     function signOut(){
       clearInterval(countdownTimer);
-      studentId="";
-      selectedItems.clear();
+      countdownValue=5;
       showScreen("logo-screen");
     }
 
-    // MENUS & MODALS
-    function setupMenus(){
-      // MENU button
-      const menuBtn = document.getElementById("menuBtn"),
-            menuModal = document.getElementById("menuModal"),
-            menuClose = document.getElementById("menuClose"),
-            configBtn = document.getElementById("openConfigBtn"),
-            stockBtn  = document.getElementById("openStockBtn");
-      menuBtn.addEventListener("click", ()=>menuModal.classList.add("active"));
-      menuBtn.addEventListener("touchstart",e=>{ e.preventDefault(); menuModal.classList.add("active"); },{passive:false});
-      menuClose.addEventListener("click", ()=>menuModal.classList.remove("active"));
-      menuClose.addEventListener("touchstart",e=>{ e.preventDefault(); menuModal.classList.remove("active"); },{passive:false});
+    async function sendDispenseSignal(){
+      const localKey = localStorage.getItem("secretKey");
+      if(localKey!==serverSecret){
+        showToast("Unauthorized"); return;
+      }
+      const user = (studentId==="DEV MODE"? "DEV MODE" : STUDENTS[studentId]),
+            data = { Status:true, User:user };
 
-      // CONFIG
-      const cfgModal = document.getElementById("configModal"),
-            cfgClose = document.getElementById("configClose"),
-            cfgSave  = document.getElementById("configSave"),
-            cfgInput = document.getElementById("configInput");
-      configBtn.addEventListener("click", ()=>{ cfgModal.classList.add("active"); menuModal.classList.remove("active"); });
-      cfgClose.addEventListener("click", ()=>cfgModal.classList.remove("active"));
-      cfgSave.addEventListener("click", ()=>{
-        const k=cfgInput.value.trim();
-        if(k){ localStorage.setItem("secretKey",k); showToast("Key saved"); cfgModal.classList.remove("active"); }
-        else showToast("Enter a key");
+      SNACK_SLOTS.forEach((s,i)=>{
+        data[`Item${i+1}`] = selectedItems.has(s.slot);
       });
+      try {
+        await db.ref("data").update(data);
+      } catch(e){ console.error(e); }
 
-      // STOCK MGMT
-      const stockModal = document.getElementById("stockModal"),
-            stockClose = document.getElementById("stockClose");
-      stockBtn.addEventListener("click", ()=>{
-        stockModal.classList.add("active");
-        menuModal.classList.remove("active");
-        renderStockCards();
+      // logging
+      const now=new Date(),
+            mm=("0"+(now.getMonth()+1)).slice(-2),
+            dd=("0"+now.getDate()).slice(-2),
+            yy=(""+now.getFullYear()).slice(-2).slice(-2),
+            key=`${mm}-${dd}-${yy}`,
+            h=now.getHours(), m=("0"+now.getMinutes()).slice(-2),
+            s=("0"+now.getSeconds()).slice(-2),
+            ap=h>=12?"pm":"am", hr=h%12||12,
+            time=`${hr}h:${m}m:${s}s${ap}`,
+            payload = [];
+      SNACK_SLOTS.forEach((_,i)=>{
+        if(selectedItems.has(_.slot)) payload.push(i+1);
       });
-      stockClose.addEventListener("click", ()=>stockModal.classList.remove("active"));
+      const log = { Time:time, User:user, Payload:payload.join(", ") };
+      try {
+        await db.ref(`Logs/${key}`).push(log);
+      } catch(e){ console.error(e); }
     }
 
-    // RENDER + SAVE stock cards
-    function renderStockCards(){
-      const body = document.querySelector("#stockModal .modal-body");
-      body.innerHTML="";
-      defaultSnacks.forEach((s,i)=>{
-        const cfg = management[s.slot] || { name:s.name, stock:0, enabled:true };
-        const card = document.createElement("div");
-        card.className="stock-card";
-        card.innerHTML=`
-          <h4>Slot ${s.slot}</h4>
-          <label>Name:<input type="text" class="name" value="${cfg.name}"></label>
-          <label>Stock:<input type="number" class="stock" value="${cfg.stock}"></label>
-          <label><input type="checkbox" class="enabled" ${cfg.enabled?"checked":""}> Enabled</label>
-          <button class="save">Save</button>
-        `;
-        // save handler
-        card.querySelector(".save").addEventListener("click",async()=>{
-          const newCfg = {
-            name: card.querySelector(".name").value,
-            stock:+card.querySelector(".stock").value,
-            enabled: card.querySelector(".enabled").checked
-          };
-          // update RTDB
-          await db.ref(`machineManagement/${s.slot}`).set(newCfg);
-          management[s.slot]=newCfg;
-          showToast(`Saved ${s.slot}`);
-          renderSnacks();
-        });
-        body.appendChild(card);
+    // Dispense UI
+    function setupDispense(){
+      const stay = document.getElementById("stay-signed-btn");
+      ["click","touchstart"].forEach(evt=>{
+        stay.addEventListener(evt,e=>{
+          if(evt==="touchstart") e.preventDefault();
+          clearInterval(countdownTimer);
+          showScreen("snack-screen");
+          renderSnackGrid();
+        },{passive:false});
+      });
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="dispense"){
+          if(e.key==="Enter"||e.code==="NumpadEnter"){
+            clearInterval(countdownTimer);
+            showScreen("snack-screen");
+            renderSnackGrid();
+          } else if(e.key==="Escape"){
+            clearInterval(countdownTimer);
+            signOut();
+          } else {
+            clearInterval(countdownTimer);
+          }
+        }
       });
     }
-
+    function initDispense(){
+      document.getElementById("thank-you-msg").textContent =
+        `Thank you, ${ (STUDENTS[studentId]||"Student").split(" ")[0] }!`;
+      countdownValue=5;
+      document.getElementById("countdown").textContent=5;
+      countdownTimer = setInterval(()=>{
+        countdownValue--;
+        document.getElementById("countdown").textContent = countdownValue;
+        if(countdownValue<=0){
+          clearInterval(countdownTimer);
+          signOut();
+        }
+      },1000);
+    }
   </script>
 </body>
 </html>
