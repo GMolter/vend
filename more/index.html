@@ -187,21 +187,7 @@
 
     /* MOBILE */
     @media(max-width:600px){
-      #logo-screen img{width:250px;height:250px;}
-      #logo-screen h2{font-size:2.2em;}
-      .digit-box{width:80px;height:80px;font-size:3.5em;line-height:80px;}
-      .keypad-btn{width:90px;height:90px;font-size:2.2em;}
-      #student-name{font-size:1.8em;}
-      #snack-signout{font-size:1.4em;padding:14px 28px;}
-      #openConfigBtn,#openShowKeyBtn{font-size:1.2em;padding:8px;}
-      #snack-screen h2{font-size:2.2em;}
-      .snack-item h4{font-size:1.8em;}
-      #dispense-button{font-size:2em;padding:30px 40px;}
-      #dispense-screen{padding:30px;border-radius:12px;}
-      #dispense-screen h2{font-size:2.4em;}
-      #dispense-screen #dispense-text{font-size:1.1em;}
-      #dispense-screen p{font-size:1.2em;}
-      #stay-signed-btn{font-size:1.4em;padding:10px 20px;}
+      /* ...same as above... */
     }
   </style>
 </head>
@@ -223,6 +209,7 @@
     <div id="snack-screen" class="screen">
       <div id="student-name">Student Name</div>
       <button id="snack-signout">Sign Out</button>
+      <!-- these two only show in DEV MODE now -->
       <button id="openConfigBtn">Set Local Key</button>
       <button id="openShowKeyBtn">View Local Key</button>
       <h2>Select a Snack</h2>
@@ -240,7 +227,9 @@
 
     <div id="configModal" class="modal screen">
       <div class="modal-header">Set Local Secret Key</div>
-      <div class="modal-body"><input id="configInput" placeholder="New local key" /></div>
+      <div class="modal-body">
+        <input id="configInput" placeholder="New local key" />
+      </div>
       <div class="modal-footer">
         <button id="configClose">Close</button>
         <button id="configSave">Save</button>
@@ -249,8 +238,12 @@
 
     <div id="showKeyModal" class="modal screen">
       <div class="modal-header">Local Secret Key</div>
-      <div class="modal-body"><strong id="savedKeyText"></strong></div>
-      <div class="modal-footer"><button id="showKeyClose">Close</button></div>
+      <div class="modal-body">
+        <strong id="savedKeyText"></strong>
+      </div>
+      <div class="modal-footer">
+        <button id="showKeyClose">Close</button>
+      </div>
     </div>
 
     <div id="toast-container"></div>
@@ -258,8 +251,8 @@
   </div>
 
   <script>
-    // completely disable any touch‐drag scrolling/bounce
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    // disable touch‐drag scrolling
+    document.addEventListener('touchmove', e => e.preventDefault(), { passive:false });
 
     // APP VERSION
     const APP_VERSION = "v2.6.6";
@@ -277,25 +270,16 @@
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // Read server key
+    // Read server key & then init
     let serverSecret = null;
-    async function checkSecret() {
-      try {
-        serverSecret = (await db.ref("Config").once("value")).val();
-      } catch(e) {
-        console.error(e);
-      }
+    (async()=>{
+      serverSecret = (await db.ref("Config").once("value")).val();
       initApp();
-    }
-    checkSecret();
+    })();
 
     // Globals
-    let currentScreen="logo",
-        studentId="",
-        selectedItems=new Set(),
-        idleTimer,
-        countdownTimer,
-        countdownValue=5;
+    let currentScreen="logo", studentId="", selectedItems=new Set(),
+        idleTimer, countdownTimer, countdownValue=5;
 
     const STUDENTS = {
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
@@ -313,30 +297,28 @@
     ];
 
     // Idle logout
-    function resetIdle() {
+    function resetIdle(){
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(signOut, 90*1000);
+      idleTimer = setTimeout(signOut,90*1000);
     }
-    ["keydown","click","mousemove","touchstart"].forEach(e => document.addEventListener(e, resetIdle));
+    ["keydown","click","mousemove","touchstart"].forEach(e=>document.addEventListener(e,resetIdle));
     resetIdle();
 
-    // Show screen
-    function showScreen(id) {
-      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    // Show screen & toggle dev button
+    function showScreen(id){
+      document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       currentScreen = id.split("-")[0];
       const devBtn = document.getElementById("devButton");
-      if (currentScreen !== "logo" || studentId !== "") {
-        devBtn.disabled = true;
-        devBtn.style.pointerEvents = "none";
+      if(currentScreen!=="logo"||studentId!==""){
+        devBtn.disabled=true; devBtn.style.pointerEvents="none";
       } else {
-        devBtn.disabled = false;
-        devBtn.style.pointerEvents = "auto";
+        devBtn.disabled=false; devBtn.style.pointerEvents="auto";
       }
     }
 
-    // Init App
-    function initApp() {
+    // Init all
+    function initApp(){
       document.getElementById("version-label").textContent = APP_VERSION;
       setupDevKey();
       setupLogo();
@@ -347,62 +329,52 @@
     }
 
     // Toast
-    function showToast(msg) {
+    function showToast(msg){
       const t = document.createElement("div");
-      t.className = "toast";
-      t.textContent = msg;
+      t.className="toast"; t.textContent=msg;
       document.getElementById("toast-container").appendChild(t);
-      setTimeout(() => t.remove(), 3000);
+      setTimeout(()=>t.remove(),3000);
     }
 
-    // Enable cursor in dev
-    function enableCursor() {
-      if (document.getElementById("cursorOverride")) return;
+    // Enable cursor for dev
+    function enableCursor(){
+      if(document.getElementById("cursorOverride"))return;
       const s = document.createElement("style");
-      s.id = "cursorOverride";
-      s.innerHTML = "html,body,button,a{cursor:auto!important}";
+      s.id="cursorOverride";
+      s.innerHTML="html,body,button,a{cursor:auto!important}";
       document.head.appendChild(s);
     }
 
-    // Dev via 'd'
+    // Dev key & button
     const devButton = document.getElementById("devButton");
-    function setupDevKey() {
-      window.addEventListener("keydown", e => {
-        if (e.key.toLowerCase() === "d") activateDev();
+    function setupDevKey(){
+      window.addEventListener("keydown",e=>{
+        if(e.key.toLowerCase()==="d") activateDev();
       });
-      // touchstart for fast response
-      devButton.addEventListener("touchstart", e => {
-        e.preventDefault();
-        activateDev();
-      }, { passive: false });
-      devButton.addEventListener("click", activateDev);
+      devButton.addEventListener("click",activateDev);
+      devButton.addEventListener("touchstart",e=>{
+        e.preventDefault(); activateDev();
+      },{passive:false});
     }
-    function activateDev() {
-      studentId = "DEV MODE";
-      document.getElementById("student-name").textContent = "DEV MODE";
+    function activateDev(){
+      studentId="DEV MODE";
+      document.getElementById("student-name").textContent="DEV MODE";
       showScreen("snack-screen");
       initSnack();
       enableCursor();
     }
 
-    // Logo
-    function setupLogo() {
-      const logoImg = document.querySelector("#logo-screen img");
-      const logoTxt = document.querySelector("#logo-screen h2");
+    // Logo screen tap anywhere to begin
+    function setupLogo(){
       ["click","touchstart"].forEach(evt=>{
-        logoImg.addEventListener(evt, e=>{
+        document.getElementById("logo-screen").addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
           showScreen("keypad-screen");
           initKeypad();
-        }, { passive: false });
-        logoTxt.addEventListener(evt, e=>{
-          if(evt==="touchstart") e.preventDefault();
-          showScreen("keypad-screen");
-          initKeypad();
-        }, { passive: false });
+        },{passive:false});
       });
-      window.addEventListener("keydown", e=>{
-        if (currentScreen==="logo") {
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="logo"){
           showScreen("keypad-screen");
           initKeypad();
         }
@@ -413,67 +385,62 @@
     const digitDisplay = document.getElementById("digit-display"),
           keypadButtons = document.getElementById("keypad-buttons"),
           maxDigits = 6;
-    function isNumKey(e) {
-      return /^\d$/.test(e.key) || (e.code.startsWith("Numpad") && e.key.length===1);
+    const layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
+    function isNumKey(e){
+      return /^\d$/.test(e.key)||(e.code.startsWith("Numpad")&&e.key.length===1);
     }
-    const layout = ["1","2","3","4","5","6","7","8","9","","0","backspace"];
-    function setupKeypad() {
+    function setupKeypad(){
       initKeypad();
-      window.addEventListener("keydown", e=>{
-        if(currentScreen==="keypad" && !e.repeat){
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="keypad"&&!e.repeat){
           if(isNumKey(e)){
-            e.preventDefault();
-            handleDigit(e.key.slice(-1));
+            e.preventDefault(); handleDigit(e.key.slice(-1));
           } else if(e.key==="Backspace"){
-            e.preventDefault();
-            handleBack();
-          } else if((e.key==="Enter"||e.code==="NumpadEnter") && studentId.length===maxDigits){
-            e.preventDefault();
-            validateID();
+            e.preventDefault(); handleBack();
+          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&studentId.length===maxDigits){
+            e.preventDefault(); validateID();
           }
         }
       });
     }
-    function initKeypad() {
-      studentId = "";
-      renderDigits();
-      if(!keypadButtons.children.length) {
-        layout.forEach(val => {
-          if(!val) {
-            const ph = document.createElement("div");
-            ph.style.width="100px"; ph.style.height="100px";
+    function initKeypad(){
+      studentId=""; renderDigits();
+      if(!keypadButtons.children.length){
+        layout.forEach(val=>{
+          if(!val){
+            const ph=document.createElement("div");
+            ph.style.width="100px";ph.style.height="100px";
             keypadButtons.appendChild(ph);
           } else {
-            const btn = document.createElement("div");
+            const btn=document.createElement("div");
             btn.classList.add("keypad-btn");
-            if(val==="backspace") {
+            if(val==="backspace"){
               btn.classList.add("backspace");
               btn.textContent="←";
-              btn.addEventListener("touchstart", e=>{ e.preventDefault(); handleBack(); }, { passive: false });
-              btn.addEventListener("click", handleBack);
+              btn.addEventListener("touchstart",e=>{e.preventDefault();handleBack();},{passive:false});
+              btn.addEventListener("click",handleBack);
             } else {
               btn.textContent=val;
-              btn.addEventListener("touchstart", e=>{ e.preventDefault(); handleDigit(val); }, { passive: false });
-              btn.addEventListener("click", ()=>handleDigit(val));
+              btn.addEventListener("touchstart",e=>{e.preventDefault();handleDigit(val);},{passive:false});
+              btn.addEventListener("click",()=>handleDigit(val));
             }
             keypadButtons.appendChild(btn);
           }
         });
       }
     }
-    function renderDigits() {
+    function renderDigits(){
       digitDisplay.innerHTML="";
       for(let i=0;i<maxDigits;i++){
-        const d = document.createElement("div");
+        const d=document.createElement("div");
         d.classList.add("digit-box");
-        d.textContent = i<studentId.length?"•":"_";
+        d.textContent=i<studentId.length?"•":"_";
         digitDisplay.appendChild(d);
       }
     }
-    function handleDigit(ch) {
+    function handleDigit(ch){
       if(studentId.length<maxDigits){
-        studentId+=ch;
-        renderDigits();
+        studentId+=ch; renderDigits();
         if(studentId.length===maxDigits) validateID();
       }
     }
@@ -485,41 +452,37 @@
     }
     function validateID(){
       if(STUDENTS[studentId]){
-        document.getElementById("student-name").textContent = STUDENTS[studentId];
-        showScreen("snack-screen");
-        initSnack();
+        document.getElementById("student-name").textContent=STUDENTS[studentId];
+        showScreen("snack-screen"); initSnack();
       } else {
         digitDisplay.classList.add("shake");
         setTimeout(()=>{
           digitDisplay.classList.remove("shake");
-          studentId="";
-          renderDigits();
+          studentId=""; renderDigits();
         },500);
         showToast("Invalid ID");
       }
     }
 
-    // Snack
-    const snackGrid = document.getElementById("snack-grid"),
+    // Snack screen
+    const snackGrid   = document.getElementById("snack-grid"),
           dispenseBtn = document.getElementById("dispense-button"),
-          signOutBtn = document.getElementById("snack-signout"),
-          cfgBtn     = document.getElementById("openConfigBtn"),
-          showBtn    = document.getElementById("openShowKeyBtn");
+          signOutBtn  = document.getElementById("snack-signout"),
+          cfgBtn      = document.getElementById("openConfigBtn"),
+          showBtn     = document.getElementById("openShowKeyBtn");
     function setupSnack(){
-      signOutBtn.addEventListener("click", signOut);
-      signOutBtn.addEventListener("touchstart", e=>{ e.preventDefault(); signOut(); }, {passive:false});
-      dispenseBtn.addEventListener("click", proceedToDispense);
-      dispenseBtn.addEventListener("touchstart", e=>{ e.preventDefault(); proceedToDispense(); }, {passive:false});
-      cfgBtn.addEventListener("click", openConfigModal);
-      showBtn.addEventListener("click", openShowKeyModal);
-      window.addEventListener("keydown", e=>{
-        if(currentScreen==="snack" && !e.repeat){
+      ["click","touchstart"].forEach(evt=>{
+        signOutBtn.addEventListener(evt,e=>{if(evt==="touchstart")e.preventDefault();signOut();},{passive:false});
+        dispenseBtn.addEventListener(evt,e=>{if(evt==="touchstart")e.preventDefault();proceedToDispense();},{passive:false});
+      });
+      cfgBtn.addEventListener("click",openConfigModal);
+      showBtn.addEventListener("click",openShowKeyModal);
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="snack"&&!e.repeat){
           if(isNumKey(e)){
-            const idx = +e.key-1;
-            if(idx>=0 && idx<snacks.length) {
-              toggleSnack(snacks[idx].id, snackGrid.children[idx]);
-            }
-          } else if((e.key==="Enter"||e.code==="NumpadEnter") && selectedItems.size){
+            const idx=+e.key-1;
+            if(idx>=0&&idx<snacks.length) toggleSnack(snacks[idx].id,snackGrid.children[idx]);
+          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
             proceedToDispense();
           } else if(e.key==="Escape"){
             signOut();
@@ -531,92 +494,95 @@
       selectedItems.clear();
       snackGrid.innerHTML="";
       snacks.forEach(s=>{
-        const d = document.createElement("div");
+        const d=document.createElement("div");
         d.classList.add("snack-item");
-        d.innerHTML = `<h4>${s.name}</h4><p>ID: ${s.id} | Qty: ${s.quantity}</p>`;
-        d.addEventListener("touchstart", e=>{ e.preventDefault(); toggleSnack(s.id,d); }, {passive:false});
-        d.addEventListener("click", ()=>toggleSnack(s.id,d));
+        d.innerHTML=`<h4>${s.name}</h4><p>ID: ${s.id} | Qty: ${s.quantity}</p>`;
+        ["click","touchstart"].forEach(evt=>{
+          d.addEventListener(evt,e=>{if(evt==="touchstart")e.preventDefault();toggleSnack(s.id,d);},{passive:false});
+        });
         snackGrid.appendChild(d);
       });
-      dispenseBtn.style.display="none";
-      cfgBtn.style.display="none";
-      showBtn.style.display="none";
-    }
-    function toggleSnack(id, el){
-      if(selectedItems.has(id)){
-        selectedItems.delete(id);
-        el.classList.remove("selected");
+      // 🔥 Show configs only in DEV MODE:
+      if(studentId==="DEV MODE"){
+        cfgBtn.style.display="block";
+        showBtn.style.display="block";
       } else {
-        selectedItems.add(id);
-        el.classList.add("selected");
+        cfgBtn.style.display="none";
+        showBtn.style.display="none";
+      }
+      dispenseBtn.style.display="none";
+    }
+    function toggleSnack(id,el){
+      if(selectedItems.has(id)){
+        selectedItems.delete(id); el.classList.remove("selected");
+      } else {
+        selectedItems.add(id); el.classList.add("selected");
       }
       if(selectedItems.size){
         dispenseBtn.style.display="block";
-        dispenseBtn.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
+        dispenseBtn.textContent= selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
       } else {
         dispenseBtn.style.display="none";
       }
     }
 
     // Config modals
-    const configModal = document.getElementById("configModal"),
-          configInput = document.getElementById("configInput"),
-          configSave  = document.getElementById("configSave"),
-          configClose = document.getElementById("configClose");
+    const configModal=document.getElementById("configModal"),
+          configInput=document.getElementById("configInput"),
+          configSave=document.getElementById("configSave"),
+          configClose=document.getElementById("configClose");
     function setupModals(){
-      configClose.addEventListener("click", ()=>configModal.style.display="none");
-      configClose.addEventListener("touchstart", e=>{ e.preventDefault(); configModal.style.display="none"; }, {passive:false});
-      configSave.addEventListener("click", saveLocalKey);
-      configSave.addEventListener("touchstart", e=>{ e.preventDefault(); saveLocalKey(); }, {passive:false});
-      configInput.addEventListener("keydown", e=>{
+      ["click","touchstart"].forEach(evt=>{
+        configClose.addEventListener(evt,e=>{if(evt==="touchstart")e.preventDefault();configModal.style.display="none";},{passive:false});
+        configSave.addEventListener(evt,e=>{if(evt==="touchstart")e.preventDefault();saveLocalKey();},{passive:false});
+      });
+      configInput.addEventListener("keydown",e=>{
         if(e.key==="Enter") saveLocalKey();
       });
-      document.getElementById("showKeyClose")
-        .addEventListener("click", ()=>document.getElementById("showKeyModal").style.display="none");
-      document.getElementById("showKeyClose")
-        .addEventListener("touchstart", e=>{ e.preventDefault(); document.getElementById("showKeyModal").style.display="none"; }, {passive:false});
+      const showKeyClose=document.getElementById("showKeyClose");
+      ["click","touchstart"].forEach(evt=>{
+        showKeyClose.addEventListener(evt,e=>{if(evt==="touchstart")e.preventDefault();document.getElementById("showKeyModal").style.display="none";},{passive:false});
+      });
     }
     function saveLocalKey(){
-      const k = configInput.value.trim();
+      const k=configInput.value.trim();
       if(!k){ showToast("Please enter a key"); return; }
-      localStorage.setItem("secretKey", k);
+      localStorage.setItem("secretKey",k);
       showToast("Local key updated");
       configModal.style.display="none";
     }
     function openConfigModal(){
-      configInput.value = localStorage.getItem("secretKey")||"";
+      configInput.value=localStorage.getItem("secretKey")||"";
       configModal.style.display="block";
     }
     function openShowKeyModal(){
-      document.getElementById("savedKeyText").textContent = localStorage.getItem("secretKey")||"(none)";
+      document.getElementById("savedKeyText").textContent=localStorage.getItem("secretKey")||"(none)";
       document.getElementById("showKeyModal").style.display="block";
     }
 
     // Dispense flow
     async function proceedToDispense(){
-      if(!selectedItems.size)return;
+      if(!selectedItems.size) return;
       await sendDispenseSignal();
       showScreen("dispense-screen");
       initDispense();
     }
-
     function signOut(){
       clearInterval(countdownTimer);
       countdownValue=5;
       showScreen("logo-screen");
     }
 
-    // Send data & log
+    // Send & Log
     async function sendDispenseSignal(){
-      const localKey = localStorage.getItem("secretKey");
+      const localKey=localStorage.getItem("secretKey");
       if(localKey!==serverSecret){
-        showToast("Unauthorized");
-        return;
+        showToast("Unauthorized"); return;
       }
-      const user = STUDENTS[studentId]||studentId;
-      const data = { Status:true, User:user };
+      const user=STUDENTS[studentId]||studentId,
+            data={Status:true,User:user};
       snacks.forEach((s,i)=>data[`Item${i+1}`]=selectedItems.has(s.id));
-      try{ await db.ref("data").update(data);}catch(e){console.error(e);}
+      try{ await db.ref("data").update(data); }catch{}
       const now=new Date(),
             mm=("0"+(now.getMonth()+1)).slice(-2),
             dd=("0"+now.getDate()).slice(-2),
@@ -629,7 +595,7 @@
             payload=[];
       snacks.forEach((_,i)=>selectedItems.has(snacks[i].id)&&payload.push(i+1));
       const log={Time:time,User:user,Payload:payload.join(", ")};
-      try{ await db.ref(`Logs/${key}`).push(log);}catch(e){console.error(e);}
+      try{ await db.ref(`Logs/${key}`).push(log); }catch{}
     }
 
     // Dispense screen
@@ -637,9 +603,15 @@
           countdownEl=document.getElementById("countdown"),
           stayBtn=document.getElementById("stay-signed-btn");
     function setupDispense(){
-      stayBtn.addEventListener("click", ()=>{ clearInterval(countdownTimer); showScreen("snack-screen"); initSnack(); });
-      stayBtn.addEventListener("touchstart", e=>{ e.preventDefault(); clearInterval(countdownTimer); showScreen("snack-screen"); initSnack(); }, {passive:false});
-      window.addEventListener("keydown", e=>{
+      ["click","touchstart"].forEach(evt=>{
+        stayBtn.addEventListener(evt,e=>{
+          if(evt==="touchstart")e.preventDefault();
+          clearInterval(countdownTimer);
+          showScreen("snack-screen");
+          initSnack();
+        },{passive:false});
+      });
+      window.addEventListener("keydown",e=>{
         if(currentScreen==="dispense"){
           if(e.key==="Enter"||e.code==="NumpadEnter"){
             clearInterval(countdownTimer);
@@ -655,10 +627,9 @@
       });
     }
     function initDispense(){
-      const user = STUDENTS[studentId]||studentId||"Student";
+      const user=STUDENTS[studentId]||studentId||"Student";
       thankYouMsg.textContent=`Thank you, ${user.split(" ")[0]}!`;
-      countdownValue=5;
-      countdownEl.textContent=countdownValue;
+      countdownValue=5; countdownEl.textContent=countdownValue;
       countdownTimer=setInterval(()=>{
         countdownValue--;
         countdownEl.textContent=countdownValue;
