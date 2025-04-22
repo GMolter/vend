@@ -200,6 +200,9 @@
     .modal-footer button:hover { background:#2980b9; }
 
     /* STOCK GRID */
+    #stockModal {
+      left:45% !important;
+    }
     #stockModal .stock-grid {
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
@@ -215,8 +218,7 @@
 
     /* EDIT PANEL */
     #stockEditModal {
-      position:fixed;
-      top:50%; left: calc(50% + 180px);
+      top:50%; left: calc(45% + 180px) !important;
       transform:translateY(-50%);
       width:280px; max-width:85%;
       background:#fafafa;border-radius:12px;
@@ -267,7 +269,7 @@
       padding:10px 20px; margin-top:10px;
       border-radius:4px; opacity:0;
       animation:fadein .3s forwards,
-                fadeout .3s forwards 2.7s;
+               fadeout .3s forwards 2.7s;
     }
     @keyframes fadein { to{opacity:1} }
     @keyframes fadeout{ to{opacity:0} }
@@ -289,6 +291,7 @@
       #dispense-screen p{font-size:1.2em;}
       #stay-signed-btn{font-size:1.4em;padding:10px 20px;}
       .modal{width:90%;max-width:360px;}
+      /* Keep edit panel hidden on small */
       #stockEditModal{display:none;}
     }
   </style>
@@ -369,7 +372,7 @@
 
     <!-- Stock Edit Panel -->
     <div id="stockEditModal">
-      <div class="modal-header" style="background:#2c3e50;">Edit Item</div>
+      <div class="modal-header">Edit Item</div>
       <div class="modal-body">
         <label>Name:</label>
         <input type="text" id="editName"/>
@@ -453,14 +456,6 @@
               .forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       currentScreen = id.split("-")[0];
-      // dev button toggle
-      const dbtn = document.getElementById("devButton"),
-            topBar = document.getElementById("menuBtn");
-      if(currentScreen!=="logo" || studentId){
-        dbtn.disabled=true; dbtn.style.pointerEvents="none";
-      } else {
-        dbtn.disabled=false; dbtn.style.pointerEvents="auto";
-      }
     }
 
     // Init entire app
@@ -599,7 +594,6 @@
 
     /* SNACK SCREEN */
     const snackGrid    = document.getElementById("snack-grid"),
-          dispenseBtn  = document.getElementById("dispense-button"),
           signOutBtn   = document.getElementById("snack-signout");
     function setupSnack(){
       ["click","touchstart"].forEach(evt=>{
@@ -621,8 +615,6 @@
           }
         }
       });
-      dispenseBtn.addEventListener("click",proceedToDispense);
-      dispenseBtn.addEventListener("touchstart",e=>{e.preventDefault();proceedToDispense()},{passive:false});
     }
     function renderSnackGrid(){
       selectedItems.clear();
@@ -634,8 +626,7 @@
               name    = cfgItem.name||s.name;
         const card = document.createElement("div");
         card.className = "snack-item" + (enabled?"":" disabled");
-        card.innerHTML = `<h4>${name}</h4>
-                          <p>ID: ${s.slot} | Qty: ${stock}</p>`;
+        card.innerHTML = `<h4>${name}</h4><p>ID: ${s.slot} | Qty: ${stock}</p>`;
         if(enabled){
           ["click","touchstart"].forEach(evt=>{
             card.addEventListener(evt,e=>{
@@ -646,7 +637,6 @@
         }
         snackGrid.appendChild(card);
       });
-      dispenseBtn.style.display="none";
       document.getElementById("menuBtn").style.display =
         (studentId==="DEV MODE"?"block":"none");
     }
@@ -657,11 +647,12 @@
       } else {
         selectedItems.add(slot); el.classList.add("selected");
       }
+      const disp = document.getElementById("dispense-button");
       if(selectedItems.size){
-        dispenseBtn.style.display="block";
-        dispenseBtn.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
+        disp.style.display="block";
+        disp.textContent = selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
       } else {
-        dispenseBtn.style.display="none";
+        disp.style.display="none";
       }
     }
 
@@ -699,9 +690,7 @@
               enabled = cfgItem.enabled!==false;
         const card = document.createElement("div");
         card.className = "stock-card" + (enabled?"":" disabled");
-        card.innerHTML = `<strong>${s.slot}</strong><br>
-                          ${cfgItem.name||s.name}<br>
-                          Qty: ${stock}`;
+        card.innerHTML = `<strong>${s.slot}</strong><br>${cfgItem.name||s.name}<br>Qty: ${stock}`;
         card.addEventListener("click",()=>openEditPanel(s.slot));
         grid.appendChild(card);
       });
