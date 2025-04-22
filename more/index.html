@@ -9,10 +9,11 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     /* RESET & GLOBALS */
-    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html, body {
-      width:100%; height:100vh; overflow:hidden; overscroll-behavior:none;
-      touch-action:none; font-family:Arial,sans-serif; background:#fff;
+      width:100%; height:100vh;
+      overflow:hidden; overscroll-behavior:none; touch-action:none;
+      font-family:Arial,sans-serif; background:#fff;
     }
     html, body, button, a { cursor:none!important; }
     button { transition:transform .1s; user-select:none; }
@@ -40,13 +41,11 @@
     #logo-screen img {
       width:300px; height:300px; border-radius:50%;
       box-shadow:0 0 20px rgba(0,0,0,.5);
-      animation:pulse 2s infinite alternate;
-      cursor:pointer;
+      animation:pulse 2s infinite alternate; cursor:pointer;
     }
     @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.05)} }
     #logo-screen h2 {
-      margin-top:20px; font-size:2.5em; color:#333;
-      cursor:pointer;
+      margin-top:20px; font-size:2.5em; color:#333; cursor:pointer;
     }
 
     /* KEYPAD */
@@ -54,8 +53,7 @@
     #digit-display { display:flex; justify-content:center; margin-bottom:20px; }
     .digit-box {
       width:70px; height:70px; margin:0 5px;
-      border-bottom:2px solid #333;
-      font-size:3em; line-height:70px;
+      border-bottom:2px solid #333; font-size:3em; line-height:70px;
     }
     .keypad-grid {
       display:grid; grid-template-columns:repeat(3,1fr);
@@ -84,8 +82,7 @@
       padding-top:100px; text-align:center;
     }
     #student-name {
-      position:absolute; top:10px; left:20px;
-      font-size:2em; color:#333;
+      position:absolute; top:10px; left:20px; font-size:2em; color:#333;
     }
     #snack-signout {
       position:absolute; top:10px; right:20px;
@@ -93,9 +90,8 @@
       padding:16px 32px; font-size:1.6em;
       border:none; border-radius:6px; cursor:pointer;
     }
-    /* shift menuBtn left so it never overlaps Sign Out */
     #menuBtn {
-      position:absolute; top:10px; right:160px;
+      position:absolute; top:10px; right:200px;
       background:#34495e; color:#fff;
       padding:16px 24px; font-size:1.2em;
       border:none; border-radius:6px; cursor:pointer;
@@ -168,7 +164,10 @@
       background:#007bff; color:#fff; cursor:pointer;
     }
 
-    /* STOCK MODAL CARDS */
+    /* STOCK MODAL SCROLL & CARDS */
+    #stockModal .modal-body {
+      max-height:60vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    }
     .stock-card {
       border:1px solid #ccc; border-radius:6px;
       padding:10px; margin-bottom:10px;
@@ -181,14 +180,13 @@
     .stock-card label { display:block; margin-bottom:8px; }
     .stock-card .stock-save {
       background:#27ae60; color:#fff; border:none;
-      padding:8px 12px; border-radius:4px;
-      cursor:pointer;
+      padding:8px 12px; border-radius:4px; cursor:pointer;
     }
 
     /* TOAST */
     #toast-container {
-      position:fixed; bottom:20px; left:50%;
-      transform:translateX(-50%); z-index:10000;
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+      z-index:10000;
     }
     .toast {
       display:inline-block; background:rgba(0,0,0,.8);
@@ -207,7 +205,7 @@
       .keypad-btn{width:90px;height:90px;font-size:2.2em;}
       #student-name{font-size:1.8em;}
       #snack-signout{font-size:1.4em;padding:14px 28px;}
-      #menuBtn{font-size:1em;padding:12px 20px;}
+      #menuBtn{font-size:1em;padding:12px 20px; right:160px;}
       #snack-screen h2{font-size:2.2em;}
       .snack-item h4{font-size:1.8em;}
       #dispense-button{font-size:2em;padding:30px 40px;}
@@ -251,7 +249,7 @@
       <button id="stay-signed-btn">Stay Signed In</button>
     </div>
 
-    <!-- CONFIG MODAL -->
+    <!-- CONFIG -->
     <div id="configModal" class="modal screen">
       <div class="modal-header">Set Local Secret Key</div>
       <div class="modal-body">
@@ -263,7 +261,7 @@
       </div>
     </div>
 
-    <!-- MENU MODAL -->
+    <!-- MENU -->
     <div id="menuModal" class="modal screen">
       <div class="modal-header">Admin Menu</div>
       <div class="modal-body">
@@ -275,7 +273,7 @@
       </div>
     </div>
 
-    <!-- STOCK MODAL -->
+    <!-- STOCK MGMT -->
     <div id="stockModal" class="modal screen">
       <div class="modal-header">Stock Management</div>
       <div class="modal-body" id="stockBody">
@@ -291,11 +289,13 @@
   </div>
 
   <script>
-    // prevent touch-scroll
-    document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+    // disable page‐scroll except inside modals
+    document.addEventListener('touchmove', e=>{
+      if (!e.target.closest('.modal')) e.preventDefault();
+    }, { passive: false });
 
     // VERSION
-    const APP_VERSION = "v2.7.1";
+    const APP_VERSION = "v2.7.2";
 
     // Firebase init
     const cfg = {
@@ -343,7 +343,7 @@
       {id:"B3",name:"Trail Mix",quantity:9}
     ];
 
-    // idle
+    // idle logout
     function resetIdle(){
       clearTimeout(idleTimer);
       idleTimer = setTimeout(signOut,90*1000);
@@ -574,8 +574,8 @@
           stockModal=document.getElementById("stockModal"),
           stockBody=document.getElementById("stockBody"),
           stockClose=document.getElementById("stockClose");
+
     function setupModals(){
-      // config
       configClose.addEventListener("click",()=>configModal.style.display="none");
       configClose.addEventListener("touchstart",e=>{e.preventDefault();configModal.style.display="none";},{passive:false});
       configSave.addEventListener("click",saveLocalKey);
@@ -605,7 +605,7 @@
       configModal.style.display="block";
     }
 
-    // STOCK MANAGEMENT (seed defaults if empty)
+    // STOCK MGMT
     async function openStockModal(){
       stockModal.style.display="block";
       stockBody.innerHTML="Loading…";
@@ -613,7 +613,6 @@
         let snap = await db.ref("machineManagement").once("value");
         let data = snap.val()||{};
         if(Object.keys(data).length===0){
-          // seed defaults
           const defaults={};
           snacks.forEach(s=>{
             defaults[s.id] = { name:s.name, stock:s.quantity, enabled:true };
@@ -621,10 +620,9 @@
           await db.ref("machineManagement").set(defaults);
           data = defaults;
         }
-        // render cards
         let html="";
         Object.keys(data).forEach(id=>{
-          const rec=data[id];
+          const rec = data[id];
           html+=`
             <div class="stock-card" data-id="${id}">
               <h4>Slot ${id}</h4>
@@ -662,7 +660,6 @@
       showScreen("dispense-screen");
       initDispense();
     }
-
     function signOut(){
       clearInterval(countdownTimer);
       countdownValue=5;
@@ -671,7 +668,7 @@
       showScreen("logo-screen");
     }
 
-    // FIREBASE UPDATE + LOG
+    // FIREBASE DISPENSE & LOG
     async function sendDispenseSignal(){
       const localKey=localStorage.getItem("secretKey");
       if(localKey!==serverSecret){
