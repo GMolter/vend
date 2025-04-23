@@ -109,8 +109,7 @@
       font-size:1.8em; color:#333;
     }
     #menuBtn {
-      position:absolute; top:12px; right:210px;
-      z-index:10003;
+      position:absolute; top:12px; right:210px; z-index:10003;
     }
     #snack-signout {
       position:absolute; top:12px; right:20px;
@@ -149,9 +148,11 @@
     .out-of-stock {
       position:absolute; top:50%; left:50%;
       transform:translate(-50%,-50%);
-      color:#c0392b; font-weight:bold;
-      text-align:center; line-height:1em;
-      pointer-events:none;
+      background:rgba(192,57,43,0.9);
+      color:#fff; font-weight:bold;
+      padding:4px 6px; border-radius:4px;
+      text-align:center; line-height:1; pointer-events:none;
+      z-index:1;
     }
     #dispense-button {
       position:absolute; bottom:20px; left:50%;
@@ -202,12 +203,8 @@
       margin-bottom:12px; color:#2c3e50;
     }
     .modal-body { margin-bottom:12px; }
-    .modal-footer {
-      text-align:right;
-    }
-    .modal-footer .btn {
-      margin-left:8px;
-    }
+    .modal-footer { text-align:right; }
+    .modal-footer .btn { margin-left:8px; }
 
     /* STOCK GRID */
     .stock-grid {
@@ -222,7 +219,7 @@
       transition:background .2s;
     }
     .stock-card:hover { background:#ececec; }
-    .stock-card.disabled { opacity:.5; cursor:not-allowed; }
+    .stock-card.disabled { opacity:.6; }
 
     /* STOCK EDIT PANEL */
     #stockEditModal {
@@ -382,7 +379,7 @@
     // disable touch scroll
     document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
 
-    const APP_VERSION="v2.7.6";
+    const APP_VERSION="v2.7.7";
     const cfg={
       apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain:"cyberflashvend.firebaseapp.com",
@@ -400,7 +397,10 @@
         idleTimer, countdownTimer, countdownValue=5;
 
     const STUDENTS={
-      "260514":"Gavin Molter", /*…*/ "260627":"Mason Robbins"
+      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
+      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
+      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
+      "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins"
     };
     const SNACK_SLOTS=[
       {slot:"A1",name:"Chips",qty:8},
@@ -691,7 +691,8 @@
         const card=document.createElement("div");
         card.className="stock-card"+(enabled?"":" disabled");
         card.innerHTML=`<strong>${s.slot}</strong><br>${name}<br>Qty: ${stock}`;
-        card.addEventListener("click",()=>{ if(enabled) openEditPanel(s.slot); });
+        // always allow edit, even if disabled
+        card.addEventListener("click",()=> openEditPanel(s.slot));
         grid.appendChild(card);
       });
       document.getElementById("stockClose").onclick=()=>{
@@ -750,7 +751,9 @@
         },{passive:false});
       });
       document.getElementById("configInput")
-        .addEventListener("keydown",e=>{ if(e.key==="Enter") cfgSave.click(); });
+        .addEventListener("keydown",e=>{
+          if(e.key==="Enter") cfgSave.click();
+        });
     }
 
     /* DISPENSE FLOW */
@@ -810,16 +813,14 @@
         stayBtn.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
           clearInterval(countdownTimer);
-          showScreen("snack-screen");
-          renderSnackGrid();
+          showScreen("snack-screen"); renderSnackGrid();
         },{passive:false});
       });
       window.addEventListener("keydown",e=>{
         if(currentScreen==="dispense"){
           if(e.key==="Enter"||e.code==="NumpadEnter"){
             clearInterval(countdownTimer);
-            showScreen("snack-screen");
-            renderSnackGrid();
+            showScreen("snack-screen"); renderSnackGrid();
           } else if(e.key==="Escape"){
             clearInterval(countdownTimer);
             signOut();
