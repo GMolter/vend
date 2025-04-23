@@ -9,16 +9,18 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     /* RESET & GLOBALS */
-    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    * { margin:0; padding:0; box-sizing:border-box; }
     html, body {
-      width:100%; height:100vh; overflow:hidden; overscroll-behavior:none; touch-action:none;
-      font-family:Arial,sans-serif; background:#fff;
-    }
-    @media (pointer: coarse) {
-      html,body,button,a { cursor:none!important; }
+      width:100%; height:100vh;
+      overflow:hidden; overscroll-behavior:none; touch-action:none;
+      font-family:Arial, sans-serif;
+      background:#f5f5f5;
     }
     @media (pointer: fine) {
-      html,body,button,a { cursor:auto!important; }
+      html,body,button,a { cursor:auto !important; }
+    }
+    @media (pointer: coarse) {
+      html,body,button,a { cursor:none !important; }
     }
     button { transition:transform .1s; user-select:none; }
     button:active { transform:scale(.95); }
@@ -26,10 +28,12 @@
     /* APP & VERSION */
     #app { position:relative; width:100%; height:100%; }
     #version-label {
-      position:fixed; bottom:10px; left:10px; color:#555; font-size:0.9em; z-index:9999;
+      position:fixed; bottom:12px; left:12px;
+      font-size:.85em; color:#777; z-index:9999;
     }
     #devButton {
-      position:fixed; top:0; right:0; width:50px; height:50px;
+      position:fixed; top:0; right:0;
+      width:48px; height:48px;
       background:transparent; border:none; opacity:0;
       z-index:10002; pointer-events:auto;
     }
@@ -38,116 +42,130 @@
     .screen {
       position:absolute; top:50%; left:50%;
       transform:translate(-50%,-50%);
-      width:90%; max-width:800px; text-align:center; display:none;
+      width:90%; max-width:800px;
+      text-align:center; display:none;
     }
     .screen.active { display:block; }
 
     /* LOGO */
     #logo-screen img {
-      width:300px; height:300px; border-radius:50%;
-      box-shadow:0 0 20px rgba(0,0,0,.5);
+      width:280px; height:280px;
+      border-radius:50%;
+      box-shadow:0 0 20px rgba(0,0,0,.3);
       animation:pulse 2s infinite alternate;
+      cursor:pointer;
     }
-    @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.05)} }
+    @keyframes pulse {
+      from{transform:scale(1)} to{transform:scale(1.05)}
+    }
     #logo-screen h2 {
-      margin-top:20px; font-size:2.5em; color:#333; cursor:pointer;
+      margin-top:16px; font-size:2.2em; color:#333;
+      cursor:pointer;
     }
 
     /* KEYPAD */
-    #keypad-screen h2 { margin-bottom:20px; font-size:2.2em; color:#333; }
+    #keypad-screen h2 {
+      margin-bottom:20px; font-size:2em; color:#333;
+    }
     #digit-display { display:flex; justify-content:center; margin-bottom:20px; }
     .digit-box {
-      width:70px; height:70px; margin:0 5px;
-      border-bottom:2px solid #333; font-size:3em; line-height:70px;
+      width:60px; height:60px; margin:0 4px;
+      border-bottom:2px solid #555;
+      font-size:2.6em; line-height:60px; color:#333;
     }
     .keypad-grid {
       display:grid; grid-template-columns:repeat(3,1fr);
-      gap:10px; justify-items:center;
+      gap:8px; justify-items:center;
     }
     .keypad-btn {
-      width:100px; height:100px; border-radius:50%;
-      background:rgba(0,0,0,.1); color:#333;
-      font-size:2.5em; display:flex;
-      align-items:center; justify-content:center;
+      width:88px; height:88px; border-radius:50%;
+      background:#eee; color:#333; font-size:2.2em;
+      display:flex; align-items:center; justify-content:center;
       touch-action:manipulation;
     }
-    .keypad-btn.backspace { background:red; color:#fff; }
+    .keypad-btn.backspace {
+      background:#e74c3c; color:#fff;
+    }
     .shake { animation:shake .5s; }
     @keyframes shake {
       0%,100%{transform:translateX(0)}
-      20%,60%{transform:translateX(-10px)}
-      40%,80%{transform:translateX(10px)}
+      25%,75%{transform:translateX(-8px)}
+      50%{transform:translateX(8px)}
     }
 
     /* SNACK SCREEN */
-    #snack-screen { padding-top:100px; }
+    #snack-screen { padding-top:80px; }
     #student-name {
-      position:absolute; top:10px; left:20px;
-      font-size:2em; color:#333;
+      position:absolute; top:12px; left:20px;
+      font-size:1.8em; color:#333;
     }
     #menuBtn {
-      position:absolute; top:10px; right:160px;
-      background:#34495e; color:#fff;
-      padding:12px 20px; font-size:1.1em;
-      border:none; border-radius:6px;
+      position:absolute; top:12px; right:210px;
+      background:#2c3e50; color:#fff;
+      padding:10px 18px; font-size:1em;
+      border:none; border-radius:4px;
       z-index:10003;
       touch-action:manipulation;
-      display:none;
     }
     #snack-signout {
-      position:absolute; top:10px; right:20px;
-      background:#e74c3c; color:#fff;
-      padding:16px 32px; font-size:1.6em;
-      border:none; border-radius:6px;
+      position:absolute; top:12px; right:20px;
+      background:#c0392b; color:#fff;
+      padding:12px 24px; font-size:1.2em;
+      border:none; border-radius:4px;
       z-index:10003;
       touch-action:manipulation;
     }
     #snack-screen h2 {
-      font-size:2.5em; margin-bottom:30px; color:#333;
+      font-size:2.2em; margin-bottom:24px; color:#333;
     }
     #snack-grid {
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-      gap:15px; margin-bottom:120px; justify-items:center;
+      grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+      gap:12px; margin-bottom:100px; justify-items:center;
     }
     .snack-item {
-      background:rgba(0,0,0,.05); border:2px solid transparent;
-      padding:15px; border-radius:8px; text-align:center;
-      transition:background .3s,border-color .3s;
+      background:#fff; border:1px solid #ddd;
+      padding:12px; border-radius:6px; text-align:center;
+      box-shadow:0 2px 5px rgba(0,0,0,.1);
+      transition:box-shadow .2s,background .2s;
       touch-action:manipulation;
     }
+    .snack-item:hover { box-shadow:0 4px 10px rgba(0,0,0,.15); }
     .snack-item.selected {
-      background:rgba(52,152,219,.4); border-color:#3498db;
+      background:#d6eaf8; border-color:#5dade2;
     }
     .snack-item.disabled {
-      opacity:0.4; cursor:not-allowed;
+      opacity:.5; cursor:not-allowed;
     }
-    .snack-item h4 { margin-bottom:5px; font-size:1.6em; }
-    .snack-item p  { font-size:1.2em; }
+    .snack-item h4 { margin-bottom:6px; font-size:1.4em; color:#2c3e50; }
+    .snack-item p  { font-size:1em; color:#555; }
+
     #dispense-button {
       position:absolute; bottom:20px; left:50%;
       transform:translateX(-50%);
-      padding:25px 35px; font-size:1.8em;
-      background:#2ecc71; border:none; border-radius:8px;
-      color:#fff; display:none;
+      padding:18px 28px; font-size:1.6em;
+      background:#27ae60; color:#fff;
+      border:none; border-radius:6px;
       touch-action:manipulation;
+      box-shadow:0 3px 6px rgba(0,0,0,.1);
+      display:none;
     }
 
     /* DISPENSE SCREEN */
     #dispense-screen {
-      background:#2e3192; color:#fff;
-      width:90%; max-width:600px;
-      padding:40px; border-radius:15px;
-      box-shadow:0 10px 30px rgba(0,0,0,.3);
+      background:#34495e; color:#fff;
+      width:90%; max-width:580px;
+      padding:30px; border-radius:8px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
     }
-    #dispense-screen img { width:100px; height:100px; margin-bottom:20px; }
-    #dispense-screen h2 { font-size:2.8em; margin-bottom:10px; }
-    #dispense-text { font-size:1.2em; margin-bottom:10px; }
-    #dispense-screen p { font-size:1.4em; margin-bottom:20px; }
+    #dispense-screen img { width:80px; height:80px; margin-bottom:16px; }
+    #dispense-screen h2 { font-size:2.4em; margin-bottom:12px; }
+    #dispense-text { font-size:1.1em; margin-bottom:12px; }
+    #dispense-screen p { font-size:1.3em; margin-bottom:18px; }
     #stay-signed-btn {
       background:#2980b9; color:#fff;
-      padding:12px 24px; font-size:1.2em;
-      border:none; border-radius:8px;
+      padding:10px 22px; font-size:1em;
+      border:none; border-radius:4px;
       touch-action:manipulation;
     }
 
@@ -155,70 +173,90 @@
     .modal {
       position:fixed; top:50%; left:50%;
       transform:translate(-50%,-50%);
-      width:320px; max-width:90%;
+      width:300px; max-width:90%;
       max-height:80vh; overflow-y:auto;
-      background:#fff; border-radius:8px;
-      box-shadow:0 5px 15px rgba(0,0,0,.2);
-      padding:20px; display:none; z-index:10001;
+      background:#fff; border-radius:6px;
+      box-shadow:0 8px 24px rgba(0,0,0,.2);
+      padding:16px; display:none; z-index:10001;
     }
     .modal.active { display:block; }
     .modal-header {
-      font-size:1.4em; font-weight:bold;
-      margin-bottom:15px;
+      font-size:1.3em; font-weight:600;
+      margin-bottom:12px; color:#2c3e50;
     }
-    .modal-body {
-      margin-bottom:15px;
-      display:flex; flex-direction:column; gap:10px;
+    .modal-body { margin-bottom:12px; }
+    .modal-body input,
+    .modal-body button {
+      width:100%; margin-top:6px;
+      font-size:1em; padding:8px;
     }
     .modal-footer {
       text-align:right;
     }
     .modal-footer button {
-      margin-left:8px; padding:8px 16px;
-      font-size:1em; touch-action:manipulation;
+      background:#2980b9; color:#fff;
+      border:none; border-radius:4px;
+      padding:8px 16px; font-size:.95em;
+      margin-left:8px;
+      touch-action:manipulation;
+    }
+    .modal-footer button.cancel {
+      background:#bdc3c7; color:#333;
     }
 
     /* STOCK GRID */
     .stock-grid {
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-      gap:12px;
+      grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+      gap:10px;
     }
     .stock-card {
-      background:#f7f7f7; border-radius:6px;
-      padding:10px; text-align:center; cursor:pointer;
+      background:#f9f9f9; border:1px solid #ddd;
+      padding:8px; border-radius:4px;
+      text-align:center; cursor:pointer;
       transition:background .2s;
     }
-    .stock-card:hover { background:#eee; }
-    .stock-card.disabled { opacity:0.5; cursor:not-allowed; }
+    .stock-card:hover { background:#ececec; }
+    .stock-card.disabled { opacity:.5; cursor:not-allowed; }
 
-    /* EDIT PANEL */
+    /* STOCK EDIT PANEL */
     #stockEditModal {
-      position:fixed; top:50%; /* center vertically */
-      left:calc(50% + 180px); /* right of stockModal (320px/2 + 20px) */
+      position:fixed; top:50%;
+      left:calc(50% + 180px);
       transform:translateY(-50%);
-      width:260px; max-width:80%;
-      background:#fff; border-radius:8px;
-      box-shadow:0 5px 15px rgba(0,0,0,.2);
-      padding:20px; display:none; z-index:10002;
+      width:240px; max-width:80%;
+      background:#fff; border-radius:6px;
+      box-shadow:0 8px 24px rgba(0,0,0,.2);
+      padding:16px; display:none; z-index:10002;
     }
     #stockEditModal.active { display:block; }
     #stockEditModal h4 {
-      margin-bottom:12px; font-size:1.2em;
+      margin-bottom:10px; font-size:1.1em; color:#2c3e50;
     }
     #stockEditModal label {
-      display:block; font-size:0.9em; margin-top:8px;
+      display:block; margin-top:8px;
+      font-size:.9em; color:#333;
     }
     #stockEditModal input[type="text"],
     #stockEditModal input[type="number"] {
-      width:100%; padding:6px; font-size:0.9em;
-      margin-top:4px; box-sizing:border-box;
+      width:100%; padding:6px; margin-top:4px;
+      font-size:.9em; border:1px solid #ccc;
+      border-radius:4px; box-sizing:border-box;
     }
     #stockEditModal .actions {
-      margin-top:15px; text-align:right;
+      margin-top:12px; text-align:right;
     }
     #stockEditModal .actions button {
-      margin-left:8px; padding:8px 12px; font-size:0.9em;
+      font-size:.9em; padding:6px 12px;
+      border:none; border-radius:4px;
+      touch-action:manipulation;
+    }
+    #stockEditModal .actions button.cancel {
+      background:#bdc3c7; color:#333;
+    }
+    #stockEditModal .actions button.save {
+      background:#27ae60; color:#fff;
+      margin-left:6px;
     }
 
     /* TOAST */
@@ -228,31 +266,31 @@
     }
     .toast {
       background:rgba(0,0,0,.8); color:#fff;
-      padding:10px 20px; margin-top:10px;
+      padding:8px 16px; margin-top:6px;
       border-radius:4px; opacity:0;
       animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
     }
     @keyframes fadein { to{opacity:1} }
-    @keyframes fadeout{ to{opacity:0} }
+    @keyframes fadeout { to{opacity:0} }
 
     /* MOBILE */
     @media(max-width:600px){
-      #logo-screen img{width:250px;height:250px;}
-      #logo-screen h2{font-size:2.2em;}
-      .digit-box{width:80px;height:80px;font-size:3.5em;line-height:80px;}
-      .keypad-btn{width:90px;height:90px;font-size:2.2em;}
-      #student-name{font-size:1.8em;}
-      #menuBtn,#snack-signout{font-size:1.2em;padding:12px 24px;}
-      #snack-screen h2{font-size:2.2em;}
-      .snack-item h4{font-size:1.8em;}
-      #dispense-button{font-size:2em;padding:30px 40px;}
-      #dispense-screen{padding:30px;border-radius:12px;}
-      #dispense-screen h2{font-size:2.4em;}
-      #dispense-text{font-size:1.1em;}
+      #logo-screen img{width:220px;height:220px;}
+      #logo-screen h2{font-size:2em;}
+      .digit-box{width:60px;height:60px;font-size:2.8em;}
+      .keypad-btn{width:80px;height:80px;font-size:2em;}
+      #student-name{font-size:1.6em;}
+      #menuBtn,#snack-signout{font-size:1em;padding:8px 16px;}
+      #snack-screen h2{font-size:2em;}
+      .snack-item h4{font-size:1.3em;}
+      #dispense-button{font-size:1.4em;padding:14px 24px;}
+      #dispense-screen{padding:20px;border-radius:6px;}
+      #dispense-screen h2{font-size:2em;}
+      #dispense-text{font-size:1em;}
       #dispense-screen p{font-size:1.2em;}
-      #stay-signed-btn{font-size:1.4em;padding:10px 20px;}
-      .modal{width:90%;max-width:360px;}
-      #stockEditModal{left:auto;right:10px;transform:translateY(-50%);}
+      #stay-signed-btn{font-size:1em;padding:8px 18px;}
+      .modal{width:90%;max-width:320px;}
+      #stockEditModal{left:auto;right:10px;}
     }
   </style>
 </head>
@@ -260,20 +298,20 @@
   <div id="app">
     <button id="devButton"></button>
 
-    <!-- Logo screen -->
+    <!-- Logo Screen -->
     <div id="logo-screen" class="screen active">
       <img src="fchs-logo.png" alt="Logo" />
       <h2>Tap to Begin</h2>
     </div>
 
-    <!-- Keypad screen -->
+    <!-- Keypad Screen -->
     <div id="keypad-screen" class="screen">
       <h2>Enter Student ID</h2>
       <div id="digit-display"></div>
       <div class="keypad-grid" id="keypad-buttons"></div>
     </div>
 
-    <!-- Snack screen -->
+    <!-- Snack Screen -->
     <div id="snack-screen" class="screen">
       <div id="student-name">Student Name</div>
       <button id="menuBtn">Menu</button>
@@ -283,7 +321,7 @@
       <button id="dispense-button">Dispense Snacks</button>
     </div>
 
-    <!-- Dispense confirmation -->
+    <!-- Dispense Screen -->
     <div id="dispense-screen" class="screen">
       <img src="fchs-logo.png" alt="Logo" />
       <h2 id="thank-you-msg">Thank you, Student!</h2>
@@ -300,7 +338,7 @@
         <button id="openStockBtn">Stock Management</button>
       </div>
       <div class="modal-footer">
-        <button id="menuClose">Close</button>
+        <button class="cancel" id="menuClose">Close</button>
       </div>
     </div>
 
@@ -311,8 +349,8 @@
         <input id="configInput" placeholder="Enter new key" />
       </div>
       <div class="modal-footer">
-        <button id="configClose">Cancel</button>
-        <button id="configSave">Save</button>
+        <button class="cancel" id="configClose">Cancel</button>
+        <button class="save"   id="configSave">Save</button>
       </div>
     </div>
 
@@ -323,21 +361,21 @@
         <div class="stock-grid" id="stock-grid"></div>
       </div>
       <div class="modal-footer">
-        <button id="stockClose">Close</button>
+        <button class="cancel" id="stockClose">Close</button>
       </div>
     </div>
 
     <!-- Stock Edit Panel -->
     <div id="stockEditModal">
       <h4 id="editTitle">Edit Item</h4>
-      <label>Name:</label>
+      <label for="editName">Name:</label>
       <input type="text" id="editName" />
-      <label>Stock:</label>
+      <label for="editQty">Stock:</label>
       <input type="number" id="editQty" min="0" />
-      <label><input type="checkbox" id="editEnabled"/>Enabled</label>
+      <label><input type="checkbox" id="editEnabled" /> Enabled</label>
       <div class="actions">
-        <button id="editCancel">Cancel</button>
-        <button id="editSave">Save</button>
+        <button class="cancel" id="editCancel">Cancel</button>
+        <button class="save"   id="editSave">Save</button>
       </div>
     </div>
 
@@ -346,51 +384,37 @@
   </div>
 
   <script>
-    // Disable any touch scroll
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive:false });
+    // disable touch scrolling
+    document.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
 
-    // App version
-    const APP_VERSION = "v2.7.4";
-
-    // Firebase init
+    const APP_VERSION = "v2.7.5";
     const cfg = {
-      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-      authDomain: "cyberflashvend.firebaseapp.com",
-      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
+      apiKey:    "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain:"cyberflashvend.firebaseapp.com",
+      databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/",
       projectId: "cyberflashvend",
-      storageBucket: "cyberflashvend.firebasestorage.app",
-      messagingSenderId: "63786658773",
-      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+      storageBucket:"cyberflashvend.firebasestorage.app",
+      messagingSenderId:"63786658773",
+      appId:     "1:63786658773:web:7792d3693ef45e9ec4eb5c"
     };
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // Globals
-    let serverSecret = null,
-        machineConfig = {},
-        currentScreen="logo",
-        studentId="",
-        selectedItems=new Set(),
-        idleTimer,
-        countdownTimer,
-        countdownValue=5;
+    // state
+    let serverSecret=null, machineConfig={}, currentScreen="logo",
+        studentId="", selectedItems=new Set(),
+        idleTimer, countdownTimer, countdownValue=5;
 
-    const STUDENTS = {
-      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
-      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
-      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
-      "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins"
-    };
+    const STUDENTS = { "260514":"Gavin Molter", /* … */ "260627":"Mason Robbins" };
     const SNACK_SLOTS = [
-      {slot:"A1",name:"Chips",quantity:8},
-      {slot:"A2",name:"Cookies",quantity:5},
-      {slot:"A3",name:"Pretzels",quantity:12},
-      {slot:"B1",name:"Candy Bar",quantity:7},
-      {slot:"B2",name:"Granola Bar",quantity:3},
-      {slot:"B3",name:"Trail Mix",quantity:9}
+      {slot:"A1",name:"Chips",qty:8},
+      {slot:"A2",name:"Cookies",qty:5},
+      {slot:"A3",name:"Pretzels",qty:12},
+      {slot:"B1",name:"Candy Bar",qty:7},
+      {slot:"B2",name:"Granola Bar",qty:3},
+      {slot:"B3",name:"Trail Mix",qty:9}
     ];
 
-    // Load server config & machineManagement
     async function loadServer(){
       serverSecret = (await db.ref("Config").once("value")).val();
       machineConfig = (await db.ref("machineManagement").once("value")).val()||{};
@@ -398,106 +422,99 @@
     }
     loadServer();
 
-    // Idle logout
+    // idle
     function resetIdle(){
       clearTimeout(idleTimer);
       idleTimer = setTimeout(signOut,90*1000);
     }
-    ["keydown","click","mousemove","touchstart"].forEach(evt=>
-      document.addEventListener(evt,resetIdle)
-    );
+    ["keydown","click","mousemove","touchstart"]
+      .forEach(e=>document.addEventListener(e,resetIdle));
     resetIdle();
 
-    // Show screen helper
+    function showToast(msg){
+      const t=document.createElement("div");
+      t.className="toast"; t.textContent=msg;
+      document.getElementById("toast-container").appendChild(t);
+      setTimeout(()=>t.remove(),3000);
+    }
+
     function showScreen(id){
-      document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+      document.querySelectorAll(".screen")
+        .forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
-      currentScreen = id.split("-")[0];
-      // devButton
-      const dbtn = document.getElementById("devButton");
-      if(currentScreen!=="logo" || studentId){
+      currentScreen=id.split("-")[0];
+      const dbtn=document.getElementById("devButton");
+      if(currentScreen!=="logo"||studentId){
         dbtn.disabled=true; dbtn.style.pointerEvents="none";
       } else {
         dbtn.disabled=false; dbtn.style.pointerEvents="auto";
       }
     }
 
-    // Init application
     function initApp(){
-      document.getElementById("version-label").textContent = APP_VERSION;
+      document.getElementById("version-label").textContent=APP_VERSION;
       setupDev(); setupLogo(); setupKeypad();
       setupSnack(); setupDispense(); setupMenu(); setupModals();
     }
 
-    // Toast
-    function showToast(msg){
-      const t = document.createElement("div");
-      t.className = "toast"; t.textContent = msg;
-      document.getElementById("toast-container").appendChild(t);
-      setTimeout(()=>t.remove(),3000);
-    }
-
-    /* DEV MODE */
+    /* DEV */
     function setupDev(){
-      const devBtn = document.getElementById("devButton");
-      window.addEventListener("keydown", e=>{
+      const dbtn=document.getElementById("devButton");
+      window.addEventListener("keydown",e=>{
         if(e.key.toLowerCase()==="d") activateDev();
       });
       ["click","touchstart"].forEach(evt=>{
-        devBtn.addEventListener(evt, e=>{
+        dbtn.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
           activateDev();
         },{passive:false});
       });
     }
     function activateDev(){
-      studentId = "DEV MODE";
-      document.getElementById("student-name").textContent = "DEV MODE";
+      studentId="DEV MODE";
+      document.getElementById("student-name").textContent="DEV MODE";
       showScreen("snack-screen");
       renderSnackGrid();
-      document.getElementById("menuBtn").style.display = "block";
+      document.getElementById("menuBtn").style.display="block";
     }
 
-    /* LOGO SCREEN */
+    /* LOGO */
     function setupLogo(){
-      const img = document.querySelector("#logo-screen img"),
-            txt = document.querySelector("#logo-screen h2");
+      const img=document.querySelector("#logo-screen img"),
+            txt=document.querySelector("#logo-screen h2");
       ["click","touchstart"].forEach(evt=>{
-        img.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          showScreen("keypad-screen"); initKeypad();
-        },{passive:false});
-        txt.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          showScreen("keypad-screen"); initKeypad();
-        },{passive:false});
+        [img,txt].forEach(el=>{
+          el.addEventListener(evt,e=>{
+            if(evt==="touchstart") e.preventDefault();
+            showScreen("keypad-screen"); initKeypad();
+          },{passive:false});
+        });
       });
-      window.addEventListener("keydown", e=>{
-        if(currentScreen==="logo") {
-          showScreen("keypad-screen");
-          initKeypad();
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="logo"){
+          showScreen("keypad-screen"); initKeypad();
         }
       });
     }
 
     /* KEYPAD */
-    const digitDisplay     = document.getElementById("digit-display"),
-          keypadButtons    = document.getElementById("keypad-buttons"),
-          maxDigits        = 6,
-          layout           = ["1","2","3","4","5","6","7","8","9","","0","backspace"];
+    const digitDisplay=document.getElementById("digit-display"),
+          keypadButtons=document.getElementById("keypad-buttons"),
+          maxDigits=6, layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
     function isNumKey(e){
-      return /^\d$/.test(e.key) ||
-             (e.code.startsWith("Numpad") && e.key.length===1);
+      return /^\d$/.test(e.key)||(e.code.startsWith("Numpad")&&e.key.length===1);
     }
     function setupKeypad(){
       initKeypad();
-      window.addEventListener("keydown", e=>{
-        if(currentScreen==="keypad" && !e.repeat){
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="keypad"&&!e.repeat){
           if(isNumKey(e)){
             e.preventDefault(); handleDigit(e.key.slice(-1));
           }
-          else if(e.key==="Backspace"){ e.preventDefault(); handleBack();}
-          else if((e.key==="Enter"||e.code==="NumpadEnter") && studentId.length===maxDigits){
+          else if(e.key==="Backspace"){
+            e.preventDefault(); handleBack();
+          }
+          else if((e.key==="Enter"||e.code==="NumpadEnter")&&studentId.length===maxDigits){
             e.preventDefault(); validateID();
           }
         }
@@ -509,7 +526,7 @@
         layout.forEach(val=>{
           if(!val){
             const ph=document.createElement("div");
-            ph.style.width="100px"; ph.style.height="100px";
+            ph.style.width="88px"; ph.style.height="88px";
             keypadButtons.appendChild(ph);
           } else {
             const btn=document.createElement("div");
@@ -532,7 +549,7 @@
       for(let i=0;i<maxDigits;i++){
         const d=document.createElement("div");
         d.className="digit-box";
-        d.textContent= i<studentId.length?"•":"_";
+        d.textContent=i<studentId.length?"•":"_";
         digitDisplay.appendChild(d);
       }
     }
@@ -544,13 +561,12 @@
     }
     function handleBack(){
       if(studentId.length){
-        studentId=studentId.slice(0,-1);
-        renderDigits();
+        studentId=studentId.slice(0,-1); renderDigits();
       }
     }
     function validateID(){
       if(STUDENTS[studentId]){
-        document.getElementById("student-name").textContent = STUDENTS[studentId];
+        document.getElementById("student-name").textContent=STUDENTS[studentId];
         showScreen("snack-screen"); renderSnackGrid();
       } else {
         digitDisplay.classList.add("shake");
@@ -563,9 +579,9 @@
     }
 
     /* SNACK SCREEN */
-    const snackGrid     = document.getElementById("snack-grid"),
-          dispenseBtn   = document.getElementById("dispense-button"),
-          signOutBtn    = document.getElementById("snack-signout");
+    const snackGrid=document.getElementById("snack-grid"),
+          dispenseBtn=document.getElementById("dispense-button"),
+          signOutBtn=document.getElementById("snack-signout");
     function setupSnack(){
       ["click","touchstart"].forEach(evt=>{
         signOutBtn.addEventListener(evt,e=>{
@@ -575,14 +591,14 @@
       });
       dispenseBtn.addEventListener("click",proceedToDispense);
       dispenseBtn.addEventListener("touchstart",e=>{e.preventDefault();proceedToDispense()},{passive:false});
-      window.addEventListener("keydown", e=>{
-        if(currentScreen==="snack" && !e.repeat){
+      window.addEventListener("keydown",e=>{
+        if(currentScreen==="snack"&&!e.repeat){
           if(isNumKey(e)){
             const idx=+e.key-1;
             if(idx>=0&&idx<SNACK_SLOTS.length)
               toggleSnack(SNACK_SLOTS[idx].slot,snackGrid.children[idx]);
           }
-          else if((e.key==="Enter"||e.code==="NumpadEnter") && selectedItems.size){
+          else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
             proceedToDispense();
           }
           else if(e.key==="Escape"){
@@ -592,17 +608,15 @@
       });
     }
     function renderSnackGrid(){
-      selectedItems.clear();
-      snackGrid.innerHTML="";
+      selectedItems.clear(); snackGrid.innerHTML="";
       SNACK_SLOTS.forEach(s=>{
         const cfgItem=machineConfig[s.slot]||{},
               enabled=cfgItem.enabled!==false,
-              stock  =(cfgItem.stock!=null?cfgItem.stock:s.quantity),
+              stock  =(cfgItem.stock!=null?cfgItem.stock:s.qty),
               name   =(cfgItem.name||s.name);
         const card=document.createElement("div");
         card.className="snack-item"+(enabled?"":" disabled");
-        card.innerHTML=`<h4>${name}</h4>
-                        <p>ID: ${s.slot} | Qty: ${stock}</p>`;
+        card.innerHTML=`<h4>${name}</h4><p>ID: ${s.slot} | Qty: ${stock}</p>`;
         if(enabled){
           ["click","touchstart"].forEach(evt=>{
             card.addEventListener(evt,e=>{
@@ -614,8 +628,8 @@
         snackGrid.appendChild(card);
       });
       dispenseBtn.style.display="none";
-      document.getElementById("menuBtn").style.display =
-        (studentId==="DEV MODE") ? "block" : "none";
+      document.getElementById("menuBtn").style.display=
+        (studentId==="DEV MODE")?"block":"none";
     }
     function toggleSnack(slot,el){
       if(el.classList.contains("disabled")) return;
@@ -633,12 +647,12 @@
       }
     }
 
-    /* MENU & STOCK MANAGEMENT */
+    /* MENU & STOCK */
     function setupMenu(){
-      const menuBtn   = document.getElementById("menuBtn"),
-            menuMod   = document.getElementById("menuModal"),
-            stockBtn  = document.getElementById("openStockBtn"),
-            menuClose = document.getElementById("menuClose");
+      const menuBtn=document.getElementById("menuBtn"),
+            menuMod=document.getElementById("menuModal"),
+            stockBtn=document.getElementById("openStockBtn"),
+            menuClose=document.getElementById("menuClose");
       ["click","touchstart"].forEach(evt=>{
         menuBtn.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
@@ -648,6 +662,13 @@
           if(evt==="touchstart") e.preventDefault();
           menuMod.classList.remove("active");
         },{passive:false});
+        document.getElementById("openConfigBtn")
+          .addEventListener(evt,e=>{
+            if(evt==="touchstart") e.preventDefault();
+            document.getElementById("configInput").value=
+              localStorage.getItem("secretKey")||"";
+            document.getElementById("configModal").classList.add("active");
+          },{passive:false});
         stockBtn.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
           openStockModal();
@@ -664,7 +685,7 @@
       SNACK_SLOTS.forEach(s=>{
         const cfgItem=machineConfig[s.slot]||{},
               enabled=cfgItem.enabled!==false,
-              stock  =(cfgItem.stock!=null?cfgItem.stock:s.quantity),
+              stock  =(cfgItem.stock!=null?cfgItem.stock:s.qty),
               name   =(cfgItem.name||s.name);
         const card=document.createElement("div");
         card.className="stock-card"+(enabled?"":" disabled");
@@ -678,24 +699,20 @@
       };
     }
 
-    /* STOCK EDIT PANEL */
     function openEditPanel(slot){
       const cfgItem=machineConfig[slot]||{},
             base=SNACK_SLOTS.find(x=>x.slot===slot);
       document.getElementById("editTitle").textContent=`Edit ${slot}`;
-      document.getElementById("editName").value=
-        cfgItem.name||base.name;
+      document.getElementById("editName").value=cfgItem.name||base.name;
       document.getElementById("editQty").value=
-        (cfgItem.stock!=null?cfgItem.stock:base.quantity);
+        cfgItem.stock!=null?cfgItem.stock:base.qty;
       document.getElementById("editEnabled").checked=
         cfgItem.enabled!==false;
       const panel=document.getElementById("stockEditModal");
       panel.classList.add("active");
-      // cancel
       document.getElementById("editCancel").onclick=()=>{
         panel.classList.remove("active");
       };
-      // save
       document.getElementById("editSave").onclick=async()=>{
         machineConfig[slot]={
           name:document.getElementById("editName").value,
@@ -707,47 +724,37 @@
                   .set(machineConfig[slot]);
           showToast("Saved");
           panel.classList.remove("active");
-          renderStockGrid();
-          renderSnackGrid();
-        } catch(e){
-          console.error(e);
-          showToast("Save failed");
+          renderStockGrid(); renderSnackGrid();
+        }catch(e){
+          console.error(e); showToast("Save failed");
         }
       };
     }
 
     /* CONFIG MODAL */
     function setupModals(){
-      const cfgModal = document.getElementById("configModal"),
-            cfgInput = document.getElementById("configInput"),
-            cfgSave  = document.getElementById("configSave"),
-            cfgClose = document.getElementById("configClose"),
-            openCfg  = document.getElementById("openConfigBtn");
+      const cfgModal=document.getElementById("configModal"),
+            cfgClose=document.getElementById("configClose"),
+            cfgSave =document.getElementById("configSave");
       ["click","touchstart"].forEach(evt=>{
-        openCfg.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          cfgInput.value = localStorage.getItem("secretKey")||"";
-          cfgModal.classList.add("active");
-        },{passive:false});
         cfgClose.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
           cfgModal.classList.remove("active");
         },{passive:false});
         cfgSave.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
-          const k=cfgInput.value.trim();
-          if(!k){ showToast("Enter key"); return; }
+          const k=document.getElementById("configInput").value.trim();
+          if(!k){ showToast("Please enter a key"); return; }
           localStorage.setItem("secretKey",k);
-          showToast("Key set");
+          showToast("Key updated");
           cfgModal.classList.remove("active");
         },{passive:false});
       });
-      cfgInput.addEventListener("keydown",e=>{
-        if(e.key==="Enter") cfgSave.click();
-      });
+      document.getElementById("configInput")
+        .addEventListener("keydown",e=>{ if(e.key==="Enter") cfgSave.click(); });
     }
 
-    /* DISPENSE FLOW */
+    /* DISHIPENSE FLOW */
     function proceedToDispense(){
       if(!selectedItems.size) return;
       sendDispenseSignal();
@@ -767,7 +774,7 @@
       SNACK_SLOTS.forEach((_,i)=>{
         data[`Item${i+1}`]=selectedItems.has(_.slot);
       });
-      try{ await db.ref("data").update(data); }catch(e){console.error(e);}
+      try{ await db.ref("data").update(data);}catch(e){console.error(e);}
       // log
       const now=new Date(),
             mm=("0"+(now.getMonth()+1)).slice(-2),
@@ -777,19 +784,17 @@
             h=now.getHours(), m=("0"+now.getMinutes()).slice(-2),
             s=("0"+now.getSeconds()).slice(-2),
             ap=h>=12?"pm":"am", hr=h%12||12,
-            time=`${hr}h:${m}m:${s}s${ap}`,
-            payload=[];
+            time=`${hr}h:${m}m:${s}s${ap}`, payload=[];
       SNACK_SLOTS.forEach((_,i)=>{
         if(selectedItems.has(_.slot)) payload.push(i+1);
       });
       const log={Time:time,User:user,Payload:payload.join(",")};
-      try{ await db.ref(`Logs/${key}`).push(log); }
-      catch(e){console.error(e);}
+      try{ await db.ref(`Logs/${key}`).push(log);}catch(e){console.error(e);}
     }
 
-    /* DISPENSE UI */
+    /* DISPENSE SCREEN UI */
     function setupDispense(){
-      const stayBtn = document.getElementById("stay-signed-btn");
+      const stayBtn=document.getElementById("stay-signed-btn");
       ["click","touchstart"].forEach(evt=>{
         stayBtn.addEventListener(evt,e=>{
           if(evt==="touchstart") e.preventDefault();
@@ -798,7 +803,7 @@
           renderSnackGrid();
         },{passive:false});
       });
-      window.addEventListener("keydown", e=>{
+      window.addEventListener("keydown",e=>{
         if(currentScreen==="dispense"){
           if(e.key==="Enter"||e.code==="NumpadEnter"){
             clearInterval(countdownTimer);
@@ -815,8 +820,8 @@
     }
     function initDispense(){
       const user=(studentId==="DEV MODE"?"DEV MODE":STUDENTS[studentId]);
-      document.getElementById("thank-you-msg").textContent=
-        `Thank you, ${user.split(" ")[0]}!`;
+      document.getElementById("thank-you-msg")
+        .textContent=`Thank you, ${user.split(" ")[0]}!`;
       countdownValue=5;
       document.getElementById("countdown").textContent=5;
       countdownTimer=setInterval(()=>{
