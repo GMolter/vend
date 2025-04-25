@@ -9,45 +9,25 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     /* RESET & GLOBALS */
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body {
+    * { margin:0; padding:0; box-sizing:border-box }
+    html,body {
       width:100%; height:100vh; overflow:hidden;
-      overscroll-behavior:none; touch-action:none;
-      font-family:Arial, sans-serif; background:#f5f5f5;
+      font-family:Arial,sans-serif; background:#f9f9f9;
+      cursor:auto;
     }
-    @media (pointer: fine) {
-      html,body,button,a { cursor:auto!important; }
-    }
-    @media (pointer: coarse) {
-      html,body,button,a { cursor:none!important; }
-    }
-    button { transition:transform .1s,background .2s; user-select:none; }
+    button { transition:transform .1s; user-select:none; }
     button:active { transform:scale(.95); }
 
-    /* GENERIC BUTTON STYLE */
-    .btn {
-      background:#3498db; color:#fff; border:none;
-      border-radius:4px; padding:8px 16px;
-      font-size:1em; box-shadow:0 2px 4px rgba(0,0,0,.1);
-      touch-action:manipulation;
-    }
-    .btn:hover { background:#2980b9; }
-    .btn.cancel { background:#bdc3c7; color:#333; }
-    .btn.danger { background:#e74c3c; }
-    .btn.danger:hover { background:#c0392b; }
-    .btn.save { background:#27ae60; }
-    .btn.save:hover { background:#229954; }
-
     /* APP & VERSION */
-    #app { position:relative; width:100%; height:100%; }
+    #app { position:relative; width:100%; height:100% }
     #version-label {
-      position:fixed; bottom:12px; left:12px;
-      font-size:.85em; color:#777; z-index:9999;
+      position:fixed; bottom:10px; left:10px;
+      color:#555; font-size:.9em; z-index:9999;
     }
     #devButton {
       position:fixed; top:0; right:0;
-      width:48px; height:48px; background:transparent;
-      border:none; opacity:0; z-index:10002; pointer-events:auto;
+      width:50px; height:50px; opacity:0;
+      z-index:9999;
     }
 
     /* SCREENS */
@@ -57,344 +37,269 @@
       width:90%; max-width:800px;
       text-align:center; display:none;
     }
-    .screen.active { display:block; }
+    .screen.active { display:block }
 
     /* LOGO */
     #logo-screen img {
-      width:280px; height:280px; border-radius:50%;
+      width:260px; height:260px; border-radius:50%;
       box-shadow:0 0 20px rgba(0,0,0,.3);
       animation:pulse 2s infinite alternate;
-      cursor:pointer;
     }
-    @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.05)} }
+    @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.03)} }
     #logo-screen h2 {
-      margin-top:16px; font-size:2.2em; color:#333;
-      cursor:pointer;
+      margin-top:15px; font-size:2.2em; color:#333;
     }
 
     /* KEYPAD */
-    #keypad-screen h2 {
-      margin-bottom:20px; font-size:2em; color:#333;
-    }
-    #digit-display { display:flex; justify-content:center; margin-bottom:20px; }
+    #keypad-screen h2 { margin-bottom:20px; font-size:1.8em; color:#333 }
+    #digit-display { display:flex; justify-content:center; margin-bottom:20px }
     .digit-box {
       width:60px; height:60px; margin:0 4px;
-      border-bottom:2px solid #555;
-      font-size:2.6em; line-height:60px; color:#333;
+      border-bottom:2px solid #333;
+      font-size:2.5em; line-height:60px;
     }
     .keypad-grid {
       display:grid; grid-template-columns:repeat(3,1fr);
       gap:8px; justify-items:center;
     }
     .keypad-btn {
-      width:88px; height:88px; border-radius:50%;
-      background:#eee; color:#333; font-size:2.2em;
-      display:flex; align-items:center; justify-content:center;
-      touch-action:manipulation;
+      width:80px; height:80px; border-radius:50%;
+      background:rgba(0,0,0,.1); color:#333;
+      font-size:2em; display:flex;
+      align-items:center; justify-content:center;
     }
-    .keypad-btn.backspace {
-      background:#e74c3c; color:#fff;
-    }
-    .shake { animation:shake .5s; }
+    .keypad-btn.backspace { background:#e74c3c; color:#fff }
+    .shake { animation:shake .5s }
     @keyframes shake {
       0%,100%{transform:translateX(0)}
-      25%,75%{transform:translateX(-8px)}
-      50%{transform:translateX(8px)}
+      25%{transform:translateX(-8px)}
+      75%{transform:translateX(8px)}
     }
 
     /* SNACK SCREEN */
-    #snack-screen { padding-top:80px; }
+    #snack-screen {
+      padding-top:80px; position:relative;
+    }
     #student-name {
-      position:absolute; top:12px; left:20px;
+      position:absolute; top:10px; left:20px;
       font-size:1.8em; color:#333;
     }
+    #menuBtn, #snack-signout {
+      position:absolute; top:10px; padding:10px 20px;
+      font-size:1em; border:none; border-radius:4px;
+    }
     #menuBtn {
-      position:absolute; top:12px; right:210px; z-index:10003;
+      right:140px; background:#3498db; color:#fff;
+      display:none;
     }
     #snack-signout {
-      position:absolute; top:12px; right:20px;
-      font-size:1.2em; padding:12px 24px;
-      z-index:10003;
+      right:20px; background:#e74c3c; color:#fff;
     }
     #snack-screen h2 {
-      font-size:2.2em; margin-bottom:24px; color:#333;
+      font-size:2em; margin-bottom:30px; color:#333;
     }
     #snack-grid {
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-      gap:12px; margin-bottom:100px; justify-items:center;
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:15px; justify-items:center;
     }
     .snack-item {
       position:relative;
       background:#fff; border:1px solid #ddd;
-      padding:12px; border-radius:6px; text-align:center;
-      box-shadow:0 2px 5px rgba(0,0,0,.1);
-      transition:box-shadow .2s,background .2s;
-      touch-action:manipulation;
+      padding:12px; border-radius:6px;
+      cursor:pointer; transition:box-shadow .2s;
+      width:100%; max-width:160px;
     }
-    .snack-item:hover { box-shadow:0 4px 10px rgba(0,0,0,.15); }
-    .snack-item.selected {
-      background:#d6eaf8; border-color:#5dade2;
+    .snack-item:hover { box-shadow:0 2px 8px rgba(0,0,0,.1) }
+    .snack-item.disabled { opacity:.6 }
+    .snack-item h4 { margin-bottom:6px; font-size:1.2em; color:#222 }
+    .snack-item p { font-size:.9em; color:#555; margin-bottom:4px }
+    .snack-item .limit {
+      font-size:.9em; font-weight:bold; color:#2980b9;
     }
-    .snack-item.disabled {
-      opacity:.5; cursor:not-allowed;
+    .snack-item .overlay {
+      position:absolute; top:0; left:0; width:100%; height:100%;
+      display:flex; align-items:center; justify-content:center;
+      text-align:center; font-size:1em; font-weight:bold;
+      color:#c0392b; background:rgba(255,255,255,.8);
+      border-radius:6px; white-space:pre-line;
     }
-    .snack-item h4 {
-      margin-bottom:6px; font-size:1.4em; color:#2c3e50;
-    }
-    .snack-item p {
-      font-size:1em; color:#555;
-    }
-    .out-of-stock {
-      position:absolute; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      background:rgba(192,57,43,0.9);
-      color:#fff; font-weight:bold;
-      padding:4px 6px; border-radius:4px;
-      text-align:center; line-height:1; pointer-events:none;
-      z-index:1;
-    }
+
     #dispense-button {
-      position:absolute; bottom:20px; left:50%;
-      transform:translateX(-50%);
-      padding:18px 28px; font-size:1.6em;
-      box-shadow:0 3px 6px rgba(0,0,0,.1);
-      touch-action:manipulation;
+      margin-top:30px; padding:14px 28px;
+      font-size:1.2em; background:#2ecc71; color:#fff;
+      border:none; border-radius:6px; display:none;
+      cursor:pointer;
     }
 
     /* DISPENSE SCREEN */
     #dispense-screen {
-      background:#34495e; color:#fff;
-      width:90%; max-width:580px;
-      padding:30px; border-radius:8px;
-      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      width:80%; max-width:500px;
+      background:#2e3192; color:#fff;
+      border-radius:12px; padding:30px;
     }
-    #dispense-screen img {
-      width:80px; height:80px; margin-bottom:16px;
-    }
-    #dispense-screen h2 {
-      font-size:2.4em; margin-bottom:12px;
-    }
-    #dispense-text {
-      font-size:1.1em; margin-bottom:12px;
-    }
-    #dispense-screen p {
-      font-size:1.3em; margin-bottom:18px;
-    }
+    #dispense-screen img { width:80px; height:80px; margin-bottom:15px }
+    #dispense-screen h2 { font-size:2em; margin-bottom:10px }
+    #dispense-text { font-size:1.1em; margin-bottom:15px }
+    #dispense-screen p { font-size:1.3em; margin-bottom:20px }
     #stay-signed-btn {
-      padding:10px 22px; font-size:1em;
-      box-shadow:0 2px 4px rgba(0,0,0,.1);
-      touch-action:manipulation;
+      background:#2980b9; padding:10px 20px;
+      font-size:1em; color:#fff; border:none;
+      border-radius:6px; cursor:pointer;
     }
 
-    /* MODALS */
+    /* MODALS & BACKDROP */
+    .modal-backdrop {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,.4); display:none; z-index:1000;
+    }
+    .modal-backdrop.active { display:block }
+
     .modal {
       position:fixed; top:50%; left:50%;
       transform:translate(-50%,-50%);
-      width:300px; max-width:90%;
-      max-height:80vh; overflow-y:auto;
-      background:#fff; border-radius:6px;
-      box-shadow:0 8px 24px rgba(0,0,0,.2);
-      padding:16px; display:none; z-index:10001;
+      background:#fff; padding:20px;
+      border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,.3);
+      width:90%; max-width:360px;
+      display:none; z-index:1001;
+      text-align:left;
     }
-    .modal.active { display:block; }
-    .modal-header {
-      font-size:1.3em; font-weight:600;
-      margin-bottom:12px; color:#2c3e50;
-    }
-    .modal-body { margin-bottom:12px; }
-    .modal-footer { text-align:right; }
-    .modal-footer .btn { margin-left:8px; }
+    .modal.active { display:block }
+    .modal h3 { margin-bottom:15px; font-size:1.3em }
 
-    /* STOCK GRID */
-    .stock-grid {
+    .modal .closeBtn {
+      margin-top:20px; padding:8px 16px;
+      font-size:1em; background:#3498db;
+      color:#fff; border:none; border-radius:4px;
+      cursor:pointer;
+    }
+
+    .grid {
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+      grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
       gap:10px;
     }
-    .stock-card {
-      background:#f9f9f9; border:1px solid #ddd;
-      padding:8px; border-radius:4px;
-      text-align:center; cursor:pointer;
-      transition:background .2s;
-    }
-    .stock-card:hover { background:#ececec; }
-    .stock-card.disabled { opacity:.6; }
 
-    /* STOCK EDIT PANEL */
-    #stockEditModal {
-      position:fixed; top:50%;
-      left:calc(50% + 180px);
-      transform:translateY(-50%);
-      width:240px; max-width:80%;
-      background:#fff; border-radius:6px;
-      box-shadow:0 8px 24px rgba(0,0,0,.2);
-      padding:16px; display:none; z-index:10002;
+    .modal label {
+      display:block; margin-bottom:10px; font-size:.95em;
     }
-    #stockEditModal.active { display:block; }
-    #stockEditModal h4 {
-      margin-bottom:10px; font-size:1.1em; color:#2c3e50;
+    .modal input[type="text"],
+    .modal input[type="number"] {
+      width:100%; padding:6px 8px; border:1px solid #ccc;
+      border-radius:4px; font-size:1em;
     }
-    #stockEditModal label {
-      display:block; margin-top:8px;
-      font-size:.9em; color:#333;
-    }
-    #stockEditModal input[type="text"],
-    #stockEditModal input[type="number"] {
-      width:100%; padding:6px; margin-top:4px;
-      font-size:.9em; border:1px solid #ccc;
-      border-radius:4px;
-    }
-    #stockEditModal .actions {
-      margin-top:12px; text-align:right;
-    }
-    #stockEditModal .actions .btn {
-      margin-left:6px; padding:6px 12px;
-    }
+    .modal button { margin-right:8px }
 
-    /* TOAST */
-    #toast-container {
-      position:fixed; bottom:20px; left:50%;
-      transform:translateX(-50%); z-index:10003;
-    }
-    .toast {
-      background:rgba(0,0,0,.8); color:#fff;
-      padding:8px 16px; margin-top:6px; border-radius:4px;
-      opacity:0; animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
-    }
-    @keyframes fadein { to{opacity:1} }
-    @keyframes fadeout{ to{opacity:0} }
-
-    /* MOBILE */
-    @media(max-width:600px){
-      #logo-screen img{width:220px;height:220px;}
-      #logo-screen h2{font-size:2em;}
-      .digit-box{width:60px;height:60px;font-size:2.8em;}
-      .keypad-btn{width:80px;height:80px;font-size:2em;}
-      #student-name{font-size:1.6em;}
-      #menuBtn,#snack-signout{font-size:1em;padding:8px 16px;}
-      #snack-screen h2{font-size:2em;}
-      .snack-item h4{font-size:1.3em;}
-      #dispense-button{font-size:1.4em;padding:14px 24px;}
-      #dispense-screen{padding:20px;border-radius:6px;}
-      #dispense-screen h2{font-size:2em;}
-      #dispense-text{font-size:1em;}
-      #dispense-screen p{font-size:1.2em;}
-      #stay-signed-btn{font-size:1em;padding:8px 18px;}
-      .modal{width:90%;max-width:320px;}
-      #stockEditModal{left:auto;right:10px;}
-    }
   </style>
 </head>
 <body>
   <div id="app">
     <button id="devButton"></button>
 
-    <!-- Logo Screen -->
+    <!-- LOGO -->
     <div id="logo-screen" class="screen active">
       <img src="fchs-logo.png" alt="Logo" />
-      <h2>Tap to Begin</h2>
+      <h2>Tap or press any key to begin</h2>
     </div>
 
-    <!-- Keypad Screen -->
+    <!-- KEYPAD -->
     <div id="keypad-screen" class="screen">
       <h2>Enter Student ID</h2>
       <div id="digit-display"></div>
       <div class="keypad-grid" id="keypad-buttons"></div>
     </div>
 
-    <!-- Snack Screen -->
+    <!-- SNACK SELECTION -->
     <div id="snack-screen" class="screen">
       <div id="student-name">Student Name</div>
-      <button class="btn" id="menuBtn">Menu</button>
-      <button class="btn danger" id="snack-signout">Sign Out</button>
+      <button id="menuBtn">Menu</button>
+      <button id="snack-signout">Sign Out</button>
       <h2>Select a Snack</h2>
       <div id="snack-grid"></div>
-      <button class="btn save" id="dispense-button">Dispense Snacks</button>
+      <button id="dispense-button">Dispense</button>
     </div>
 
-    <!-- Dispense Screen -->
+    <!-- DISPENSE CONFIRMATION -->
     <div id="dispense-screen" class="screen">
       <img src="fchs-logo.png" alt="Logo" />
-      <h2 id="thank-you-msg">Thank you, Student!</h2>
-      <div id="dispense-text">Your snack(s) will be dispensed shortly</div>
-      <p>Signing you out in <span id="countdown">5</span></p>
-      <button class="btn" id="stay-signed-btn">Stay Signed In</button>
+      <h2 id="thank-you-msg">Thank you!</h2>
+      <div id="dispense-text">Your snack(s) are on the way</div>
+      <p>Signing out in <span id="countdown">5</span>…</p>
+      <button id="stay-signed-btn">Stay Signed In</button>
     </div>
 
-    <!-- Dev Menu Modal -->
-    <div id="menuModal" class="modal">
-      <div class="modal-header">Dev Menu</div>
-      <div class="modal-body">
-        <button class="btn" id="openConfigBtn">Set Local Key</button>
-        <button class="btn" id="openStockBtn">Stock Management</button>
-      </div>
-      <div class="modal-footer">
-        <button class="btn cancel" id="menuClose">Close</button>
-      </div>
+    <!-- BACKDROP FOR ALL MODALS -->
+    <div id="backdrop" class="modal-backdrop"></div>
+
+    <!-- DEV MENU MODAL -->
+    <div id="devMenu" class="modal">
+      <h3>Dev Menu</h3>
+      <button id="openConfig">Set Local Key</button>
+      <button id="openStockMgmt">Stock Management</button>
+      <button class="closeBtn" id="devMenuClose">Close</button>
     </div>
 
-    <!-- Config Modal -->
+    <!-- CONFIG MODAL -->
     <div id="configModal" class="modal">
-      <div class="modal-header">Set Local Secret Key</div>
-      <div class="modal-body">
-        <input id="configInput" placeholder="Enter new key" />
-      </div>
-      <div class="modal-footer">
-        <button class="btn cancel" id="configClose">Cancel</button>
-        <button class="btn save" id="configSave">Save</button>
-      </div>
+      <h3>Set Local Secret Key</h3>
+      <label>Key:<br />
+        <input id="configInput" type="text" placeholder="Enter secret key" />
+      </label>
+      <button class="closeBtn" id="configSave">Save</button>
+      <button class="closeBtn" id="configClose">Close</button>
     </div>
 
-    <!-- Stock Management Modal -->
+    <!-- STOCK MANAGEMENT MODAL -->
     <div id="stockModal" class="modal">
-      <div class="modal-header">Stock Management</div>
-      <div class="modal-body">
-        <div class="stock-grid" id="stock-grid"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn cancel" id="stockClose">Close</button>
-      </div>
+      <h3>Stock Management</h3>
+      <div id="stockGrid" class="grid"></div>
+      <button class="closeBtn" id="stockClose">Close</button>
     </div>
 
-    <!-- Stock Edit Panel -->
-    <div id="stockEditModal">
-      <h4 id="editTitle">Edit Item</h4>
-      <label for="editName">Name:</label>
-      <input type="text" id="editName" />
-      <label for="editQty">Stock:</label>
-      <input type="number" id="editQty" min="0" />
-      <label><input type="checkbox" id="editEnabled" /> Enabled</label>
-      <div class="actions">
-        <button class="btn cancel" id="editCancel">Cancel</button>
-        <button class="btn save" id="editSave">Save</button>
-      </div>
+    <!-- ITEM EDIT MODAL -->
+    <div id="editModal" class="modal">
+      <h3 id="editTitle">Edit Item</h3>
+      <label>Name:<br /><input id="editName" type="text" /></label>
+      <label>Stock:<br /><input id="editStock" type="number" min="0" /></label>
+      <label><input id="editEnabled" type="checkbox" /> Enabled</label>
+      <button class="closeBtn" id="editSave">Save</button>
+      <button class="closeBtn" id="editCancel">Cancel</button>
     </div>
 
-    <div id="toast-container"></div>
-    <div id="version-label"></div>
+    <div id="version-label">v3.0.0</div>
   </div>
 
   <script>
-    // disable touch scroll
-    document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+    // VERSION
+    const APP_VERSION = "v3.0.0";
 
-    const APP_VERSION="v2.7.7";
-    const cfg={
-      apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-      authDomain:"cyberflashvend.firebaseapp.com",
-      databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/",
-      projectId:"cyberflashvend",
-      storageBucket:"cyberflashvend.firebasestorage.app",
-      messagingSenderId:"63786658773",
-      appId:"1:63786658773:web:7792d3693ef45e9ec4eb5c"
+    // FIREBASE INIT
+    const cfg = {
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
+      projectId: "cyberflashvend",
+      storageBucket: "cyberflashvend.firebasestorage.app",
+      messagingSenderId: "63786658773",
+      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
     };
     firebase.initializeApp(cfg);
-    const db=firebase.database();
+    const db = firebase.database();
 
-    let serverSecret=null, machineConfig={},
-        currentScreen="logo", studentId="", selectedItems=new Set(),
-        idleTimer, countdownTimer, countdownValue=5;
+    // STATE
+    let currentScreen="logo",
+        studentId="",
+        userKey="",
+        serverSecret=null,
+        snacks=[
+          {id:"A1",name:"Chips"},
+          {id:"A2",name:"Cookies"},
+          {id:"A3",name:"Pretzels"},
+          {id:"B1",name:"Candy Bar"},
+          {id:"B2",name:"Granola Bar"},
+          {id:"B3",name:"Trail Mix"}
+        ],
+        selected=new Set();
 
     const STUDENTS={
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
@@ -402,449 +307,351 @@
       "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
       "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins"
     };
-    const SNACK_SLOTS=[
-      {slot:"A1",name:"Chips",qty:8},
-      {slot:"A2",name:"Cookies",qty:5},
-      {slot:"A3",name:"Pretzels",qty:12},
-      {slot:"B1",name:"Candy Bar",qty:7},
-      {slot:"B2",name:"Granola Bar",qty:3},
-      {slot:"B3",name:"Trail Mix",qty:9}
-    ];
 
-    async function loadServer(){
-      serverSecret=(await db.ref("Config").once("value")).val();
-      machineConfig=(await db.ref("machineManagement").once("value")).val()||{};
-      initApp();
+    // ON LOAD
+    window.addEventListener("load", async ()=>{
+      // fetch Config secret
+      serverSecret = (await db.ref("Config").once("value")).val();
+      document.getElementById("version-label").textContent = APP_VERSION;
+      setup();
+    });
+
+    function setup(){
+      setupIdleLogout();
+      setupLogo();
+      setupKeypad();
+      setupSnack();
+      setupDispense();
+      setupDevMenu();
+      setupConfigModal();
+      setupStockMgmt();
+      setupEditModal();
     }
-    loadServer();
 
+    // IDLE LOGOUT
+    let idleTimer;
+    function setupIdleLogout(){
+      ["keydown","click","mousemove","touchstart"].forEach(e=>
+        document.addEventListener(e,resetIdle));
+      resetIdle();
+    }
     function resetIdle(){
       clearTimeout(idleTimer);
-      idleTimer=setTimeout(signOut,90*1000);
-    }
-    ["keydown","click","mousemove","touchstart"].forEach(e=>
-      document.addEventListener(e,resetIdle)
-    );
-    resetIdle();
-
-    function showToast(msg){
-      const t=document.createElement("div");
-      t.className="toast";t.textContent=msg;
-      document.getElementById("toast-container").appendChild(t);
-      setTimeout(()=>t.remove(),3000);
+      idleTimer = setTimeout(signOut,90_000);
     }
 
+    // SCREEN SWITCH
     function showScreen(id){
-      document.querySelectorAll(".screen")
-        .forEach(s=>s.classList.remove("active"));
+      document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
-      currentScreen=id.split("-")[0];
-      const dbtn=document.getElementById("devButton");
-      if(currentScreen!=="logo"||studentId){
-        dbtn.disabled=true;dbtn.style.pointerEvents="none";
-      }else{
-        dbtn.disabled=false;dbtn.style.pointerEvents="auto";
-      }
+      currentScreen = id;
+      document.getElementById("menuBtn").style.display = 
+        (id==="snack-screen" && studentId==="DEV MODE")?"inline-block":"none";
     }
 
-    function initApp(){
-      document.getElementById("version-label").textContent=APP_VERSION;
-      setupDev(); setupLogo(); setupKeypad();
-      setupSnack(); setupDispense(); setupMenu(); setupModals();
-    }
-
-    /* DEV */
-    function setupDev(){
-      const dbtn=document.getElementById("devButton");
-      window.addEventListener("keydown",e=>{
-        if(e.key.toLowerCase()==="d") activateDev();
-      });
-      ["click","touchstart"].forEach(evt=>{
-        dbtn.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          activateDev();
-        },{passive:false});
-      });
-    }
-    function activateDev(){
-      studentId="DEV MODE";
-      document.getElementById("student-name").textContent="DEV MODE";
-      showScreen("snack-screen");
-      renderSnackGrid();
-      document.getElementById("menuBtn").style.display="block";
-    }
-
-    /* LOGO */
+    // LOGO -> KEYPAD
     function setupLogo(){
-      const img=document.querySelector("#logo-screen img"),
+      const logo=document.querySelector("#logo-screen img"),
             txt=document.querySelector("#logo-screen h2");
       ["click","touchstart"].forEach(evt=>{
-        [img,txt].forEach(el=>{
-          el.addEventListener(evt,e=>{
-            if(evt==="touchstart") e.preventDefault();
-            showScreen("keypad-screen"); initKeypad();
-          },{passive:false});
-        });
+        logo.addEventListener(evt,e=>startKeypad(e),{passive:false});
+        txt.addEventListener(evt,e=>startKeypad(e),{passive:false});
       });
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="logo"){
-          showScreen("keypad-screen"); initKeypad();
-        }
-      });
+      window.addEventListener("keydown",()=>currentScreen==="logo"&&startKeypad());
+    }
+    function startKeypad(e){
+      if(e&&e.type==="touchstart") e.preventDefault();
+      showScreen("keypad-screen");
+      initKeypad();
     }
 
-    /* KEYPAD */
+    // KEYPAD
     const digitDisplay=document.getElementById("digit-display"),
           keypadButtons=document.getElementById("keypad-buttons"),
-          maxDigits=6, layout=["1","2","3","4","5","6","7","8","9","","0","backspace"];
-    function isNumKey(e){
-      return /^\d$/.test(e.key)||(e.code.startsWith("Numpad")&&e.key.length===1);
-    }
+          layout=["1","2","3","4","5","6","7","8","9","","0","backspace"],
+          maxD=6;
     function setupKeypad(){
-      initKeypad();
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="keypad"&&!e.repeat){
-          if(isNumKey(e)){
-            e.preventDefault(); handleDigit(e.key.slice(-1));
-          }
-          else if(e.key==="Backspace"){ e.preventDefault(); handleBack();}
-          else if((e.key==="Enter"||e.code==="NumpadEnter")&& studentId.length===maxDigits){
-            e.preventDefault(); validateID();
+      layout.forEach(val=>{
+        const btn=document.createElement("div");
+        if(!val){
+          btn.style.width="80px"; btn.style.height="80px";
+        } else {
+          btn.className="keypad-btn";
+          if(val==="backspace"){
+            btn.classList.add("backspace"); btn.textContent="←";
+            btn.addEventListener("click",handleBack);
+          } else {
+            btn.textContent=val;
+            btn.addEventListener("click",()=>handleDigit(val));
           }
         }
+        keypadButtons.appendChild(btn);
       });
-    }
-    function initKeypad(){
-      studentId=""; renderDigits();
-      if(!keypadButtons.childElementCount){
-        layout.forEach(val=>{
-          if(!val){
-            const ph=document.createElement("div");
-            ph.style.width="88px";ph.style.height="88px";
-            keypadButtons.appendChild(ph);
-          }else{
-            const btn=document.createElement("div");
-            btn.className="keypad-btn"+(val==="backspace"?" backspace":"");
-            btn.textContent= val==="backspace"?"←":val;
-            if(val==="backspace"){
-              btn.addEventListener("touchstart",e=>{e.preventDefault();handleBack()},{passive:false});
-              btn.addEventListener("click",handleBack);
-            } else {
-              btn.addEventListener("touchstart",e=>{e.preventDefault();handleDigit(val)},{passive:false});
-              btn.addEventListener("click",()=>handleDigit(val));
-            }
-            keypadButtons.appendChild(btn);
-          }
-        });
-      }
+      window.addEventListener("keydown",e=>{
+        if(currentScreen!=="keypad-screen")return;
+        if(/\d/.test(e.key)) handleDigit(e.key);
+        else if(e.key==="Backspace") handleBack();
+        else if(e.key==="Enter" && studentId.length===maxD) validateID();
+      });
     }
     function renderDigits(){
       digitDisplay.innerHTML="";
-      for(let i=0;i<maxDigits;i++){
+      for(let i=0;i<maxD;i++){
         const d=document.createElement("div");
         d.className="digit-box";
-        d.textContent=i<studentId.length?"•":"_";
+        d.textContent = i<studentId.length?"•":"_";
         digitDisplay.appendChild(d);
       }
     }
+    function initKeypad(){
+      studentId="";
+      renderDigits();
+    }
     function handleDigit(ch){
-      if(studentId.length<maxDigits){
+      if(studentId.length<maxD){
         studentId+=ch; renderDigits();
-        if(studentId.length===maxDigits) validateID();
+        if(studentId.length===maxD) validateID();
       }
     }
     function handleBack(){
-      if(studentId.length){
-        studentId=studentId.slice(0,-1); renderDigits();
-      }
+      if(!studentId) return;
+      studentId=studentId.slice(0,-1); renderDigits();
     }
-    function validateID(){
-      if(STUDENTS[studentId]){
-        document.getElementById("student-name").textContent=STUDENTS[studentId];
-        showScreen("snack-screen"); renderSnackGrid();
-      } else {
+    async function validateID(){
+      if(!STUDENTS[studentId]){
         digitDisplay.classList.add("shake");
-        setTimeout(()=>{
-          digitDisplay.classList.remove("shake");
-          studentId=""; renderDigits();
-        },500);
-        showToast("Invalid ID");
+        setTimeout(()=>digitDisplay.classList.remove("shake"),500);
+        studentId=""; renderDigits();
+        return alert("Invalid ID");
       }
+      document.getElementById("student-name").textContent = STUDENTS[studentId];
+      userKey = STUDENTS[studentId].replace(/ /g,"_");
+      // fetch machine + user limits
+      const [mS,uS] = await Promise.all([
+        db.ref("machineManagement").once("value"),
+        db.ref(`userManagement/${userKey}/Limits`).once("value")
+      ]);
+      const mD = mS.val()||{}, uD = uS.val()||{};
+      snacks = snacks.map(s=>{
+        const cfg = mD[s.id]||{};
+        return {
+          id:s.id,
+          name:s.name,
+          enabled: cfg.enabled !== false,
+          quantity: cfg.stock!=null?cfg.stock:0,
+          limit:   uD[s.id]!=null?uD[s.id]:null
+        };
+      });
+      showScreen("snack-screen");
+      renderSnackGrid();
     }
 
-    /* SNACK */
-    const snackGrid=document.getElementById("snack-grid"),
-          dispenseBtn=document.getElementById("dispense-button"),
-          signOutBtn=document.getElementById("snack-signout");
+    // SNACK GRID
+    const grid=document.getElementById("snack-grid"),
+          dispenseBtn=document.getElementById("dispense-button");
     function setupSnack(){
-      ["click","touchstart"].forEach(evt=>{
-        signOutBtn.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          signOut();
-        },{passive:false});
-      });
+      document.getElementById("snack-signout")
+        .addEventListener("click",signOut);
       dispenseBtn.addEventListener("click",proceedToDispense);
-      dispenseBtn.addEventListener("touchstart",e=>{e.preventDefault();proceedToDispense()},{passive:false});
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="snack"&&!e.repeat){
-          if(isNumKey(e)){
-            const idx=+e.key-1;
-            if(idx>=0&&idx<SNACK_SLOTS.length)
-              toggleSnack(SNACK_SLOTS[idx].slot,snackGrid.children[idx]);
-          }
-          else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
-            proceedToDispense();
-          }
-          else if(e.key==="Escape"){
-            signOut();
-          }
-        }
-      });
     }
     function renderSnackGrid(){
-      selectedItems.clear(); snackGrid.innerHTML="";
-      SNACK_SLOTS.forEach(s=>{
-        const cfgItem=machineConfig[s.slot]||{},
-              enabled=cfgItem.enabled!==false,
-              stock  =(cfgItem.stock!=null?cfgItem.stock:s.qty),
-              name   =(cfgItem.name||s.name);
+      grid.innerHTML=""; selected.clear(); dispenseBtn.style.display="none";
+      snacks.forEach(s=>{
         const card=document.createElement("div");
-        card.className="snack-item"+(enabled?"":" disabled");
-        card.innerHTML=`<h4>${name}</h4><p>ID: ${s.slot} | Qty: ${stock}</p>`;
-        if(stock<=0){
-          card.classList.add("disabled");
-          const ol=document.createElement("div");
-          ol.className="out-of-stock";
-          ol.innerHTML="Out<br>Of<br>Stock";
-          card.appendChild(ol);
-        }
-        if(enabled){
-          ["click","touchstart"].forEach(evt=>{
-            card.addEventListener(evt,e=>{
-              if(evt==="touchstart") e.preventDefault();
-              toggleSnack(s.slot,card);
-            },{passive:false});
-          });
-        }
-        snackGrid.appendChild(card);
-      });
-      dispenseBtn.style.display="none";
-      document.getElementById("menuBtn").style.display=
-        (studentId==="DEV MODE")?"block":"none";
-    }
-    function toggleSnack(slot,el){
-      if(el.classList.contains("disabled")) return;
-      if(selectedItems.has(slot)){
-        selectedItems.delete(slot); el.classList.remove("selected");
-      } else {
-        selectedItems.add(slot); el.classList.add("selected");
-      }
-      if(selectedItems.size){
-        dispenseBtn.style.display="block";
-        dispenseBtn.textContent=
-          selectedItems.size===1?"Dispense Snack":"Dispense Snacks";
-      } else {
-        dispenseBtn.style.display="none";
-      }
-    }
-
-    /* MENU & STOCK */
-    function setupMenu(){
-      const menuBtn=document.getElementById("menuBtn"),
-            menuMod=document.getElementById("menuModal"),
-            stockBtn=document.getElementById("openStockBtn"),
-            menuClose=document.getElementById("menuClose");
-      ["click","touchstart"].forEach(evt=>{
-        menuBtn.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          menuMod.classList.add("active");
-        },{passive:false});
-        menuClose.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          menuMod.classList.remove("active");
-        },{passive:false});
-        document.getElementById("openConfigBtn")
-          .addEventListener(evt,e=>{
-            if(evt==="touchstart") e.preventDefault();
-            document.getElementById("configInput").value=
-              localStorage.getItem("secretKey")||"";
-            document.getElementById("configModal").classList.add("active");
-          },{passive:false});
-        stockBtn.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          openStockModal();
-        },{passive:false});
-      });
-    }
-    function openStockModal(){
-      document.getElementById("stockModal").classList.add("active");
-      renderStockGrid();
-    }
-    function renderStockGrid(){
-      const grid=document.getElementById("stock-grid");
-      grid.innerHTML="";
-      SNACK_SLOTS.forEach(s=>{
-        const cfgItem=machineConfig[s.slot]||{},
-              enabled=cfgItem.enabled!==false,
-              stock  =(cfgItem.stock!=null?cfgItem.stock:s.qty),
-              name   =(cfgItem.name||s.name);
-        const card=document.createElement("div");
-        card.className="stock-card"+(enabled?"":" disabled");
-        card.innerHTML=`<strong>${s.slot}</strong><br>${name}<br>Qty: ${stock}`;
-        // always allow edit, even if disabled
-        card.addEventListener("click",()=> openEditPanel(s.slot));
+        card.className="snack-item";
+        if(!s.enabled||s.quantity===0||s.limit===0) card.classList.add("disabled");
+        card.innerHTML=`
+          <h4>${s.name}</h4>
+          <p>ID: ${s.id} | Qty: ${s.quantity}</p>
+          <p class="limit">Limit: ${s.limit===null?"N/A":s.limit}</p>
+        `;
+        if(s.quantity===0)
+          card.innerHTML+=`<div class="overlay">OUT\nOF\nSTOCK</div>`;
+        else if(s.limit===0)
+          card.innerHTML+=`<div class="overlay">LIMIT\nREACHED</div>`;
+        card.onclick=()=>{
+          if(!s.enabled||s.quantity===0||s.limit===0) return;
+          if(selected.has(s.id)){
+            selected.delete(s.id); card.style.boxShadow="";
+          } else {
+            selected.add(s.id); card.style.boxShadow="0 0 0 3px #27ae60";
+          }
+          dispenseBtn.style.display = selected.size?"inline-block":"none";
+        };
         grid.appendChild(card);
       });
-      document.getElementById("stockClose").onclick=()=>{
-        document.getElementById("stockModal").classList.remove("active");
-        document.getElementById("stockEditModal").classList.remove("active");
-      };
     }
 
-    function openEditPanel(slot){
-      const cfgItem=machineConfig[slot]||{},
-            base=SNACK_SLOTS.find(x=>x.slot===slot);
-      document.getElementById("editTitle").textContent=`Edit ${slot}`;
-      document.getElementById("editName").value=cfgItem.name||base.name;
-      document.getElementById("editQty").value=cfgItem.stock!=null?cfgItem.stock:base.qty;
-      document.getElementById("editEnabled").checked=cfgItem.enabled!==false;
-      const panel=document.getElementById("stockEditModal");
-      panel.classList.add("active");
-      document.getElementById("editCancel").onclick=()=>{
-        panel.classList.remove("active");
-      };
-      document.getElementById("editSave").onclick=async()=>{
-        machineConfig[slot]={
-          name:document.getElementById("editName").value,
-          stock:parseInt(document.getElementById("editQty").value),
-          enabled:document.getElementById("editEnabled").checked
-        };
-        try{
-          await db.ref(`machineManagement/${slot}`)
-                  .set(machineConfig[slot]);
-          showToast("Saved");
-          panel.classList.remove("active");
-          renderStockGrid(); renderSnackGrid();
-        }catch(e){
-          console.error(e); showToast("Save failed");
+    // DISPENSE
+    async function proceedToDispense(){
+      if(!selected.size) return;
+      const localKey = localStorage.getItem("secretKey");
+      if(localKey!==serverSecret) return alert("Unauthorized");
+      // update both stock & limits
+      const updates={};
+      snacks.forEach(s=>{
+        if(selected.has(s.id)){
+          updates[`machineManagement/${s.id}/stock`] = s.quantity-1;
+          updates[`userManagement/${userKey}/Limits/${s.id}`] = (s.limit||0)-1;
         }
-      };
-    }
-
-    /* CONFIG MODAL */
-    function setupModals(){
-      const cfgModal=document.getElementById("configModal"),
-            cfgClose=document.getElementById("configClose"),
-            cfgSave=document.getElementById("configSave");
-      ["click","touchstart"].forEach(evt=>{
-        cfgClose.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          cfgModal.classList.remove("active");
-        },{passive:false});
-        cfgSave.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          const k=document.getElementById("configInput").value.trim();
-          if(!k){ showToast("Please enter a key"); return; }
-          localStorage.setItem("secretKey",k);
-          showToast("Key updated");
-          cfgModal.classList.remove("active");
-        },{passive:false});
       });
-      document.getElementById("configInput")
-        .addEventListener("keydown",e=>{
-          if(e.key==="Enter") cfgSave.click();
-        });
-    }
-
-    /* DISPENSE FLOW */
-    function proceedToDispense(){
-      if(!selectedItems.size) return;
-      sendDispenseSignal();
+      await db.ref().update(updates);
+      // show dispense screen
       showScreen("dispense-screen");
-      initDispense();
-    }
-    function signOut(){
-      clearInterval(countdownTimer);
-      countdownValue=5;
-      showScreen("logo-screen");
-    }
-    async function sendDispenseSignal(){
-      const localKey=localStorage.getItem("secretKey");
-      if(localKey!==serverSecret){ showToast("Unauthorized"); return; }
-      const user=(studentId==="DEV MODE"?"DEV MODE":STUDENTS[studentId]);
-      const data={Status:true,User:user};
-      SNACK_SLOTS.forEach((_,i)=>{
-        data[`Item${i+1}`]=selectedItems.has(_.slot);
-      });
-      try{ await db.ref("data").update(data); }catch(e){console.error(e);}
-      // decrement stock
-      for(const slot of selectedItems){
-        const cfgItem=machineConfig[slot]||{};
-        const prev=(cfgItem.stock!=null?cfgItem.stock:
-                    SNACK_SLOTS.find(x=>x.slot===slot).qty);
-        const newStock=Math.max(0,prev-1);
-        machineConfig[slot]={
-          name:cfgItem.name||SNACK_SLOTS.find(x=>x.slot===slot).name,
-          stock:newStock,
-          enabled:newStock>0
-        };
-        await db.ref(`machineManagement/${slot}`).set(machineConfig[slot]);
-      }
-      // log
-      const now=new Date(), mm=("0"+(now.getMonth()+1)).slice(-2),
-            dd=("0"+now.getDate()).slice(-2),
-            yy=(""+now.getFullYear()).slice(-2).slice(-2),
-            key=`${mm}-${dd}-${yy}`, h=now.getHours(),
-            m=("0"+now.getMinutes()).slice(-2),
-            s=("0"+now.getSeconds()).slice(-2),
-            ap=h>=12?"pm":"am", hr=h%12||12,
-            time=`${hr}h:${m}m:${s}s${ap}`, payload=[];
-      SNACK_SLOTS.forEach((_,i)=>{
-        if(selectedItems.has(_.slot)) payload.push(i+1);
-      });
-      const log={Time:time,User:user,Payload:payload.join(",")};
-      try{ await db.ref(`Logs/${key}`).push(log);}catch(e){console.error(e);}
+      initDispenseTimer();
     }
 
-    /* DISPENSE UI */
+    // DISPENSE SCREEN
     function setupDispense(){
-      const stayBtn=document.getElementById("stay-signed-btn");
-      ["click","touchstart"].forEach(evt=>{
-        stayBtn.addEventListener(evt,e=>{
-          if(evt==="touchstart") e.preventDefault();
-          clearInterval(countdownTimer);
-          showScreen("snack-screen"); renderSnackGrid();
-        },{passive:false});
-      });
-      window.addEventListener("keydown",e=>{
-        if(currentScreen==="dispense"){
-          if(e.key==="Enter"||e.code==="NumpadEnter"){
-            clearInterval(countdownTimer);
-            showScreen("snack-screen"); renderSnackGrid();
-          } else if(e.key==="Escape"){
-            clearInterval(countdownTimer);
-            signOut();
-          } else {
-            clearInterval(countdownTimer);
-          }
-        }
-      });
+      document.getElementById("stay-signed-btn")
+        .addEventListener("click",()=>showScreen("snack-screen"));
     }
-    function initDispense(){
-      const user=(studentId==="DEV MODE"?"DEV MODE":STUDENTS[studentId]);
-      document.getElementById("thank-you-msg")
-        .textContent=`Thank you, ${user.split(" ")[0]}!`;
+    let countdownTimer, countdownValue=5;
+    function initDispenseTimer(){
+      document.getElementById("thank-you-msg").textContent =
+        `Thank you, ${STUDENTS[studentId].split(" ")[0]}!`;
       countdownValue=5;
       document.getElementById("countdown").textContent=5;
-      countdownTimer=setInterval(()=>{
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(()=>{
         countdownValue--;
-        document.getElementById("countdown").textContent=countdownValue;
+        document.getElementById("countdown").textContent= countdownValue;
         if(countdownValue<=0){
           clearInterval(countdownTimer);
           signOut();
         }
       },1000);
     }
+
+    // DEV MENU
+    function setupDevMenu(){
+      const devBtn=document.getElementById("devButton"),
+            menuBtn=document.getElementById("menuBtn"),
+            devMenu=document.getElementById("devMenu"),
+            backdrop=document.getElementById("backdrop"),
+            close=document.getElementById("devMenuClose"),
+            openConfig=document.getElementById("openConfig"),
+            openStock=document.getElementById("openStockMgmt");
+      // activate dev
+      window.addEventListener("keydown",e=>{
+        if(e.key.toLowerCase()==="d" && currentScreen==="logo"){
+          activateDev();
+        }
+      });
+      devBtn.addEventListener("click",activateDev);
+      function activateDev(){
+        studentId="DEV MODE";
+        document.getElementById("student-name").textContent="DEV MODE";
+        showScreen("snack-screen");
+        renderSnackGrid();
+      }
+      // open/close menu
+      menuBtn.addEventListener("click",()=>{
+        backdrop.classList.add("active");
+        devMenu.classList.add("active");
+      });
+      close.onclick = () => {
+        backdrop.classList.remove("active");
+        devMenu.classList.remove("active");
+      };
+      // open config & stock
+      openConfig.onclick = ()=>{ 
+        backdrop.classList.add("active");
+        document.getElementById("configModal").classList.add("active");
+        devMenu.classList.remove("active");
+      };
+      openStock.onclick = ()=>{
+        backdrop.classList.add("active");
+        document.getElementById("stockModal").classList.add("active");
+        devMenu.classList.remove("active");
+      };
+      // backdrop click closes any modal
+      backdrop.addEventListener("click",closeAllModals);
+    }
+    function closeAllModals(){
+      document.querySelectorAll(".modal.active, .modal-backdrop.active")
+        .forEach(el=>el.classList.remove("active"));
+    }
+
+    // CONFIG MODAL
+    function setupConfigModal(){
+      const cfgM=document.getElementById("configModal"),
+            cfgInp=document.getElementById("configInput"),
+            save=document.getElementById("configSave"),
+            close=document.getElementById("configClose"),
+            backdrop=document.getElementById("backdrop");
+      save.addEventListener("click",()=>{
+        const k=cfgInp.value.trim();
+        if(!k) return alert("Key cannot be empty");
+        localStorage.setItem("secretKey",k);
+        alert("Local key saved");
+        closeAllModals();
+      });
+      close.addEventListener("click",closeAllModals);
+    }
+
+    // STOCK MANAGEMENT
+    function setupStockMgmt(){
+      const stockG=document.getElementById("stockGrid"),
+            close=document.getElementById("stockClose"),
+            backdrop=document.getElementById("backdrop");
+      close.onclick = closeAllModals;
+      function populate(){
+        stockG.innerHTML="";
+        snacks.forEach(s=>{
+          const c=document.createElement("div");
+          c.className="snack-item";
+          c.innerHTML=`<h4>${s.id}</h4><p>${s.name}</p><p>Qty: ${s.quantity}</p>`;
+          c.onclick=()=>openEdit(s.id);
+          stockG.appendChild(c);
+        });
+      }
+      document.getElementById("openStockMgmt")
+        .addEventListener("click",populate);
+    }
+
+    // EDIT MODAL
+    function setupEditModal(){
+      const eM=document.getElementById("editModal"),
+            eTitle=document.getElementById("editTitle"),
+            eName=document.getElementById("editName"),
+            eStock=document.getElementById("editStock"),
+            eEnabled=document.getElementById("editEnabled"),
+            save=document.getElementById("editSave"),
+            cancel=document.getElementById("editCancel"),
+            backdrop=document.getElementById("backdrop");
+      cancel.onclick = closeAllModals;
+      save.onclick = async ()=>{
+        const id = eTitle.textContent.split(" ")[1],
+              nm = eName.value.trim(),
+              st = +eStock.value,
+              en = eEnabled.checked;
+        if(!nm||st<0) return alert("Invalid values");
+        await db.ref(`machineManagement/${id}`)
+          .set({ stock:st, enabled:en });
+        // update in-memory
+        const s = snacks.find(x=>x.id===id);
+        s.name=nm; s.quantity=st; s.enabled=en;
+        renderSnackGrid();
+        closeAllModals();
+      };
+      window.openEdit = id =>{
+        const s = snacks.find(x=>x.id===id);
+        eTitle.textContent=`Edit ${id}`;
+        eName.value = s.name;
+        eStock.value = s.quantity;
+        eEnabled.checked = s.enabled;
+        backdrop.classList.add("active");
+        eM.classList.add("active");
+      };
+    }
+
+    // SIGN OUT
+    function signOut(){
+      clearInterval(countdownTimer);
+      showScreen("logo-screen");
+    }
+
   </script>
 </body>
 </html>
