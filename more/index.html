@@ -101,8 +101,7 @@
     #stockEditModal.active{ display:block; }
     #stockEditModal h4{ margin-bottom:10px; font-size:1.1em; color:#2c3e50; }
     #stockEditModal label{ display:block; margin-top:8px; font-size:.9em; color:#333; }
-    #stockEditModal input[type="text"],
-    #stockEditModal input[type="number"]{ width:100%; padding:6px; margin-top:4px; font-size:.9em; border:1px solid #ccc; border-radius:4px; }
+    #stockEditModal input[type="text"],#stockEditModal input[type="number"]{ width:100%; padding:6px; margin-top:4px; font-size:.9em; border:1px solid #ccc; border-radius:4px; }
     #stockEditModal .actions{ margin-top:12px; text-align:right; }
     #stockEditModal .actions .btn{ margin-left:6px; padding:6px 12px; }
 
@@ -226,7 +225,7 @@
     // disable touch scroll
     document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
 
-    const APP_VERSION="v2.7.9 Stable";
+    const APP_VERSION="v2.7.10";
 
     const cfg={
       apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
@@ -254,7 +253,7 @@
       "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
       "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
       "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins",
-      "360794": "Calix Baker"
+      "360794":"Calix Baker"
     };
 
     /* UPDATED SLOT IDS */
@@ -290,11 +289,10 @@
       document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       currentScreen=id.split("-")[0];
-
       const d=document.getElementById("devButton");
       if(currentScreen!=="logo"||studentId){
         d.disabled=true; d.style.pointerEvents="none";
-      }else{
+      } else {
         d.disabled=false; d.style.pointerEvents="auto";
       }
     }
@@ -327,10 +325,7 @@
             txt=document.querySelector("#logo-screen h2");
       ["click","touchstart"].forEach(evt=>{
         [img,txt].forEach(el=>{
-          el.addEventListener(evt,e=>{
-            if(evt==="touchstart")e.preventDefault();
-            showScreen("keypad-screen"); initKeypad();
-          },{passive:false});
+          el.addEventListener(evt,e=>{ if(evt==="touchstart")e.preventDefault(); showScreen("keypad-screen"); initKeypad(); },{passive:false});
         });
       });
       window.addEventListener("keydown",e=>{
@@ -476,15 +471,28 @@
 
     function toggleSnack(slot,card){
       if(card.classList.contains("disabled")) return;
-      if(selectedItems.has(slot)){
-        selectedItems.delete(slot); card.classList.remove("selected");
-      }else{
-        selectedItems.add(slot); card.classList.add("selected");
+
+      // ENFORCE MAX 2 FOR STUDENTS
+      if(!selectedItems.has(slot)
+         && studentId !== "DEV MODE"
+         && selectedItems.size >= 2)
+      {
+        showToast("You can only select up to 2 items");
+        return;
       }
+
+      if(selectedItems.has(slot)){
+        selectedItems.delete(slot);
+        card.classList.remove("selected");
+      } else {
+        selectedItems.add(slot);
+        card.classList.add("selected");
+      }
+
       if(selectedItems.size){
         dispenseBtn.style.display="block";
         dispenseBtn.textContent=(selectedItems.size===1)?"Dispense Snack":"Dispense Snacks";
-      }else{
+      } else {
         dispenseBtn.style.display="none";
       }
     }
@@ -551,9 +559,7 @@
 
       const panel=document.getElementById("stockEditModal");
       panel.classList.add("active");
-
       document.getElementById("editCancel").onclick=()=>panel.classList.remove("active");
-
       document.getElementById("editSave").onclick=async()=>{
         machineConfig[slot]={
           name   :document.getElementById("editName").value,
@@ -669,9 +675,9 @@
           if(e.key==="Enter"||e.code==="NumpadEnter"){
             clearInterval(countdownTimer);
             showScreen("snack-screen"); renderSnackGrid();
-          }else if(e.key==="Escape"){
+          } else if(e.key==="Escape"){
             clearInterval(countdownTimer); signOut();
-          }else{
+          } else {
             clearInterval(countdownTimer);
           }
         }
@@ -682,7 +688,7 @@
       const user=(studentId==="DEV MODE")?"DEV MODE":STUDENTS[studentId];
       document.getElementById("thank-you-msg").textContent=`Thank you, ${user.split(" ")[0]}!`;
       countdownValue=5;
-      document.getElementById("countdown").textContent=countdownValue;
+      document.getElementById("countdown").textContent=5;
       countdownTimer=setInterval(()=>{
         countdownValue--;
         document.getElementById("countdown").textContent=countdownValue;
