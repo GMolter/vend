@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Vending Machine – Admin Panel</title>
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      margin: 0; padding: 2rem;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1 { margin-bottom: 1rem; }
+    section { margin-bottom: 2rem; }
+    ul { list-style: none; padding: 0; }
+    li {
+      background: #fff;
+      margin-bottom: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    li button {
+      background: #3498db;
+      border: none;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    li button:hover { background: #2980b9; }
+    #day-transactions { display: none; }
+    #day-transactions.active { display: block; }
+  </style>
+</head>
+<body>
+  <h1>Admin Panel</h1>
+
+  <section id="recent-section">
+    <h2>Recent 10 Transactions</h2>
+    <ul id="recent-list">
+      <li>Loading…</li>
+    </ul>
+  </section>
+
+  <section id="dates-section">
+    <h2>By Date</h2>
+    <ul id="date-list">
+      <li>Loading…</li>
+    </ul>
+  </section>
+
+  <section id="day-transactions">
+    <h2 id="day-title"></h2>
+    <ul id="day-list"></ul>
+  </section>
+
+  <script>
+    // --- Firebase init (same config as main site) ---
+    const cfg = {
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
+      projectId: "cyberflashvend",
+      storageBucket: "cyberflashvend.firebasestorage.app",
+      messagingSenderId: "63786658773",
+      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+    };
+    firebase.initializeApp(cfg);
+    const db = firebase.database();
+
+    let allLogs = {};  // will hold /Logs data
+
+    // parse dateKey "MM-DD-YY" into JS Date
+    function parseDateKey(d) {
+      const [mm, dd, yy] = d.split("-");
+      return new Date(2000 + Number(yy), Number(mm)-1, Number(dd));
+    }
+
+    // fetch logs once
+    db.ref("Logs").once("value").then(snap => {
+      allLogs = snap.val() || {};
+
+      renderDates();
+      renderRecent();
+    });
+
+    function renderDates() {
+      const dateList = document.getElementById("date-list");
+      dateList.innerHTML = "";
+
+      // sort date keys descending
+      const dates = Object.keys(allLogs)
+        .sort((a,b) => parseDateKey(b) - parseDateKey(a));
+
+      dates.forEach(dateKey => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.textContent = dateKey;
+        btn.onclick = () => showDay(dateKey);
+        li.appendChild(btn);
+        dateList.appendChild(li);
+      });
+    }
+
+    function renderRecent() {
+      // flatten all entries
+      let flat = [];
+      for (const dateKey in allLogs) {
+        const entries = allLogs[dateKey];
+        for (const id in entries) {
+          flat.push({ date: dateKey, ...entries[id] });
+        }
+      }
+      // sort by date descending
+      flat.sort((a,b) => parseDateKey(b.date) - parseDateKey(a.date));
+      // take first 10
+      const recent10 = flat.slice(0,10);
+      const recentList = document.getElementById("recent-list");
+      recentList.innerHTML = "";
+      recent10.forEach(tx => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span><strong>${tx.date}</strong> — ${tx.Time} — ${tx.User}</span>
+          <small>Items: ${tx.Payload}</small>
+        `;
+        recentList.appendChild(li);
+      });
+      if(!recent10.length) {
+        recentList.innerHTML = "<li>No transactions yet</li>";
+      }
+    }
+
+    function showDay(dateKey) {
+      const daySection = document.getElementById("day-transactions");
+      const title = document.getElementById("day-title");
+      const dayList = document.getElementById("day-list");
+
+      title.textContent = `Transactions on ${dateKey}`;
+      dayList.innerHTML = "";
+
+      const entries = allLogs[dateKey] || {};
+      const arr = Object.values(entries);
+
+      if (!arr.length) {
+        dayList.innerHTML = "<li>No transactions on this date</li>";
+      } else {
+        arr.forEach(tx => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <span>${tx.Time} — ${tx.User}</span>
+            <small>Items: ${tx.Payload}</small>
+          `;
+          dayList.appendChild(li);
+        });
+      }
+      daySection.classList.add("active");
+      // scroll into view
+      daySection.scrollIntoView({ behavior: "smooth" });
+    }
+  </script>
+</body>
+</html>
