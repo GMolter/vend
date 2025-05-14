@@ -19,15 +19,19 @@
 
     h1 { text-align:center; margin-bottom:20px }
     .btn {
-      display:inline-block; margin:0 8px 20px 0;
+      display:inline-block; margin:0 16px 20px 0;
       padding:8px 16px; border:none; border-radius:4px;
       color:#fff; font-size:1em;
     }
-    .btn.dev { background:orange }
+    .btn.dev    { background:orange }
     .btn.stable { background:green }
 
     /* SEARCH */
-    #searchBar { width:100%; padding:8px 12px; font-size:1em; margin-bottom:24px; border:1px solid #ccc; border-radius:4px }
+    #searchBar {
+      width:100%; padding:8px 12px; font-size:1em;
+      margin:12px 0 24px;
+      border:1px solid #ccc; border-radius:4px;
+    }
 
     /* SECTIONS */
     section { margin-bottom:40px }
@@ -40,23 +44,41 @@
       padding:12px; box-shadow:0 2px 6px rgba(0,0,0,.1);
     }
     .card h3 { font-size:1.1em; margin-bottom:6px }
-    .card p { font-size:.95em; margin-bottom:4px; color:#555 }
+    .card p  { font-size:.95em; margin-bottom:4px; color:#555 }
 
-    /* MODAL */
+    /* DATE & USER SUBTITLES */
+    .sub-title { font-size:1.2em; margin:16px 0 8px }
+
+    /* MODAL OVERLAY */
     #modalOverlay {
       position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.5); display:none;
+      align-items:center; justify-content:center;
       z-index:1000;
     }
+    /* MODAL BOX */
     #modal {
-      background:#fff; border-radius:6px; max-width:500px; width:90%;
-      max-height:80vh; overflow-y:auto; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,.3);
+      position:relative;
+      background:#fff; border-radius:6px;
+      max-width:500px; width:90%; max-height:80vh;
+      overflow-y:auto; padding:20px;
+      box-shadow:0 4px 12px rgba(0,0,0,.3);
     }
-    #modal h2 { margin-bottom:12px }
+    /* CLOSE BUTTON */
     #modal .close {
-      position:absolute; top:10px; right:14px; font-size:1.2em;
-      background:none; border:none; cursor:pointer; color:#999;
+      position:static; float:right;
+      background:#e74c3c; color:#fff;
+      border:none; border-radius:4px;
+      padding:4px 8px; font-size:1em;
+      cursor:pointer;
     }
+    #modal h2 {
+      margin-bottom:12px; font-size:1.3em; color:#2c3e50;
+    }
+
+    /* TRANSACTION ENTRY IN MODAL */
+    .modal-entry { margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:8px }
+    .modal-entry:last-child { border:none }
 
   </style>
 </head>
@@ -70,39 +92,33 @@
       <button class="btn stable">Stable Page</button>
     </a>
 
-    <input type="text" id="searchBar" placeholder="Search by Date or User" />
-
     <!-- Recent 6 Transactions -->
     <section>
       <h2>Recent 6 Transactions</h2>
-      <div id="recentGrid" class="grid">
-        <!-- dynamically filled -->
-      </div>
+      <div id="recentGrid" class="grid"></div>
       <button id="moreBtn" class="btn save" style="display:none">More…</button>
     </section>
 
     <!-- Browse -->
     <section>
       <h2>Browse</h2>
-      <h3>By Date</h3>
-      <div id="datesGrid" class="grid">
-        <!-- date cards -->
-      </div>
-      <h3>By User</h3>
-      <div id="usersGrid" class="grid">
-        <!-- user cards -->
-      </div>
+      <!-- move search bar here -->
+      <input type="text" id="searchBar" placeholder="Search by Date or User" />
+
+      <div class="sub-title">By Date</div>
+      <div id="datesGrid" class="grid"></div>
+
+      <div class="sub-title">By User</div>
+      <div id="usersGrid" class="grid"></div>
     </section>
   </div>
 
   <!-- Modal -->
   <div id="modalOverlay">
     <div id="modal">
-      <button class="close">&times;</button>
+      <button class="close">×</button>
       <h2 id="modalTitle">Transactions</h2>
-      <div id="modalContent">
-        <!-- list of transactions -->
-      </div>
+      <div id="modalContent"></div>
     </div>
   </div>
 
@@ -120,49 +136,46 @@
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // map payload index → item name
+    // Slot → name lookup
     const SLOT_NAMES = {
       "C2":"Chips","E1":"Cookies","E2":"Pretzels",
       "E3":"Candy Bar","E4":"Granola Bar","E5":"Trail Mix"
     };
 
-    // UI refs
-    const recentGrid = document.getElementById('recentGrid');
-    const datesGrid  = document.getElementById('datesGrid');
-    const usersGrid  = document.getElementById('usersGrid');
-    const searchBar  = document.getElementById('searchBar');
-    const moreBtn    = document.getElementById('moreBtn');
-    const modalOvl   = document.getElementById('modalOverlay');
-    const modal      = document.getElementById('modal');
-    const modalTitle = document.getElementById('modalTitle');
+    // STUDENTS map
+    const STUDENTS = {
+      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
+      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
+      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
+      "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins",
+      "360794":"Calix Baker"
+    };
+
+    // references
+    const recentGrid   = document.getElementById('recentGrid');
+    const datesGrid    = document.getElementById('datesGrid');
+    const usersGrid    = document.getElementById('usersGrid');
+    const searchBar    = document.getElementById('searchBar');
+    const moreBtn      = document.getElementById('moreBtn');
+    const modalOvl     = document.getElementById('modalOverlay');
+    const modal        = document.getElementById('modal');
+    const modalTitle   = document.getElementById('modalTitle');
     const modalContent = document.getElementById('modalContent');
 
-    // state
-    let allLogs = [];      // {key,date,Time,User,Payload[]}
-    let filteredLogs = [];
-    let showCount = 6;
+    let allLogs = [], filteredLogs = [], showCount = 6;
 
-    // load logs once
+    // load all logs
     db.ref('Logs').once('value', snap => {
       const data = snap.val()||{};
-      // flatten by date
       Object.entries(data).forEach(([date, dayLogs])=>{
-        Object.entries(dayLogs).forEach(([_, log])=>{
+        Object.values(dayLogs).forEach(log=>{
           allLogs.push({...log, key:date});
         });
       });
-      // sort newest first by date+time
+      // sort descending
       allLogs.sort((a,b)=>{
-        const da = new Date(a.key + ' ' + a.Time.replace(/h|m|s|pm|am/g, match=>{
-          if(match==='pm') return ' PM';
-          if(match==='am') return ' AM';
-          return match.replace(/[hms]/,'');
-        }));
-        const db_ = new Date(b.key + ' ' + b.Time.replace(/h|m|s|pm|am/g, match=>{
-          if(match==='pm') return ' PM';
-          if(match==='am') return ' AM';
-          return match.replace(/[hms]/,'');
-        }));
+        const da = new Date(a.key+' '+a.Time.replace(/h|m|s/,':').replace('pm',' PM').replace('am',' AM'));
+        const db_ = new Date(b.key+' '+b.Time.replace(/h|m|s/,':').replace('pm',' PM').replace('am',' AM'));
         return db_ - da;
       });
       filteredLogs = allLogs.slice();
@@ -170,89 +183,99 @@
       renderBrowse();
     });
 
-    // render recent
+    // Recent
     function renderRecent(){
-      recentGrid.innerHTML = '';
-      const slice = filteredLogs.slice(0, showCount);
-      slice.forEach(log=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-        // date/time without seconds: convert "4h:05m:38spm" → "4:05 PM"
-        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(pm|am)/, '$1:$2 $3');
-        card.innerHTML = `
+      recentGrid.innerHTML='';
+      filteredLogs.slice(0,showCount).forEach(log=>{
+        const card = document.createElement('div'); card.className='card';
+        // format time
+        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, '$1:$2 $3'.toUpperCase());
+        card.innerHTML=`
           <h3>${log.key} ${t}</h3>
           <p><strong>User:</strong> ${log.User}</p>
-          <p><strong>Items:</strong> ${log.Payload.split(',').map(i=>SLOT_NAMES[ Object.keys(SLOT_NAMES)[i-1] ]).join(', ')}</p>
+          <p><strong>Items:</strong> ${log.Payload.split(',').map(i=>SLOT_NAMES[Object.keys(SLOT_NAMES)[i-1]]).join(', ')}</p>
         `;
-        card.addEventListener('click',()=>openModal(`Recent Entry`, [log]));
+        card.addEventListener('click', ()=> openModal(`Recent Entry`, [log]));
         recentGrid.appendChild(card);
       });
       moreBtn.style.display = filteredLogs.length>showCount ? 'inline-block' : 'none';
     }
+    moreBtn.onclick = ()=>{ showCount+=6; renderRecent(); };
 
-    moreBtn.onclick = ()=>{
-      showCount += 6;
-      renderRecent();
-    };
-
-    // render browse by date & by user
+    // Browse: dates & users
     function renderBrowse(){
-      const dates = Array.from(new Set(allLogs.map(l=>l.key)));
-      datesGrid.innerHTML = '';
+      // dates
+      let dates = [...new Set(allLogs.map(l=>l.key))];
+      datesGrid.innerHTML='';
       dates.forEach(date=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.textContent = date.replace(/-/g,'/');
+        const card=document.createElement('div'); card.className='card';
+        const label = date.replace(/-/g,'/');
+        card.innerHTML = `<h3>${label}</h3>`;
         card.addEventListener('click', ()=> {
           const dayLogs = allLogs.filter(l=>l.key===date);
-          openModal(`Transactions on ${date.replace(/-/g,'/')}`, dayLogs);
+          openModal(`Transactions on ${label}`, dayLogs);
         });
         datesGrid.appendChild(card);
       });
-
-      const users = Array.from(new Set(allLogs.map(l=>l.User)));
-      usersGrid.innerHTML = '';
-      users.forEach(u=>{
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.textContent = u;
-        card.addEventListener('click', ()=> {
-          const uLogs = allLogs.filter(l=>l.User===u);
-          openModal(`History for ${u}`, uLogs);
-        });
+      // users
+      usersGrid.innerHTML='';
+      Object.entries(STUDENTS).forEach(([id,name])=>{
+        const card=document.createElement('div'); card.className='card';
+        card.innerHTML = `<h3>${name}</h3><p><strong>ID:</strong> ${id}</p>`;
+        card.addEventListener('click', ()=> openUserModal(name,id));
         usersGrid.appendChild(card);
       });
     }
 
-    // search filter
-    searchBar.addEventListener('input', ()=> {
+    // search
+    searchBar.addEventListener('input', ()=>{
       const q = searchBar.value.trim().toLowerCase();
       filteredLogs = allLogs.filter(l=>{
         return l.key.includes(q.replace(/[.\-]/g,'-'))
             || l.User.toLowerCase().includes(q);
       });
-      showCount = 6;
-      renderRecent();
+      showCount=6; renderRecent();
     });
 
-    // modal
-    document.querySelector('#modal .close').onclick = () => modalOvl.style.display = 'none';
+    // Modal helpers
+    modal.querySelector('.close').onclick = ()=> modalOvl.style.display='none';
 
+    // generic modal
     function openModal(title, logs){
       modalTitle.textContent = title;
       modalContent.innerHTML = '';
       logs.forEach(log=>{
-        const div = document.createElement('div');
-        div.style.marginBottom = '12px';
-        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(pm|am)/, '$1:$2 $3');
-        div.innerHTML = `
+        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, '$1:$2 $3'.toUpperCase());
+        const entry = document.createElement('div'); entry.className='modal-entry';
+        entry.innerHTML=`
           <p><strong>${log.key} ${t}</strong></p>
           <p>User: ${log.User}</p>
-          <p>Items: ${log.Payload.split(',').map(i=>SLOT_NAMES[ Object.keys(SLOT_NAMES)[i-1] ]).join(', ')}</p>
+          <p>Items: ${log.Payload.split(',').map(i=>SLOT_NAMES[Object.keys(SLOT_NAMES)[i-1]]).join(', ')}</p>
         `;
-        modalContent.appendChild(div);
+        modalContent.appendChild(entry);
       });
-      modalOvl.style.display = 'flex';
+      modalOvl.style.display='flex';
+    }
+
+    // user-specific modal
+    function openUserModal(name,id){
+      // list dates for that user
+      const userLogs = allLogs.filter(l=>l.User===name);
+      const dates = [...new Set(userLogs.map(l=>l.key))];
+      modalTitle.textContent = `History for ${name} (ID: ${id})`;
+      modalContent.innerHTML = '<p>Select a date:</p>';
+      dates.forEach(date=>{
+        const btn = document.createElement('button');
+        btn.textContent = date.replace(/-/g,'/');
+        btn.className = 'btn';
+        btn.style.margin = '4px';
+        btn.onclick = ()=> {
+          const dayLogs = userLogs.filter(l=>l.key===date);
+          openModal(`${name} on ${date.replace(/-/g,'/')}`, dayLogs);
+        };
+        modalContent.appendChild(btn);
+      });
+      modalOvl.style.display='flex';
     }
   </script>
 </body>
