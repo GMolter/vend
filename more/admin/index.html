@@ -9,52 +9,53 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
-      margin: 0; padding: 2rem;
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      color: #333;
+      margin:0; padding:2rem;
+      font-family:Arial,sans-serif;
+      background:#f5f5f5; color:#333;
     }
-    h1 { margin-bottom: 1rem; }
-    section { margin-bottom: 2rem; }
-    ul { list-style: none; padding: 0; }
-    li {
-      background: #fff;
-      margin-bottom: 0.5rem;
-      padding: 0.75rem 1rem;
-      border-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    h1,h2 { margin-bottom:.75rem; }
+    section { margin-bottom:2rem; }
+
+    ul { padding:0; }
+    #recent-list li,
+    #day-list li {
+      list-style:none;
+      background:#fff;
+      margin-bottom:1rem;
+      padding:1rem;
+      border-radius:6px;
+      box-shadow:0 2px 5px rgba(0,0,0,.1);
     }
-    li button {
-      background: #3498db;
-      border: none;
-      color: #fff;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
+    #recent-list li .time {
+      font-weight:600; margin-bottom:.5rem; display:block;
     }
-    li button:hover { background: #2980b9; }
-    #day-transactions { display: none; }
-    #day-transactions.active { display: block; }
+    #recent-list li .items {
+      font-size:.9em; color:#555;
+    }
+    #date-list { display:flex; flex-wrap:wrap; gap:.5rem; }
+    #date-list button {
+      background:#3498db; color:#fff; border:none;
+      padding:.5rem 1rem; border-radius:4px; cursor:pointer;
+    }
+    #date-list button:hover { background:#2980b9; }
+    #day-transactions { display:none; }
+    #day-transactions.active { display:block; }
+
+    /* small utility */
+    .hidden { display:none; }
   </style>
 </head>
 <body>
   <h1>Admin Panel</h1>
 
   <section id="recent-section">
-    <h2>Recent 10 Transactions</h2>
-    <ul id="recent-list">
-      <li>Loading…</li>
-    </ul>
+    <h2>Recent 6 Transactions</h2>
+    <ul id="recent-list"><li>Loading…</li></ul>
   </section>
 
   <section id="dates-section">
     <h2>By Date</h2>
-    <ul id="date-list">
-      <li>Loading…</li>
-    </ul>
+    <ul id="date-list"><li>Loading…</li></ul>
   </section>
 
   <section id="day-transactions">
@@ -63,7 +64,7 @@
   </section>
 
   <script>
-    // --- Firebase init (same config as main site) ---
+    // — Firebase init (same as main site) —
     const cfg = {
       apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain: "cyberflashvend.firebaseapp.com",
@@ -76,94 +77,112 @@
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    let allLogs = {};  // will hold /Logs data
+    // same snack slots ordering as main site
+    const SNACK_SLOTS = [
+      { slot:"C2", name:"Chips" },
+      { slot:"E1", name:"Cookies" },
+      { slot:"E2", name:"Pretzels" },
+      { slot:"E3", name:"Candy Bar" },
+      { slot:"E4", name:"Granola Bar" },
+      { slot:"E5", name:"Trail Mix" }
+    ];
 
-    // parse dateKey "MM-DD-YY" into JS Date
-    function parseDateKey(d) {
-      const [mm, dd, yy] = d.split("-");
-      return new Date(2000 + Number(yy), Number(mm)-1, Number(dd));
-    }
-
-    // fetch logs once
+    let allLogs = {};
     db.ref("Logs").once("value").then(snap => {
-      allLogs = snap.val() || {};
-
+      allLogs = snap.val()||{};
       renderDates();
       renderRecent();
     });
 
-    function renderDates() {
-      const dateList = document.getElementById("date-list");
-      dateList.innerHTML = "";
+    function parseDateKey(d) {
+      const [mm,dd,yy] = d.split("-");
+      return new Date(2000+Number(yy),Number(mm)-1,Number(dd));
+    }
 
-      // sort date keys descending
-      const dates = Object.keys(allLogs)
-        .sort((a,b) => parseDateKey(b) - parseDateKey(a));
-
-      dates.forEach(dateKey => {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.textContent = dateKey;
-        btn.onclick = () => showDay(dateKey);
-        li.appendChild(btn);
-        dateList.appendChild(li);
-      });
+    function formatTime(raw) {
+      // raw like "12h:49m:38sam" → want "12:49am"
+      const m = raw.match(/^(\d+)h:(\d+)m/);
+      const per = raw.slice(-2);
+      return m ? `${m[1]}:${m[2]}${per}` : raw;
     }
 
     function renderRecent() {
-      // flatten all entries
-      let flat = [];
+      const flat = [];
       for (const dateKey in allLogs) {
         const entries = allLogs[dateKey];
         for (const id in entries) {
           flat.push({ date: dateKey, ...entries[id] });
         }
       }
-      // sort by date descending
-      flat.sort((a,b) => parseDateKey(b.date) - parseDateKey(a.date));
-      // take first 10
-      const recent10 = flat.slice(0,10);
-      const recentList = document.getElementById("recent-list");
-      recentList.innerHTML = "";
-      recent10.forEach(tx => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <span><strong>${tx.date}</strong> — ${tx.Time} — ${tx.User}</span>
-          <small>Items: ${tx.Payload}</small>
-        `;
-        recentList.appendChild(li);
-      });
-      if(!recent10.length) {
-        recentList.innerHTML = "<li>No transactions yet</li>";
+      flat.sort((a,b)=>parseDateKey(b.date)-parseDateKey(a.date));
+      const recent6 = flat.slice(0,6);
+      const ul = document.getElementById("recent-list");
+      ul.innerHTML = "";
+      if (!recent6.length) {
+        ul.innerHTML = "<li>No transactions yet</li>";
+        return;
       }
+      recent6.forEach(tx=> {
+        const li = document.createElement("li");
+        const t = formatTime(tx.Time);
+        // map payload numbers to names
+        const items = tx.Payload
+          .split(",")
+          .map(n=> SNACK_SLOTS[Number(n)-1]?.name )
+          .filter(Boolean)
+          .join(", ");
+        li.innerHTML = `
+          <span class="time">${tx.date} — ${t} — ${tx.User}</span>
+          <span class="items">Items: ${items}</span>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    function renderDates() {
+      const dates = Object.keys(allLogs)
+        .sort((a,b)=>parseDateKey(b)-parseDateKey(a));
+      const ul = document.getElementById("date-list");
+      ul.innerHTML = "";
+      if (!dates.length) {
+        ul.innerHTML = "<li>No dates</li>";
+        return;
+      }
+      dates.forEach(dk=> {
+        const btn = document.createElement("button");
+        btn.textContent = dk;
+        btn.onclick = ()=> showDay(dk);
+        ul.appendChild(btn);
+      });
     }
 
     function showDay(dateKey) {
-      const daySection = document.getElementById("day-transactions");
+      const sec = document.getElementById("day-transactions");
       const title = document.getElementById("day-title");
-      const dayList = document.getElementById("day-list");
-
+      const ul = document.getElementById("day-list");
       title.textContent = `Transactions on ${dateKey}`;
-      dayList.innerHTML = "";
-
-      const entries = allLogs[dateKey] || {};
-      const arr = Object.values(entries);
-
-      if (!arr.length) {
-        dayList.innerHTML = "<li>No transactions on this date</li>";
+      ul.innerHTML = "";
+      const entries = Object.values(allLogs[dateKey]||{});
+      if (!entries.length) {
+        ul.innerHTML = "<li>No transactions</li>";
       } else {
-        arr.forEach(tx => {
+        entries.forEach(tx=> {
           const li = document.createElement("li");
+          const t = formatTime(tx.Time);
+          const items = tx.Payload
+            .split(",")
+            .map(n=> SNACK_SLOTS[Number(n)-1]?.name )
+            .filter(Boolean)
+            .join(", ");
           li.innerHTML = `
-            <span>${tx.Time} — ${tx.User}</span>
-            <small>Items: ${tx.Payload}</small>
+            <span class="time">${t} — ${tx.User}</span>
+            <span class="items">Items: ${items}</span>
           `;
-          dayList.appendChild(li);
+          ul.appendChild(li);
         });
       }
-      daySection.classList.add("active");
-      // scroll into view
-      daySection.scrollIntoView({ behavior: "smooth" });
+      sec.classList.add("active");
+      sec.scrollIntoView({ behavior: "smooth" });
     }
   </script>
 </body>
