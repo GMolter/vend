@@ -1,429 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Vending Machine – Admin Panel</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vending Machine — Admin Panel</title>
   <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     /* RESET & GLOBALS */
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family:Arial,sans-serif;
-      background:#f5f5f5; color:#333;
-      padding:1rem;
-    }
-    h1 { margin-bottom:1rem; }
+    * { margin:0; padding:0; box-sizing:border-box }
+    body { font-family:Arial,sans-serif; background:#f5f5f5; color:#333 }
+    a { text-decoration:none }
+    button { cursor:pointer; }
 
-    /* Top navigation buttons */
-    #top-nav {
-      display:flex; gap:2rem;
-      margin-bottom:2rem;
-    }
-    .btn.dev { background:#e67e22; }
-    .btn.dev:hover { background:#d35400; }
-    .btn.stable { background:#27ae60; }
-    .btn.stable:hover { background:#229954; }
+    /* CONTAINER */
+    #app { max-width:960px; margin:20px auto; padding:0 10px }
+
+    h1 { text-align:center; margin-bottom:20px }
     .btn {
-      padding:.6rem 1.2rem; border:none; border-radius:4px;
-      color:#fff; cursor:pointer; font-size:1rem;
-      transition:background .2s;
+      display:inline-block; margin:0 8px 20px 0;
+      padding:8px 16px; border:none; border-radius:4px;
+      color:#fff; font-size:1em;
     }
-
-    /* SECTION HEADINGS */
-    section h2 {
-      font-size:1.4em; margin:1.5rem 0 .75rem;
-    }
-
-    /* RECENT TRANSACTIONS as grid of cards */
-    #recent-list {
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-      gap:1rem;
-      list-style:none;
-    }
-    #recent-list li {
-      background:#fff; border-radius:6px; padding:1rem;
-      box-shadow:0 2px 5px rgba(0,0,0,.1);
-    }
-    #recent-list .time {
-      display:block; font-weight:600; margin-bottom:.5rem;
-    }
-    #recent-list .items {
-      font-size:.9rem; color:#555;
-    }
-    #moreBtn {
-      display:none; background:#3498db; margin:1rem auto;
-      padding:.6rem 1.2rem; border:none; border-radius:4px;
-      color:#fff; cursor:pointer; font-size:1rem;
-      transition:background .2s;
-    }
-    #moreBtn:hover { background:#2980b9; }
+    .btn.dev { background:orange }
+    .btn.stable { background:green }
 
     /* SEARCH */
-    #date-search-container {
-      margin-bottom:1rem;
+    #searchBar { width:100%; padding:8px 12px; font-size:1em; margin-bottom:24px; border:1px solid #ccc; border-radius:4px }
+
+    /* SECTIONS */
+    section { margin-bottom:40px }
+    section h2 { font-size:1.4em; margin-bottom:12px }
+
+    /* CARDS GRID */
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px }
+    .card {
+      background:#fff; border:1px solid #ddd; border-radius:6px;
+      padding:12px; box-shadow:0 2px 6px rgba(0,0,0,.1);
     }
-    #dateSearch {
-      width:100%; padding:.6rem;
-      font-size:1rem; border:1px solid #ccc; border-radius:4px;
+    .card h3 { font-size:1.1em; margin-bottom:6px }
+    .card p { font-size:.95em; margin-bottom:4px; color:#555 }
+
+    /* MODAL */
+    #modalOverlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center;
+      z-index:1000;
+    }
+    #modal {
+      background:#fff; border-radius:6px; max-width:500px; width:90%;
+      max-height:80vh; overflow-y:auto; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,.3);
+    }
+    #modal h2 { margin-bottom:12px }
+    #modal .close {
+      position:absolute; top:10px; right:14px; font-size:1.2em;
+      background:none; border:none; cursor:pointer; color:#999;
     }
 
-    /* DATE CARDS */
-    #date-list {
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
-      gap:.75rem;
-    }
-    .date-card {
-      background:#fff; border:1px solid #ddd; padding:.75rem;
-      border-radius:6px; box-shadow:0 2px 5px rgba(0,0,0,.1);
-      text-align:center; cursor:pointer;
-      transition:background .2s;
-    }
-    .date-card:hover { background:#ecf0f1; }
-    .date-card span { display:block; font-weight:600; }
-
-    /* USER CARDS */
-    #user-list {
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-      gap:.75rem;
-      margin-top:1rem;
-    }
-    .user-card {
-      background:#fff; border:1px solid #ddd; padding:.75rem;
-      border-radius:6px; box-shadow:0 2px 5px rgba(0,0,0,.1);
-      text-align:center; cursor:pointer;
-      transition:background .2s;
-      font-size:.9rem;
-    }
-    .user-card:hover { background:#ecf0f1; }
-
-    /* MODALS */
-    .modal {
-      position:fixed; top:0; left:0; right:0; bottom:0;
-      background:rgba(0,0,0,.5); display:none;
-      align-items:center; justify-content:center; z-index:10000;
-    }
-    .modal.active { display:flex; }
-    .modal-content {
-      background:#fff; border-radius:6px; width:90%; max-width:600px;
-      max-height:80vh; overflow-y:auto; padding:1rem;
-      box-shadow:0 8px 24px rgba(0,0,0,.2);
-    }
-    .modal-header {
-      display:flex; justify-content:space-between; align-items:center;
-      margin-bottom:1rem;
-    }
-    .modal-header h3 { margin:0; font-size:1.2em; }
-    .close-btn {
-      background:transparent; border:none; font-size:1.2em; cursor:pointer;
-    }
-    .tx-list {
-      list-style:none; display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-      gap:1rem;
-    }
-    .tx-list li {
-      background:#fdfdfd; border-radius:6px; padding:.75rem;
-      box-shadow:0 2px 5px rgba(0,0,0,.1);
-    }
-    .tx-list .time { font-weight:600; margin-bottom:.5rem; }
-    .tx-list .items { font-size:.9rem; color:#555; }
-
-    /* TOAST */
-    #toast-container {
-      position:fixed; bottom:20px; left:50%;
-      transform:translateX(-50%); z-index:10001;
-    }
-    .toast {
-      background:rgba(0,0,0,.8); color:#fff;
-      padding:8px 16px; margin-top:6px; border-radius:4px;
-      opacity:0; animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
-    }
-    @keyframes fadein{ to{opacity:1} }
-    @keyframes fadeout{ to{opacity:0} }
-
-    /* MOBILE */
-    @media(max-width:600px){
-      #top-nav { flex-direction:column; gap:1rem; }
-      #date-list, #user-list {
-        grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
-      }
-    }
   </style>
 </head>
 <body>
-  <h1>Admin Panel</h1>
+  <div id="app">
+    <h1>Admin Panel</h1>
+    <a href="https://gmolter.github.io/vend/more" target="_blank">
+      <button class="btn dev">Dev Page</button>
+    </a>
+    <a href="https://gmolter.github.io/vend/" target="_blank">
+      <button class="btn stable">Stable Page</button>
+    </a>
 
-  <div id="top-nav">
-    <button class="btn dev"    onclick="location.href='https://gmolter.github.io/vend/more'">Dev Page</button>
-    <button class="btn stable" onclick="location.href='https://gmolter.github.io/vend/'">Stable Page</button>
-  </div>
+    <input type="text" id="searchBar" placeholder="Search by Date or User" />
 
-  <section id="recent-section">
-    <h2>Recent 6 Transactions</h2>
-    <ul id="recent-list"></ul>
-    <button id="moreBtn">More...</button>
-  </section>
-
-  <section id="browse-section">
-    <h2>Browse</h2>
-    <div id="date-search-container">
-      <input id="dateSearch" placeholder="Search by Date or User"/>
-    </div>
-    <h2>By Date</h2>
-    <div id="date-list"></div>
-    <h2>By User</h2>
-    <div id="user-list"></div>
-  </section>
-
-  <!-- Day Modal -->
-  <div id="dayModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="day-title"></h3>
-        <button class="close-btn" onclick="closeDayModal()">×</button>
+    <!-- Recent 6 Transactions -->
+    <section>
+      <h2>Recent 6 Transactions</h2>
+      <div id="recentGrid" class="grid">
+        <!-- dynamically filled -->
       </div>
-      <ul id="day-list" class="tx-list"></ul>
-    </div>
-  </div>
+      <button id="moreBtn" class="btn save" style="display:none">More…</button>
+    </section>
 
-  <!-- More Modal -->
-  <div id="moreModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>All Transactions</h3>
-        <button class="close-btn" onclick="closeMoreModal()">×</button>
+    <!-- Browse -->
+    <section>
+      <h2>Browse</h2>
+      <h3>By Date</h3>
+      <div id="datesGrid" class="grid">
+        <!-- date cards -->
       </div>
-      <ul id="more-list" class="tx-list"></ul>
-    </div>
-  </div>
-
-  <!-- User Modal -->
-  <div id="userModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="user-title"></h3>
-        <button class="close-btn" onclick="closeUserModal()">×</button>
+      <h3>By User</h3>
+      <div id="usersGrid" class="grid">
+        <!-- user cards -->
       </div>
-      <ul id="user-list-modal" class="tx-list"></ul>
-    </div>
+    </section>
   </div>
 
-  <div id="toast-container"></div>
+  <!-- Modal -->
+  <div id="modalOverlay">
+    <div id="modal">
+      <button class="close">&times;</button>
+      <h2 id="modalTitle">Transactions</h2>
+      <div id="modalContent">
+        <!-- list of transactions -->
+      </div>
+    </div>
+  </div>
 
   <script>
     // Firebase init
     const cfg = {
-      apiKey:    "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain:"cyberflashvend.firebaseapp.com",
       databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/",
-      projectId: "cyberflashvend",
+      projectId:"cyberflashvend",
       storageBucket:"cyberflashvend.firebasestorage.app",
       messagingSenderId:"63786658773",
-      appId:     "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+      appId:"1:63786658773:web:7792d3693ef45e9ec4eb5c"
     };
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // slot→name map
-    const SNACK_SLOTS = {
-      C2:"Chips",E1:"Cookies",E2:"Pretzels",
-      E3:"Candy Bar",E4:"Granola Bar",E5:"Trail Mix"
+    // map payload index → item name
+    const SLOT_NAMES = {
+      "C2":"Chips","E1":"Cookies","E2":"Pretzels",
+      "E3":"Candy Bar","E4":"Granola Bar","E5":"Trail Mix"
     };
 
-    let allLogs = {};
+    // UI refs
+    const recentGrid = document.getElementById('recentGrid');
+    const datesGrid  = document.getElementById('datesGrid');
+    const usersGrid  = document.getElementById('usersGrid');
+    const searchBar  = document.getElementById('searchBar');
+    const moreBtn    = document.getElementById('moreBtn');
+    const modalOvl   = document.getElementById('modalOverlay');
+    const modal      = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
 
-    // fetch logs
-    db.ref("Logs").once("value").then(snap=>{
-      allLogs = snap.val()||{};
-      renderDates();
-      renderUsers();
+    // state
+    let allLogs = [];      // {key,date,Time,User,Payload[]}
+    let filteredLogs = [];
+    let showCount = 6;
+
+    // load logs once
+    db.ref('Logs').once('value', snap => {
+      const data = snap.val()||{};
+      // flatten by date
+      Object.entries(data).forEach(([date, dayLogs])=>{
+        Object.entries(dayLogs).forEach(([_, log])=>{
+          allLogs.push({...log, key:date});
+        });
+      });
+      // sort newest first by date+time
+      allLogs.sort((a,b)=>{
+        const da = new Date(a.key + ' ' + a.Time.replace(/h|m|s|pm|am/g, match=>{
+          if(match==='pm') return ' PM';
+          if(match==='am') return ' AM';
+          return match.replace(/[hms]/,'');
+        }));
+        const db_ = new Date(b.key + ' ' + b.Time.replace(/h|m|s|pm|am/g, match=>{
+          if(match==='pm') return ' PM';
+          if(match==='am') return ' AM';
+          return match.replace(/[hms]/,'');
+        }));
+        return db_ - da;
+      });
+      filteredLogs = allLogs.slice();
+      renderRecent();
+      renderBrowse();
+    });
+
+    // render recent
+    function renderRecent(){
+      recentGrid.innerHTML = '';
+      const slice = filteredLogs.slice(0, showCount);
+      slice.forEach(log=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        // date/time without seconds: convert "4h:05m:38spm" → "4:05 PM"
+        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(pm|am)/, '$1:$2 $3');
+        card.innerHTML = `
+          <h3>${log.key} ${t}</h3>
+          <p><strong>User:</strong> ${log.User}</p>
+          <p><strong>Items:</strong> ${log.Payload.split(',').map(i=>SLOT_NAMES[ Object.keys(SLOT_NAMES)[i-1] ]).join(', ')}</p>
+        `;
+        card.addEventListener('click',()=>openModal(`Recent Entry`, [log]));
+        recentGrid.appendChild(card);
+      });
+      moreBtn.style.display = filteredLogs.length>showCount ? 'inline-block' : 'none';
+    }
+
+    moreBtn.onclick = ()=>{
+      showCount += 6;
+      renderRecent();
+    };
+
+    // render browse by date & by user
+    function renderBrowse(){
+      const dates = Array.from(new Set(allLogs.map(l=>l.key)));
+      datesGrid.innerHTML = '';
+      dates.forEach(date=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.textContent = date.replace(/-/g,'/');
+        card.addEventListener('click', ()=> {
+          const dayLogs = allLogs.filter(l=>l.key===date);
+          openModal(`Transactions on ${date.replace(/-/g,'/')}`, dayLogs);
+        });
+        datesGrid.appendChild(card);
+      });
+
+      const users = Array.from(new Set(allLogs.map(l=>l.User)));
+      usersGrid.innerHTML = '';
+      users.forEach(u=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.textContent = u;
+        card.addEventListener('click', ()=> {
+          const uLogs = allLogs.filter(l=>l.User===u);
+          openModal(`History for ${u}`, uLogs);
+        });
+        usersGrid.appendChild(card);
+      });
+    }
+
+    // search filter
+    searchBar.addEventListener('input', ()=> {
+      const q = searchBar.value.trim().toLowerCase();
+      filteredLogs = allLogs.filter(l=>{
+        return l.key.includes(q.replace(/[.\-]/g,'-'))
+            || l.User.toLowerCase().includes(q);
+      });
+      showCount = 6;
       renderRecent();
     });
 
-    function parseDateKey(d){
-      return new Date(+("20"+d.slice(-2)), +d.slice(0,2)-1, +d.slice(3,5));
-    }
-    function formatTime(raw){
-      const m=raw.match(/^(\d+)h:(\d+)m/), ap=raw.slice(-2);
-      return m ? `${m[1]}:${m[2]}${ap}` : raw;
-    }
-    function showToast(msg){
-      const t=document.createElement("div");
-      t.className="toast"; t.textContent=msg;
-      document.getElementById("toast-container").append(t);
-      setTimeout(()=>t.remove(),3000);
-    }
+    // modal
+    document.querySelector('#modal .close').onclick = () => modalOvl.style.display = 'none';
 
-    /* RECENT */
-    function renderRecent(){
-      const flat=[];
-      for(const dateKey in allLogs){
-        for(const id in allLogs[dateKey]){
-          flat.push({date:dateKey, ...allLogs[dateKey][id]});
-        }
-      }
-      flat.sort((a,b)=>parseDateKey(b.date)-parseDateKey(a.date));
-      const recent6=flat.slice(0,6);
-      const ul=document.getElementById("recent-list"),
-            moreBtn=document.getElementById("moreBtn");
-      ul.innerHTML="";
-      if(!recent6.length){
-        ul.innerHTML=`<li><span class="time">—</span><span class="items">No transactions</span></li>`;
-        moreBtn.style.display='none'; return;
-      }
-      recent6.forEach(tx=>{
-        const li=document.createElement("li"),
-              t=formatTime(tx.Time),
-              items=tx.Payload.split(",").map(n=>SNACK_SLOTS[n.trim()]).join(", ");
-        li.innerHTML=`<span class="time">${tx.date} / ${t} / ${tx.User}</span>
-                      <span class="items">Items: ${items}</span>`;
-        ul.append(li);
+    function openModal(title, logs){
+      modalTitle.textContent = title;
+      modalContent.innerHTML = '';
+      logs.forEach(log=>{
+        const div = document.createElement('div');
+        div.style.marginBottom = '12px';
+        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(pm|am)/, '$1:$2 $3');
+        div.innerHTML = `
+          <p><strong>${log.key} ${t}</strong></p>
+          <p>User: ${log.User}</p>
+          <p>Items: ${log.Payload.split(',').map(i=>SLOT_NAMES[ Object.keys(SLOT_NAMES)[i-1] ]).join(', ')}</p>
+        `;
+        modalContent.appendChild(div);
       });
-      moreBtn.style.display=flat.length>6?'block':'none';
-      moreBtn.onclick=()=>openMoreModal(flat);
-    }
-    function openMoreModal(allEntries){
-      const ul=document.getElementById("more-list");
-      ul.innerHTML="";
-      allEntries.forEach(tx=>{
-        const li=document.createElement("li"),
-              t=formatTime(tx.Time),
-              items=tx.Payload.split(",").map(n=>SNACK_SLOTS[n.trim()]).join(", ");
-        li.innerHTML=`<span class="time">${tx.date} / ${t} / ${tx.User}</span>
-                      <span class="items">Items: ${items}</span>`;
-        ul.append(li);
-      });
-      document.getElementById("moreModal").classList.add("active");
-    }
-    function closeMoreModal(){
-      document.getElementById("moreModal").classList.remove("active");
-    }
-
-    /* DATES & SEARCH */
-    let dateKeys = [];
-    function renderDates(){
-      dateKeys = Object.keys(allLogs)
-        .sort((a,b)=>parseDateKey(b)-parseDateKey(a));
-      updateDateList(dateKeys);
-    }
-
-    function updateDateList(keys){
-      const div=document.getElementById("date-list");
-      div.innerHTML="";
-      if(!keys.length){
-        div.textContent="No dates match.";
-        return;
-      }
-      keys.forEach(dk=>{
-        const card=document.createElement("div");
-        card.className="date-card";
-        card.innerHTML=`<span>${dk.replace(/-/g,'/')}</span>`;
-        card.onclick=()=>showDay(dk);
-        div.append(card);
-      });
-    }
-
-    /* USERS & SEARCH */
-    let userList = [];
-    function renderUsers(){
-      const set = new Set();
-      for(const d in allLogs){
-        for(const id in allLogs[d]){
-          set.add(allLogs[d][id].User);
-        }
-      }
-      userList = Array.from(set).sort();
-      updateUserList(userList);
-    }
-
-    function updateUserList(users){
-      const div=document.getElementById("user-list");
-      div.innerHTML="";
-      users.forEach(u=>{
-        const card=document.createElement("div");
-        card.className="user-card";
-        card.textContent=u;
-        card.onclick=()=>showUser(u);
-        div.append(card);
-      });
-    }
-
-    /* SEARCH HANDLER */
-    document.getElementById("dateSearch").addEventListener("input",e=>{
-      const q=e.target.value.toLowerCase();
-      // filter dates
-      updateDateList(dateKeys.filter(dk=>
-        dk.replace(/-/g,'/').includes(q)
-      ));
-      // filter users
-      updateUserList(userList.filter(u=>
-        u.toLowerCase().includes(q)
-      ));
-    });
-
-    /* DAY MODAL */
-    function showDay(dateKey){
-      const ul=document.getElementById("day-list"),
-            title=document.getElementById("day-title"),
-            entries=Object.values(allLogs[dateKey]||{});
-      title.textContent=`Transactions on ${dateKey.replace(/-/g,'/')}`;
-      ul.innerHTML="";
-      if(!entries.length){
-        ul.innerHTML=`<li><span class="time">—</span><span class="items">No transactions</span></li>`;
-      } else {
-        entries.forEach(tx=>{
-          const li=document.createElement("li"),
-                t=formatTime(tx.Time),
-                items=tx.Payload.split(",").map(n=>SNACK_SLOTS[n.trim()]).join(", ");
-          li.innerHTML=`<span class="time">${t} — ${tx.User}</span>
-                        <span class="items">Items: ${items}</span>`;
-          ul.append(li);
-        });
-      }
-      document.getElementById("dayModal").classList.add("active");
-    }
-    function closeDayModal(){
-      document.getElementById("dayModal").classList.remove("active");
-    }
-
-    /* USER MODAL */
-    function showUser(userName){
-      const ul=document.getElementById("user-list-modal"),
-            title=document.getElementById("user-title"),
-            flat = [];
-      for(const dateKey in allLogs){
-        for(const id in allLogs[dateKey]){
-          const tx = allLogs[dateKey][id];
-          if(tx.User === userName){
-            flat.push({date:dateKey, ...tx});
-          }
-        }
-      }
-      flat.sort((a,b)=>parseDateKey(b.date)-parseDateKey(a.date));
-      title.textContent=`Transactions by ${userName}`;
-      ul.innerHTML="";
-      if(!flat.length){
-        ul.innerHTML=`<li><span class="time">—</span><span class="items">No transactions</span></li>`;
-      } else {
-        flat.forEach(tx=>{
-          const li=document.createElement("li"),
-                t=formatTime(tx.Time),
-                items=tx.Payload.split(",").map(n=>SNACK_SLOTS[n.trim()]).join(", ");
-          li.innerHTML=`<span class="time">${tx.date} / ${t}</span>
-                        <span class="items">Items: ${items}</span>`;
-          ul.append(li);
-        });
-      }
-      document.getElementById("userModal").classList.add("active");
-    }
-    function closeUserModal(){
-      document.getElementById("userModal").classList.remove("active");
+      modalOvl.style.display = 'flex';
     }
   </script>
 </body>
