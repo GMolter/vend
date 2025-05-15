@@ -25,6 +25,7 @@
     .btn:hover        { background:#2980b9 }
     .btn.save         { background:#27ae60 }
     .btn.save:hover   { background:#229954 }
+    .close-btn        { background:#e74c3c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer }
 
     /* MINI CONSOLE */
     #miniConsole {
@@ -51,10 +52,10 @@
       display:grid; gap:12px; margin-bottom:12px;
     }
     #recentContainer {
-      grid-template-columns:repeat(auto-fit,minmax(200px,1fr))
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
     }
     .card-grid {
-      grid-template-columns:repeat(auto-fit,minmax(120px,1fr))
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
     }
     .recent-card, .date-card, .user-card {
       background:#fff; border:1px solid #ddd;
@@ -77,11 +78,13 @@
       margin-bottom:12px;
     }
 
-    /* MODAL */
+    /* MODAL BACKDROP */
     .modal-backdrop {
       position:fixed; top:0; left:0; width:100%; height:100%;
       background:rgba(0,0,0,.5); display:none; z-index:1001;
     }
+
+    /* MODAL */
     .modal {
       position:fixed; top:50%; left:50%;
       transform:translate(-50%,-50%);
@@ -95,11 +98,6 @@
       display:flex; justify-content:space-between;
       align-items:center; margin-bottom:12px;
     }
-    .modal-header h3 { margin:0; color:#333 }
-    .modal-header .close-btn {
-      background:#e74c3c; color:#fff; border:none;
-      padding:4px 8px; border-radius:4px; cursor:pointer;
-    }
     .txn-card {
       border-top:1px solid #eee; padding:8px 0;
     }
@@ -107,9 +105,23 @@
   </style>
 </head>
 <body>
-  <!-- Mini-debug console -->
+  <!-- 1) Mini-console, 2) Hook console right after it exists -->
   <div id="miniConsole"></div>
+  <script>
+    document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+    function _log(type,args){
+      const mc = document.getElementById('miniConsole');
+      const d  = document.createElement('div');
+      d.textContent = `[${type}] ${Array.from(args).join(' ')}`;
+      mc.appendChild(d);
+      mc.scrollTop = mc.scrollHeight;
+    }
+    console.log   = (...a)=>_log('LOG',a);
+    console.warn  = (...a)=>_log('WARN',a);
+    console.error = (...a)=>_log('ERR',a);
+  </script>
 
+  <!-- APP -->
   <div id="app">
     <div style="margin-bottom:16px;">
       <button class="btn" style="background:orange; margin-right:12px;"
@@ -127,14 +139,12 @@
       <div id="recentContainer">
         <p>Loading recent…</p>
       </div>
-      <button id="moreBtn" class="btn save" style="display:none">
-        More…
-      </button>
+      <button id="moreBtn" class="btn save" style="display:none">More…</button>
     </div>
 
     <div class="section" id="browseWrapper">
       <h1>Browse</h1>
-      <input id="searchInput" placeholder="Search by Date or User"/>
+      <input id="searchInput" placeholder="Type query then hit Enter"/>
       <h2>By Date</h2>
       <div id="datesContainer" class="card-grid">
         <p>Loading dates…</p>
@@ -146,8 +156,21 @@
     </div>
   </div>
 
+  <!-- BACKDROP -->
   <div id="modalBackdrop" class="modal-backdrop"></div>
 
+  <!-- SEARCH MODAL -->
+  <div id="searchModal" class="modal">
+    <div class="modal-header">
+      <h3 id="searchModalTitle">Search</h3>
+      <button class="close-btn" onclick="closeModal()">X</button>
+    </div>
+    <div id="searchModalBody" class="modal-body">
+      <p>Enter a search query and press Enter.</p>
+    </div>
+  </div>
+
+  <!-- DATE MODAL -->
   <div id="dateModal" class="modal">
     <div class="modal-header">
       <h3 id="dateModalTitle">Transactions</h3>
@@ -156,6 +179,7 @@
     <div id="dateModalBody" class="modal-body">Loading…</div>
   </div>
 
+  <!-- USER MODAL -->
   <div id="userModal" class="modal">
     <div class="modal-header">
       <h3 id="userModalTitle">User</h3>
@@ -164,7 +188,7 @@
     <div id="userModalBody" class="modal-body">Loading…</div>
   </div>
 
-  <!-- load Firebase & your script AFTER the HTML paints -->
+  <!-- FIREBASE & ADMIN.JS -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="admin.js"></script>
