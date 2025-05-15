@@ -4,12 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Vending Machine Admin</title>
-
-  <!-- Firebase v8 (deferred) -->
-  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script defer src="admin.js"></script>
-
   <style>
     /* RESET & GLOBAL */
     * { margin:0; padding:0; box-sizing:border-box }
@@ -20,6 +14,7 @@
       font-family:Arial,sans-serif;
       background:#f5f5f5;
     }
+
     /* BUTTONS */
     .btn {
       display:inline-block; background:#3498db; color:#fff;
@@ -27,9 +22,9 @@
       font-size:1em; box-shadow:0 2px 4px rgba(0,0,0,.1);
       cursor:pointer; text-decoration:none;
     }
-    .btn:hover { background:#2980b9 }
-    .btn.save { background:#27ae60 }
-    .btn.save:hover { background:#229954 }
+    .btn:hover        { background:#2980b9 }
+    .btn.save         { background:#27ae60 }
+    .btn.save:hover   { background:#229954 }
 
     /* MINI CONSOLE */
     #miniConsole {
@@ -53,11 +48,14 @@
 
     /* CARDS */
     #recentContainer, .card-grid {
-      display:grid;
-      gap:12px; margin-bottom:12px;
+      display:grid; gap:12px; margin-bottom:12px;
     }
-    #recentContainer { grid-template-columns:repeat(auto-fit,minmax(200px,1fr)) }
-    .card-grid { grid-template-columns:repeat(auto-fit,minmax(120px,1fr)) }
+    #recentContainer {
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr))
+    }
+    .card-grid {
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr))
+    }
     .recent-card, .date-card, .user-card {
       background:#fff; border:1px solid #ddd;
       border-radius:6px; padding:12px;
@@ -109,12 +107,12 @@
   </style>
 </head>
 <body>
-  <!-- mini-debug console -->
+  <!-- Mini-debug console -->
   <div id="miniConsole"></div>
 
   <div id="app">
     <div style="margin-bottom:16px;">
-      <button class="btn" style="background:orange;margin-right:12px;"
+      <button class="btn" style="background:orange; margin-right:12px;"
         onclick="location.href='https://gmolter.github.io/vend/more'">
         Dev Page
       </button>
@@ -165,5 +163,10 @@
     </div>
     <div id="userModalBody" class="modal-body">Loading…</div>
   </div>
+
+  <!-- load Firebase & your script AFTER the HTML paints -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
