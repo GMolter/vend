@@ -30,18 +30,10 @@
       background:#e74c3c; color:#fff; border:none;
       padding:4px 8px; border-radius:4px; cursor:pointer;
     }
-    /* MINI CONSOLE */
-    #miniConsole {
-      position:fixed; top:0; left:0;
-      width:100%; height:20vh;
-      background:#111; color:#0f0;
-      font-family:monospace; font-size:.85em;
-      overflow-y:auto; padding:8px; z-index:1000;
-    }
     /* LAYOUT */
     #app {
-      position:absolute; top:20vh; left:0;
-      width:100%; height:80vh; overflow-y:auto; padding:16px;
+      position:absolute; top:0; left:0;
+      width:100%; height:100vh; overflow-y:auto; padding:16px;
     }
     h1 { font-size:1.8em; margin-bottom:8px; color:#333 }
     .section { margin-bottom:24px }
@@ -95,29 +87,16 @@
   </style>
 </head>
 <body>
-  <div id="miniConsole"></div>
-  <script>
-    // mini-console hook
-    document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
-    function _log(type,args){
-      const mc=document.getElementById('miniConsole'),
-            d=document.createElement('div');
-      d.textContent=`[${type}] ${Array.from(args).join(' ')}`;
-      mc.appendChild(d); mc.scrollTop=mc.scrollHeight;
-    }
-    console.log   =(...a)=>_log('LOG',a);
-    console.warn  =(...a)=>_log('WARN',a);
-    console.error =(...a)=>_log('ERR',a);
-    console.log('🔥 INLINE OK');
-    document.getElementById('recentContainer')?.innerHTML='✅ INLINE OK';
-  </script>
-
   <div id="app">
     <div style="margin-bottom:16px;">
       <button class="btn" style="background:orange;margin-right:12px;"
-        onclick="location.href='https://gmolter.github.io/vend/more'">Dev Page</button>
+        onclick="location.href='https://gmolter.github.io/vend/more'">
+        Dev Page
+      </button>
       <button class="btn save"
-        onclick="location.href='https://gmolter.github.io/vend/'">Stable Page</button>
+        onclick="location.href='https://gmolter.github.io/vend/'">
+        Stable Page
+      </button>
     </div>
 
     <div class="section">
@@ -137,6 +116,7 @@
   </div>
 
   <div id="modalBackdrop" class="modal-backdrop"></div>
+
   <!-- Search Modal -->
   <div id="searchModal" class="modal">
     <div class="modal-header">
@@ -145,6 +125,7 @@
     </div>
     <div id="searchModalBody" class="modal-body"><p>Enter query.</p></div>
   </div>
+
   <!-- Date Modal -->
   <div id="dateModal" class="modal">
     <div class="modal-header">
@@ -153,6 +134,7 @@
     </div>
     <div id="dateModalBody" class="modal-body">Loading…</div>
   </div>
+
   <!-- User Modal -->
   <div id="userModal" class="modal">
     <div class="modal-header">
@@ -163,8 +145,7 @@
   </div>
 
   <script>
-    console.log('🚀 admin inlined starting');
-
+  (function(){
     const BASE = 'https://cyberflashvend-default-rtdb.firebaseio.com';
     const SLOT_NAMES = ["Chips","Cookies","Pretzels","Candy Bar","Granola Bar","Trail Mix"];
     const STUDENTS = {
@@ -175,60 +156,56 @@
       "360794":"Calix Baker"
     };
 
-    let logsData={}, allEntries=[];
+    let logsData = {};
 
-    // load last 30 days
+    // fetch last 30 days of logs
     fetch(`${BASE}/Logs.json?orderBy="$key"&limitToLast=30`)
       .then(r=>r.json())
       .then(data=>{
-        console.log('loaded logs', data);
         logsData = data||{};
-        // build allEntries
-        Object.entries(logsData).forEach(([dk, logs])=>{
-          const disp=dk.replace(/-/g,'/');
-          Object.values(logs).forEach(l=>{
-            const items=(l.Payload+'').split(',').filter(x=>x)
-              .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
-            allEntries.push({
-              dateKey:dk, displayDate:disp,
-              time:l.Time.replace(/s.*$/,''), user:l.User, items
-            });
-          });
-        });
         renderRecent();
         renderBrowse();
       })
-      .catch(e=>console.error('fetch logs error',e));
+      .catch(e=>console.error(e));
 
     function renderRecent(){
-      const rc=document.getElementById('recentContainer');
-      rc.innerHTML='';
-      const last6=allEntries.slice(-6).reverse();
-      last6.forEach(e=>{
-        const d=document.createElement('div');
+      const rc = document.getElementById('recentContainer');
+      rc.innerHTML = '';
+      const entries = [];
+      Object.entries(logsData).forEach(([dk, logs])=>{
+        const disp = dk.replace(/-/g,'/');
+        Object.values(logs).forEach(l=>{
+          const items = (l.Payload+'').split(',').filter(x=>x)
+            .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
+          entries.push({ disp, time:l.Time.replace(/s.*$/,''), user:l.User, items });
+        });
+      });
+      entries.slice(-6).reverse().forEach(e=>{
+        const d = document.createElement('div');
         d.className='recent-card';
         d.innerHTML=`
-          <p class="time">${e.displayDate} ${e.time}</p>
+          <p class="time">${e.disp} ${e.time}</p>
           <p>User: ${e.user}</p>
           <p>Items: ${e.items.join(', ')}</p>`;
         rc.appendChild(d);
       });
-      if(allEntries.length>6){
-        const mb=document.getElementById('moreBtn');
+      if(entries.length>6){
+        const mb = document.getElementById('moreBtn');
         mb.style.display='inline-block';
-        mb.onclick=()=>document.getElementById('browseWrapper')
-                          .scrollIntoView({behavior:'smooth'});
+        mb.onclick = ()=> document.getElementById('browseWrapper')
+                              .scrollIntoView({behavior:'smooth'});
       }
     }
 
     function renderBrowse(){
-      const dc=document.getElementById('datesContainer'),
-            uc=document.getElementById('usersContainer');
-      dc.innerHTML=''; uc.innerHTML='';
+      const dc = document.getElementById('datesContainer'),
+            uc = document.getElementById('usersContainer');
+      dc.innerHTML = '';
+      uc.innerHTML = '';
 
       // dates
       Object.keys(logsData).sort((a,b)=>b.localeCompare(a)).forEach(dk=>{
-        const c=document.createElement('div');
+        const c = document.createElement('div');
         c.className='date-card';
         c.innerHTML=`<span>${dk.replace(/-/g,'/')}</span>`;
         c.onclick=()=>openDateModal(dk);
@@ -239,11 +216,10 @@
       Object.keys(STUDENTS).sort((a,b)=>
         STUDENTS[a].localeCompare(STUDENTS[b])
       ).forEach(uid=>{
-        const name=STUDENTS[uid];
-        const c=document.createElement('div');
+        const c = document.createElement('div');
         c.className='user-card';
         c.innerHTML=`
-          <span>${name}</span>
+          <span>${STUDENTS[uid]}</span>
           <span style="font-size:.8em;color:#666;">${uid}</span>`;
         c.onclick=()=>openUserModal(uid);
         uc.appendChild(c);
@@ -251,7 +227,7 @@
 
       // search
       document.getElementById('searchInput')
-        .addEventListener('keydown',e=>{
+        .addEventListener('keydown', e=>{
           if(e.key==='Enter'){
             e.preventDefault();
             const q=e.target.value.trim();
@@ -260,42 +236,45 @@
         });
     }
 
-    // modals
-    window.openSearchModal=q=>{
+    window.openSearchModal = function(q){
       closeModal();
-      const md=document.getElementById('searchModal'),
-            bd=document.getElementById('searchModalBody'),
-            tt=document.getElementById('searchModalTitle'),
-            bp=document.getElementById('modalBackdrop');
+      const md = document.getElementById('searchModal'),
+            bd = document.getElementById('searchModalBody'),
+            tt = document.getElementById('searchModalTitle'),
+            bp = document.getElementById('modalBackdrop');
       tt.textContent=`Search: "${q}"`;
       let html='';
       const ql=q.toLowerCase();
+
       // date matches
       Object.keys(logsData).forEach(dk=>{
-        if(dk.replace(/-/g,'/').includes(ql))
+        if(dk.replace(/-/g,'/').includes(ql)){
           html+=`<button class="btn" onclick="openDateModal('${dk}')">
             ${dk.replace(/-/g,'/')}</button>`;
+        }
       });
-      // user matches
+
+      // user matches (by name or id)
       Object.entries(STUDENTS).forEach(([uid,name])=>{
-        if(name.toLowerCase().includes(ql)||uid.includes(ql))
+        if(name.toLowerCase().includes(ql)||uid.includes(ql)){
           html+=`<button class="btn" onclick="openUserModal('${uid}')">
             ${name}</button>`;
+        }
       });
-      bd.innerHTML=html||'<p>No matches.</p>';
+
+      bd.innerHTML = html||'<p>No matches.</p>';
       bp.style.display='block'; md.style.display='block';
     };
 
-    window.openDateModal=dk=>{
+    window.openDateModal = function(dk){
       closeModal();
-      const md=document.getElementById('dateModal'),
-            bd=document.getElementById('dateModalBody'),
-            tt=document.getElementById('dateModalTitle'),
-            bp=document.getElementById('modalBackdrop');
+      const md = document.getElementById('dateModal'),
+            bd = document.getElementById('dateModalBody'),
+            tt = document.getElementById('dateModalTitle'),
+            bp = document.getElementById('modalBackdrop');
       tt.textContent=`Transactions on ${dk.replace(/-/g,'/')}`;
-      const logs=logsData[dk]||{};
       let html='';
-      Object.values(logs).forEach(l=>{
+      Object.values(logsData[dk]||{}).forEach(l=>{
         const items=(l.Payload+'').split(',').filter(x=>x)
           .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
         html+=`<div class="txn-card">
@@ -303,38 +282,44 @@
           <p>Items: ${items.join(', ')}</p>
         </div>`;
       });
-      bd.innerHTML=html||'<p>No Transactions</p>';
+      bd.innerHTML = html||'<p>No Transactions</p>';
       bp.style.display='block'; md.style.display='block';
     };
 
-    window.openUserModal=uid=>{
+    window.openUserModal = function(uid){
       closeModal();
-      const md=document.getElementById('userModal'),
-            bd=document.getElementById('userModalBody'),
-            tt=document.getElementById('userModalTitle'),
-            bp=document.getElementById('modalBackdrop');
-      const name=STUDENTS[uid]||uid;
-      tt.textContent=name;
+      const md = document.getElementById('userModal'),
+            bd = document.getElementById('userModalBody'),
+            tt = document.getElementById('userModalTitle'),
+            bp = document.getElementById('modalBackdrop');
+      const name = STUDENTS[uid]||uid;
+      tt.textContent = name;
       let html=`<p><strong>ID:</strong> ${uid}</p>`;
-      // find dates
-      const dates=Object.entries(logsData)
-        .filter(([dk,logs])=>Object.values(logs).some(l=>l.User===uid))
+      // collect dates where l.User matches name
+      const dates = Object.entries(logsData)
+        .filter(([dk,logs])=>
+          Object.values(logs).some(l=>l.User===name)
+        )
         .map(([dk])=>dk)
         .sort((a,b)=>b.localeCompare(a));
-      if(!dates.length) html+='<p>No Transactions</p>';
-      else dates.forEach(dk=>{
-        html+=`<button class="btn" style="margin:4px;"
-          onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>`;
-      });
+      if(!dates.length){
+        html+='<p>No Transactions</p>';
+      } else {
+        dates.forEach(dk=>{
+          html+=`<button class="btn" style="margin:4px;"
+            onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>`;
+        });
+      }
       bd.innerHTML=html;
       bp.style.display='block'; md.style.display='block';
     };
 
-    function closeModal(){
+    window.closeModal = function(){
       document.getElementById('modalBackdrop').style.display='none';
       document.querySelectorAll('.modal')
         .forEach(m=>m.style.display='none');
-    }
+    };
+  })();
   </script>
 </body>
 </html>
