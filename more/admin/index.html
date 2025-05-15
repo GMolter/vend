@@ -23,7 +23,7 @@
     @media (pointer: fine)  { html,body,button,a { cursor:auto!important;  } }
     @media (pointer: coarse){ html,body,button,a { cursor:none!important; } }
 
-    /* GENERIC BUTTONS */
+    /* BUTTONS */
     .btn {
       display:inline-block;
       background:#3498db; color:#fff; border:none;
@@ -32,9 +32,6 @@
       text-decoration:none; cursor:pointer;
     }
     .btn:hover       { background:#2980b9; }
-    .btn.cancel      { background:#bdc3c7; color:#333; }
-    .btn.danger      { background:#e74c3c; }
-    .btn.danger:hover{ background:#c0392b; }
     .btn.save        { background:#27ae60; }
     .btn.save:hover  { background:#229954; }
 
@@ -58,45 +55,36 @@
     .section { margin-bottom:24px; }
     .section h2 { font-size:1.4em; margin:12px 0 8px; color:#555; }
 
-    /* RECENT CARDS */
+    /* CARDS */
     #recentContainer {
       display:grid;
       grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
       gap:12px; margin-bottom:12px;
     }
-    .recent-card {
+    .recent-card, .date-card, .user-card {
       background:#fff; border:1px solid #ddd;
       border-radius:6px; padding:12px;
       box-shadow:0 2px 6px rgba(0,0,0,.1);
     }
-    .recent-card p { margin:4px 0; color:#444; font-size:.95em; }
+    .recent-card p, .txn-card p { margin:4px 0; color:#444; font-size:.95em; }
     .recent-card .time { font-weight:bold; }
-
-    /* SEARCH */
-    #browseWrapper { margin-top:16px; }
-    #searchInput {
-      width:100%; padding:8px 12px; font-size:1em;
-      border:1px solid #ccc; border-radius:4px;
-      margin-bottom:12px;
-    }
-
-    /* DATE & USER CARDS */
     .card-grid {
       display:grid;
       grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
       gap:10px;
     }
     .date-card, .user-card {
-      background:#fff; border:1px solid #ddd;
-      border-radius:6px; padding:8px;
-      box-shadow:0 1px 4px rgba(0,0,0,.1);
       text-align:center; cursor:pointer;
-    }
-    .date-card:hover, .user-card:hover {
-      box-shadow:0 2px 8px rgba(0,0,0,.15);
     }
     .date-card span, .user-card span {
       display:block; color:#333; font-weight:bold;
+    }
+
+    /* SEARCH */
+    #searchInput {
+      width:100%; padding:8px 12px; font-size:1em;
+      border:1px solid #ccc; border-radius:4px;
+      margin-bottom:12px;
     }
 
     /* MODAL */
@@ -122,11 +110,10 @@
       background:#e74c3c; color:#fff; border:none;
       padding:4px 8px; border-radius:4px; cursor:pointer;
     }
-    .modal-body p { margin:6px 0; }
-    .modal-body .txn-card {
+    .txn-card {
       border-top:1px solid #eee; padding:8px 0;
     }
-    .modal-body .txn-card:first-child { border:0; }
+    .txn-card:first-child { border:0; }
   </style>
 </head>
 <body>
