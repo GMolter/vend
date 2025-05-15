@@ -25,6 +25,8 @@
     }
     .btn.dev    { background:orange }
     .btn.stable { background:green }
+    .btn.save   { background:#27ae60; }
+    .btn.save:hover { background:#229954; }
 
     /* SEARCH */
     #searchBar {
@@ -46,7 +48,7 @@
     .card h3 { font-size:1.1em; margin-bottom:6px }
     .card p  { font-size:.95em; margin-bottom:4px; color:#555 }
 
-    /* DATE & USER SUBTITLES */
+    /* SUB-TITLES */
     .sub-title { font-size:1.2em; margin:16px 0 8px }
 
     /* MODAL OVERLAY */
@@ -66,20 +68,16 @@
     }
     /* CLOSE BUTTON */
     #modal .close {
-      position:static; float:right;
       background:#e74c3c; color:#fff;
       border:none; border-radius:4px;
       padding:4px 8px; font-size:1em;
-      cursor:pointer;
+      cursor:pointer; float:right;
     }
     #modal h2 {
-      margin-bottom:12px; font-size:1.3em; color:#2c3e50;
+      margin-top:0; margin-bottom:12px; font-size:1.3em; color:#2c3e50;
     }
-
-    /* TRANSACTION ENTRY IN MODAL */
     .modal-entry { margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:8px }
     .modal-entry:last-child { border:none }
-
   </style>
 </head>
 <body>
@@ -102,7 +100,6 @@
     <!-- Browse -->
     <section>
       <h2>Browse</h2>
-      <!-- move search bar here -->
       <input type="text" id="searchBar" placeholder="Search by Date or User" />
 
       <div class="sub-title">By Date</div>
@@ -188,10 +185,9 @@
       recentGrid.innerHTML='';
       filteredLogs.slice(0,showCount).forEach(log=>{
         const card = document.createElement('div'); card.className='card';
-        // format time
-        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, '$1:$2 $3'.toUpperCase());
+        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, '$1:$2 $3').toUpperCase();
         card.innerHTML=`
-          <h3>${log.key} ${t}</h3>
+          <h3>${log.key.replace(/-/g,'/')} ${t}</h3>
           <p><strong>User:</strong> ${log.User}</p>
           <p><strong>Items:</strong> ${log.Payload.split(',').map(i=>SLOT_NAMES[Object.keys(SLOT_NAMES)[i-1]]).join(', ')}</p>
         `;
@@ -205,15 +201,14 @@
     // Browse: dates & users
     function renderBrowse(){
       // dates
-      let dates = [...new Set(allLogs.map(l=>l.key))];
+      const dates = [...new Set(allLogs.map(l=>l.key))];
       datesGrid.innerHTML='';
       dates.forEach(date=>{
         const card=document.createElement('div'); card.className='card';
-        const label = date.replace(/-/g,'/');
-        card.innerHTML = `<h3>${label}</h3>`;
+        card.innerHTML = `<h3>${date.replace(/-/g,'/')}</h3>`;
         card.addEventListener('click', ()=> {
           const dayLogs = allLogs.filter(l=>l.key===date);
-          openModal(`Transactions on ${label}`, dayLogs);
+          openModal(`Transactions on ${date.replace(/-/g,'/')}`, dayLogs);
         });
         datesGrid.appendChild(card);
       });
@@ -227,7 +222,7 @@
       });
     }
 
-    // search
+    // search filter + Enter key opens modal
     searchBar.addEventListener('input', ()=>{
       const q = searchBar.value.trim().toLowerCase();
       filteredLogs = allLogs.filter(l=>{
@@ -236,19 +231,27 @@
       });
       showCount=6; renderRecent();
     });
+    searchBar.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){
+        if(filteredLogs.length){
+          openModal('Search Results', filteredLogs);
+        } else {
+          showToast('No results');
+        }
+      }
+    });
 
     // Modal helpers
     modal.querySelector('.close').onclick = ()=> modalOvl.style.display='none';
 
-    // generic modal
     function openModal(title, logs){
       modalTitle.textContent = title;
       modalContent.innerHTML = '';
       logs.forEach(log=>{
-        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, '$1:$2 $3'.toUpperCase());
+        let t = log.Time.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, '$1:$2 $3').toUpperCase();
         const entry = document.createElement('div'); entry.className='modal-entry';
         entry.innerHTML=`
-          <p><strong>${log.key} ${t}</strong></p>
+          <p><strong>${log.key.replace(/-/g,'/')} ${t}</strong></p>
           <p>User: ${log.User}</p>
           <p>Items: ${log.Payload.split(',').map(i=>SLOT_NAMES[Object.keys(SLOT_NAMES)[i-1]]).join(', ')}</p>
         `;
@@ -259,23 +262,35 @@
 
     // user-specific modal
     function openUserModal(name,id){
-      // list dates for that user
       const userLogs = allLogs.filter(l=>l.User===name);
-      const dates = [...new Set(userLogs.map(l=>l.key))];
       modalTitle.textContent = `History for ${name} (ID: ${id})`;
-      modalContent.innerHTML = '<p>Select a date:</p>';
-      dates.forEach(date=>{
-        const btn = document.createElement('button');
-        btn.textContent = date.replace(/-/g,'/');
-        btn.className = 'btn';
-        btn.style.margin = '4px';
-        btn.onclick = ()=> {
-          const dayLogs = userLogs.filter(l=>l.key===date);
-          openModal(`${name} on ${date.replace(/-/g,'/')}`, dayLogs);
-        };
-        modalContent.appendChild(btn);
-      });
+      modalContent.innerHTML = '';
+      if(!userLogs.length){
+        modalContent.innerHTML = '<p>No Transactions</p>';
+      } else {
+        modalContent.innerHTML = '<p>Select a date:</p>';
+        const dates = [...new Set(userLogs.map(l=>l.key))];
+        dates.forEach(date=>{
+          const btn = document.createElement('button');
+          btn.textContent = date.replace(/-/g,'/');
+          btn.className = 'btn';
+          btn.style.margin = '4px';
+          btn.onclick = ()=> {
+            const dayLogs = userLogs.filter(l=>l.key===date);
+            openModal(`${name} on ${date.replace(/-/g,'/')}`, dayLogs);
+          };
+          modalContent.appendChild(btn);
+        });
+      }
       modalOvl.style.display='flex';
+    }
+
+    // Toast
+    function showToast(msg){
+      const t=document.createElement("div");
+      t.className="toast"; t.textContent=msg;
+      document.body.appendChild(t);
+      setTimeout(()=>t.remove(),2000);
     }
   </script>
 </body>
