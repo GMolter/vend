@@ -14,15 +14,14 @@
       width:100%; min-height:100vh;
       font-family:Arial, sans-serif; background:#f5f5f5;
       overflow-y:auto; -webkit-overflow-scrolling:touch;
+      padding:20px;
     }
     h1,h2,h3 { color:#333; margin-bottom:8px; }
-    button, a.btn { cursor:pointer; }
-
-    /* GENERIC BUTTON */
     .btn {
       display:inline-block; background:#3498db; color:#fff; border:none;
       border-radius:4px; padding:6px 12px; font-size:.95em;
       text-decoration:none; text-align:center; margin:4px;
+      cursor:pointer;
     }
     .btn:hover { background:#2980b9; }
     .btn.cancel { background:#bdc3c7; color:#333; }
@@ -31,8 +30,9 @@
     .btn.save { background:#27ae60; }
     .btn.save:hover { background:#229954; }
 
-    /* LAYOUT */
-    #container { max-width:960px; margin:24px auto; padding:0 12px; }
+    #topButtons { margin-bottom:24px; }
+    #topButtons .btn { margin-right:16px; }
+
     #recentContainer, #dateContainer, #userContainer {
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
@@ -45,7 +45,6 @@
     .card h4 { margin-bottom:6px; font-size:1em; color:#2c3e50; }
     .card p { font-size:.9em; color:#555; line-height:1.4; }
 
-    /* SEARCH */
     #browseSection { margin-bottom:32px; }
     #browseSection h2 { margin-bottom:12px; }
     #searchInput {
@@ -70,50 +69,34 @@
       margin-bottom:12px;
     }
     #modal header h3 { font-size:1.25em; color:#2c3e50; }
-    #modal header button { background:#e74c3c; color:#fff; border:none; border-radius:4px; padding:4px 8px; }
+    #modal header button { background:#e74c3c; color:#fff; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; }
     #modal .entry { margin-bottom:12px; }
     #modal .entry h4 { margin-bottom:4px; font-size:1em; color:#2c3e50; }
     #modal .entry p { font-size:.9em; color:#555; }
-
-    /* BUTTON BAR */
-    #topButtons { margin-bottom:24px; }
-    #topButtons a { margin-right:16px; }
   </style>
 </head>
 <body>
   <div id="container">
     <h1>Admin Panel</h1>
-
-    <!-- Dev / Stable Links -->
     <div id="topButtons">
       <a class="btn" style="background:orange;" href="https://gmolter.github.io/vend/more" target="_blank">Dev Page</a>
       <a class="btn save" href="https://gmolter.github.io/vend/" target="_blank">Stable Page</a>
     </div>
 
-    <!-- Recent 6 Transactions -->
     <h2>Recent 6 Transactions</h2>
-    <div id="recentContainer">
-      <!-- cards injected here -->
-    </div>
+    <div id="recentContainer"></div>
     <button id="moreRecent" class="btn cancel" style="display:none;">More…</button>
 
-    <!-- Browse Section -->
     <div id="browseSection">
       <h2>Browse</h2>
       <input id="searchInput" placeholder="Search by Date or User" />
     </div>
 
-    <!-- By Date -->
     <h3>By Date</h3>
-    <div id="dateContainer">
-      <!-- date cards injected -->
-    </div>
+    <div id="dateContainer"></div>
 
-    <!-- By User -->
     <h3>By User</h3>
-    <div id="userContainer">
-      <!-- user cards injected -->
-    </div>
+    <div id="userContainer"></div>
   </div>
 
   <!-- Modal -->
@@ -123,21 +106,23 @@
         <h3 id="modalTitle">Loading…</h3>
         <button id="modalClose">X</button>
       </header>
-      <div id="modalContent">
-        <!-- entries here -->
-      </div>
+      <div id="modalContent"></div>
     </div>
   </div>
 
   <script>
-    // Firebase init
-    const cfg={apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-      authDomain:"cyberflashvend.firebaseapp.com",
-      databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/",
-      projectId:"cyberflashvend",storageBucket:"cyberflashvend.firebasestorage.app",
-      messagingSenderId:"63786658773",appId:"1:63786658773:web:7792d3693ef45e9ec4eb5c"};
+    // Initialize Firebase
+    const cfg = {
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
+      projectId: "cyberflashvend",
+      storageBucket: "cyberflashvend.firebasestorage.app",
+      messagingSenderId: "63786658773",
+      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+    };
     firebase.initializeApp(cfg);
-    const db=firebase.database();
+    const db = firebase.database();
 
     // Constants
     const STUDENTS = {
@@ -158,164 +143,146 @@
 
     let allLogs = [];
 
-    // fetch logs once
-    db.ref("Logs").once("value").then(snap=>{
-      const data = snap.val()||{};
-      Object.entries(data).forEach(([dateKey, entries])=>{
-        Object.values(entries).forEach(log=>{
-          allLogs.push({
-            date: dateKey,
-            time: log.Time,
-            User: log.User,
-            Payload: log.Payload
-          });
-        });
-      });
-      // sort by date then time descending
-      allLogs.sort((a,b)=>{
-        if(a.date!==b.date) return b.date.localeCompare(a.date);
-        return b.time.localeCompare(a.time);
-      });
-      renderRecent();
-      renderByDate();
-      renderByUser();
-    });
-
-    // helpers
-    function fmtTime(t){
-      return t.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/,
-        (_,h,m,ap)=>`${h}:${m}${ap}`);
+    function fmtTime(t) {
+      return t.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, (_,h,m,ap)=>`${h}:${m}${ap}`);
     }
-    function mapPayload(p){
-      return p.split(",").map(n=>{
+    function mapPayload(p) {
+      return p.split(",").map(n => {
         const idx = parseInt(n,10)-1;
         return SNACK_SLOTS[idx]?.name||"Unknown";
       }).join(", ");
     }
 
+    // Load logs
+    db.ref("Logs").once("value")
+      .then(snap => {
+        const data = snap.val()||{};
+        Object.entries(data).forEach(([dateKey, entries])=>{
+          Object.values(entries).forEach(log=>{
+            allLogs.push({
+              date: dateKey,
+              time: log.Time,
+              User: log.User,
+              Payload: log.Payload
+            });
+          });
+        });
+        // sort descending
+        allLogs.sort((a,b)=>{
+          if (a.date !== b.date) return b.date.localeCompare(a.date);
+          return b.time.localeCompare(a.time);
+        });
+        console.log("Loaded logs:", allLogs.length);
+        renderRecent();
+        renderByDate();
+        renderByUser();
+      })
+      .catch(err => console.error("Firebase error:", err));
+
+    function element(selector){
+      return document.querySelector(selector);
+    }
+    function on(id,evt,fn){ element(id).addEventListener(evt,fn); }
+
     // Recent 6
     function renderRecent(){
-      const rc = document.getElementById("recentContainer");
-      rc.innerHTML="";
-      const slice = allLogs.slice(0,6);
-      slice.forEach(log=>{
-        const card=document.createElement("div"); card.className="card";
-        card.innerHTML=`
+      const rc = element("#recentContainer");
+      rc.innerHTML = "";
+      const recent = allLogs.slice(0,6);
+      recent.forEach(log=>{
+        const div = document.createElement("div");
+        div.className="card";
+        div.innerHTML = `
           <h4>${log.date.replace(/-/g,"/")} ${fmtTime(log.time)}</h4>
           <p><strong>${log.User}</strong><br>${mapPayload(log.Payload)}</p>`;
-        rc.appendChild(card);
+        rc.appendChild(div);
       });
-      document.getElementById("moreRecent")
-        .style.display = allLogs.length>6 ? "inline-block":"none";
+      element("#moreRecent").style.display = allLogs.length>6 ? "inline-block":"none";
     }
-    document.getElementById("moreRecent")
-      .onclick = ()=> openModal("All Transactions", allLogs);
+    on("#moreRecent","click",()=> openLogModal("All Transactions", allLogs));
 
     // By Date
     function renderByDate(){
-      const dc=document.getElementById("dateContainer");
-      dc.innerHTML="";
+      const dc = element("#dateContainer");
+      dc.innerHTML = "";
       const dates = Array.from(new Set(allLogs.map(l=>l.date)));
       dates.forEach(date=>{
         const btn = document.createElement("button");
         btn.className="btn save";
         btn.textContent = date.replace(/-/g,"/");
-        btn.onclick = ()=> {
-          const day = allLogs.filter(l=>l.date===date);
-          openModal(`Date ${date.replace(/-/g,"/")}`, day);
-        };
+        btn.onclick = ()=> openLogModal(`Date ${btn.textContent}`, allLogs.filter(l=>l.date===date));
         dc.appendChild(btn);
       });
     }
 
     // By User
     function renderByUser(){
-      const uc=document.getElementById("userContainer");
-      uc.innerHTML="";
+      const uc = element("#userContainer");
+      uc.innerHTML = "";
       Object.entries(STUDENTS).forEach(([id,name])=>{
-        const btn=document.createElement("button");
+        const btn = document.createElement("button");
         btn.className="btn";
-        btn.textContent = `${name}`;
+        btn.textContent = name;
         btn.onclick = ()=> openUserModal(name,id);
         uc.appendChild(btn);
       });
     }
 
+    // Search
+    on("#searchInput","keypress",e=>{
+      if(e.key==="Enter"){
+        const q = e.target.value.trim();
+        if(!q) return;
+        const dateKey = q.replace(/[\.\/]/g,"-");
+        const byDate = allLogs.filter(l=>l.date===dateKey);
+        if(byDate.length) return openLogModal(`Date ${q}`, byDate);
+        const byUser = allLogs.filter(l=>l.User.toLowerCase().includes(q.toLowerCase()));
+        if(byUser.length) return openLogModal(`“${q}”`, byUser);
+        alert("No results");
+      }
+    });
+
+    // Modal
+    const overlay = element("#modalOverlay"),
+          modal   = element("#modal"),
+          titleEl = element("#modalTitle"),
+          content = element("#modalContent");
+    on("#modalClose","click",()=> overlay.style.display="none");
+
+    function openLogModal(title, logs){
+      titleEl.textContent = title;
+      if(!logs.length){
+        content.innerHTML = "<p>No Transactions</p>";
+      } else {
+        content.innerHTML = logs.map(l=>`
+          <div class="entry">
+            <h4>${l.date.replace(/-/g,"/")} ${fmtTime(l.time)}</h4>
+            <p><strong>${l.User}</strong><br>${mapPayload(l.Payload)}</p>
+          </div>`).join("");
+      }
+      overlay.style.display = "flex";
+    }
+
     function openUserModal(name,id){
       const userLogs = allLogs.filter(l=>l.User===name);
       if(!userLogs.length){
-        openModal(`History for ${name} (ID:${id})`, []);
-        return;
+        return openLogModal(`History for ${name} (ID:${id})`, []);
       }
-      // unique dates
-      const dates = Array.from(new Set(userLogs.map(l=>l.date)));
-      const entries = dates.map(d=>({
-        header: d.replace(/-/g,"/"),
-        logs: userLogs.filter(l=>l.date===d)
+      // group by date
+      const byDate = {};
+      userLogs.forEach(l=> (byDate[l.date] = byDate[l.date]||[]).push(l) );
+      const entries = Object.entries(byDate).map(([date, logs])=>({
+        date: date.replace(/-/g,"/"),
+        logs
       }));
-      // show as date‐buttons
-      showCustomModal(
-        `History for ${name} (ID:${id})`,
-        entries.map(e=>({
-          header:e.header,
-          body: e.logs.map(l=>`${fmtTime(l.time)} – ${mapPayload(l.Payload)}`).join("<br>")
-        }))
-      );
-    }
-
-    // Search
-    document.getElementById("searchInput")
-      .addEventListener("keypress",e=>{
-        if(e.key==="Enter"){
-          const q = e.target.value.trim();
-          if(!q) return;
-          // date lookup
-          const dk = q.replace(/[\.\/]/g,"-");
-          const byDate = allLogs.filter(l=>l.date===dk);
-          if(byDate.length){
-            openModal(`Date ${q}`, byDate);
-            return;
-          }
-          // user lookup
-          const byUser = allLogs.filter(l=>
-            l.User.toLowerCase().includes(q.toLowerCase()));
-          if(byUser.length){
-            openModal(`Search “${q}”`, byUser);
-            return;
-          }
-          alert("No results");
-        }
-      });
-
-    // MODAL
-    const overlay = document.getElementById("modalOverlay"),
-          modal   = document.getElementById("modal"),
-          titleEl = document.getElementById("modalTitle"),
-          contentEl = document.getElementById("modalContent");
-
-    document.getElementById("modalClose")
-      .onclick = ()=> overlay.style.display="none";
-
-    function openModal(title, logs){
-      titleEl.textContent = title;
-      contentEl.innerHTML = logs.length
-        ? logs.map(l=>`
-            <div class="entry">
-              <h4>${l.date.replace(/-/g,"/")} ${fmtTime(l.time)}</h4>
-              <p><strong>${l.User}</strong><br>${mapPayload(l.Payload)}</p>
-            </div>`).join("")
-        : "<p>No Transactions</p>";
-      overlay.style.display="flex";
-    }
-
-    function showCustomModal(title, items){
-      titleEl.textContent = title;
-      contentEl.innerHTML = items.map(it=>`
+      // build content
+      titleEl.textContent = `History for ${name} (ID:${id})`;
+      content.innerHTML = entries.map(e=>`
         <div class="entry">
-          <h4>${it.header}</h4>
-          <p>${it.body}</p>
+          <h4>${e.date}</h4>
+          ${e.logs.map(l=>`<p>${fmtTime(l.time)} — ${mapPayload(l.Payload)}</p>`).join("")}
         </div>`).join("");
-      overlay.style.display="flex";
+      overlay.style.display = "flex";
     }
   </script>
 </body>
