@@ -79,6 +79,17 @@
     .entry h4 { margin-bottom:4px; font-size:1em; color:#2c3e50; }
     .entry p  { font-size:.9em; color:#555; }
 
+    /* MINI CONSOLE */
+    #miniConsole {
+      position:fixed; bottom:0; left:0; width:100%;
+      max-height:30vh; background:#111; color:#0f0;
+      font-family:monospace; font-size:.85em;
+      overflow-y:auto; padding:8px;
+      box-shadow:0 -2px 6px rgba(0,0,0,.5);
+      z-index:1002;
+    }
+    #miniConsole div { margin-bottom:4px; }
+
     /* TOAST */
     #toast-container {
       position:fixed; bottom:20px; left:50%;
@@ -126,9 +137,27 @@
     </div>
   </div>
 
+  <!-- Mini Console -->
+  <div id="miniConsole"></div>
+
   <div id="toast-container"></div>
 
   <script>
+    // redirect all console outputs to miniConsole as well
+    (function(){
+      const origLog = console.log, origWarn = console.warn, origErr = console.error;
+      const mc = document.getElementById("miniConsole");
+      function append(type,args){
+        const d = document.createElement("div");
+        d.textContent = "["+type+"] "+ Array.from(args).join(" ");
+        mc.appendChild(d);
+        mc.scrollTop = mc.scrollHeight;
+      }
+      console.log = function(){ append("LOG",arguments); origLog.apply(console,arguments); }
+      console.warn = function(){ append("WARN",arguments); origWarn.apply(console,arguments); }
+      console.error = function(){ append("ERR",arguments); origErr.apply(console,arguments); }
+    })();
+
     // disable touch scroll
     document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
 
@@ -182,6 +211,7 @@
     }
 
     // Listen for logs
+    console.log("⏳ Setting up RTDB listener...");
     db.ref("Logs").on("value", snap => {
       const data = snap.val();
       console.log("Logs snapshot:", data);
@@ -207,14 +237,12 @@
       renderByDate();
       renderByUser();
     }, err => {
-      console.error("Logs error:", err);
+      console.error("RTDB error:", err);
       showToast("Error loading logs");
     });
 
     // Helpers
     const $ = s => document.querySelector(s);
-
-    function showScreen(id){ /* unused here */ }
 
     // Recent
     function renderRecent(){
