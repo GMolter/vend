@@ -41,162 +41,159 @@ document.addEventListener('DOMContentLoaded', ()=>{
     { slot:"E5", name:"Trail Mix"   }
   ];
 
-  // 1) fetch & render recent 6
+  // Recent 6
   db.ref('Logs')
     .orderByKey()
     .limitToLast(6)
     .once('value')
     .then(snap => {
-      const entries = [];
-      snap.forEach(daySnap => {
-        const dateKey = daySnap.key;
-        daySnap.forEach(logSnap => {
-          const log = logSnap.val();
-          const ids = (''+log.Payload).split(',').filter(x=>x);
-          const items = ids.map(i=>{
-            const idx = parseInt(i,10)-1;
-            return SNACK_SLOTS[idx]?.name||`#${i}`;
-          });
-          entries.push({
-            displayDate: dateKey.replace(/-/g,'/'),
-            time: log.Time.replace(/s.*$/,''),
-            user: log.User,
-            items
-          });
-        });
-      });
       const rc = document.getElementById('recentContainer');
       rc.innerHTML = '';
-      entries.reverse().forEach(e=>{
-        const c = document.createElement('div');
-        c.className = 'recent-card';
-        c.innerHTML = `
-          <p class="time">${e.displayDate} ${e.time}</p>
+      const tmp = [];
+      snap.forEach(daySnap => {
+        const date = daySnap.key.replace(/-/g,'/');
+        daySnap.forEach(logSnap => {
+          const log = logSnap.val();
+          const items = (''+log.Payload).split(',').filter(x=>x)
+            .map(i=>SNACK_SLOTS[parseInt(i,10)-1]?.name||`#${i}`);
+          tmp.push({ date, time: log.Time.replace(/s.*$/,''), user: log.User, items });
+        });
+      });
+      tmp.reverse().forEach(e=>{
+        const div = document.createElement('div');
+        div.className = 'recent-card';
+        div.innerHTML = `
+          <p class="time">${e.date} ${e.time}</p>
           <p>User: ${e.user}</p>
           <p>Items: ${e.items.join(', ')}</p>
         `;
-        rc.appendChild(c);
+        rc.appendChild(div);
       });
-      if(entries.length>6){
+      if(tmp.length > 6){
         const mb = document.getElementById('moreBtn');
         mb.style.display = 'inline-block';
         mb.onclick = ()=> document.getElementById('browseWrapper').scrollIntoView({behavior:'smooth'});
       }
     })
-    .catch(err=> console.error("Failed loading recent:", err));
+    .catch(err=> console.error("Recent load error:", err));
 
-  // 2) fetch date-keys & users for Browse
-  db.ref('Logs').once('value')
+  // Browse last 30 days
+  const DAYS = 30;
+  db.ref('Logs')
+    .orderByKey()
+    .limitToLast(DAYS)
+    .once('value')
     .then(snap => {
-      const entriesByUser = {};
-      const datesContainer = document.getElementById('datesContainer');
-      const usersContainer = document.getElementById('usersContainer');
-      const dateKeys = [];
+      const datesC = document.getElementById('datesContainer');
+      const usersC = document.getElementById('usersContainer');
+      datesC.innerHTML = '';
+      usersC.innerHTML = '';
+      const users = {};
+      const keys = [];
       snap.forEach(daySnap => {
-        dateKeys.push(daySnap.key);
-        daySnap.forEach(logSnap => {
-          const u = logSnap.val().User;
-          entriesByUser[u] = entriesByUser[u]||new Set();
-          entriesByUser[u].add(daySnap.key);
-        });
+        const dk = daySnap.key;
+        keys.push(dk);
+        daySnap.forEach(ls=> users[ls.val().User]=true);
       });
-      datesContainer.innerHTML = '';
-      dateKeys.sort((a,b)=>b.localeCompare(a)).forEach(dateKey=>{
-        const display = dateKey.replace(/-/g,'/');
+      // date cards
+      keys.sort((a,b)=>b.localeCompare(a)).forEach(dk=>{
         const card = document.createElement('div');
         card.className = 'date-card';
-        card.innerHTML = `<span>${display}</span>`;
-        card.onclick = ()=> openDateModal(dateKey);
-        datesContainer.appendChild(card);
+        const disp = dk.replace(/-/g,'/');
+        card.innerHTML = `<span>${disp}</span>`;
+        card.onclick = ()=> openDateModal(dk);
+        datesC.appendChild(card);
       });
-      usersContainer.innerHTML = '';
-      Object.keys(entriesByUser).sort().forEach(user=>{
+      // user cards
+      Object.keys(users).sort().forEach(u=>{
         const card = document.createElement('div');
         card.className = 'user-card';
-        card.innerHTML = `<span>${user}</span>`;
-        card.onclick = ()=> openUserModal(user);
-        usersContainer.appendChild(card);
+        card.innerHTML = `<span>${u}</span>`;
+        card.onclick = ()=> openUserModal(u);
+        usersC.appendChild(card);
       });
+
+      // search filter
+      document.getElementById('searchInput')
+        .addEventListener('input', e=>{
+          const q = e.target.value.toLowerCase();
+          document.querySelectorAll('.date-card').forEach(c=>{
+            c.style.display = c.textContent.toLowerCase().includes(q)?'':'none';
+          });
+          document.querySelectorAll('.user-card').forEach(c=>{
+            c.style.display = c.textContent.toLowerCase().includes(q)?'':'none';
+          });
+        });
     })
-    .catch(err=> console.error("Failed loading browse:", err));
+    .catch(err=> console.error("Browse load error:", err));
 });
 
+// modals
 function closeModal(){
   document.getElementById('modalBackdrop').style.display='none';
   document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
 }
 
 function openDateModal(dateKey){
-  const backdrop = document.getElementById('modalBackdrop');
-  const modal    = document.getElementById('dateModal');
-  const title    = document.getElementById('dateModalTitle');
-  const body     = document.getElementById('dateModalBody');
-  title.textContent = `Transactions on ${dateKey.replace(/-/g,'/')}`;
-  body.innerHTML = 'Loading…';
-  backdrop.style.display = 'block';
-  modal.style.display = 'block';
+  const md = document.getElementById('dateModal'),
+        bd = document.getElementById('dateModalBody'),
+        tt = document.getElementById('dateModalTitle');
+  tt.textContent = `Transactions on ${dateKey.replace(/-/g,'/')}`;
+  bd.innerHTML = 'Loading…';
+  document.getElementById('modalBackdrop').style.display='block';
+  md.style.display='block';
 
-  firebase.database()
-    .ref(`Logs/${dateKey}`)
+  firebase.database().ref(`Logs/${dateKey}`)
     .once('value')
-    .then(daySnap => {
-      const logs = daySnap.val()||{};
-      const html = Object.values(logs).map(log=>{
-        const ids = (''+log.Payload).split(',').filter(x=>x);
-        const items = ids.map(i=>{
-          const idx = parseInt(i,10)-1;
-          return SNACK_SLOTS[idx]?.name||`#${i}`;
-        });
+    .then(snap=>{
+      const html = Object.values(snap.val()||{}).map(log=>{
+        const items = (''+log.Payload).split(',').filter(x=>x)
+          .map(i=>SNACK_SLOTS[parseInt(i,10)-1]?.name||`#${i}`);
         return `
           <div class="txn-card">
             <p><strong>${log.Time.replace(/s.*$/,'')}</strong> — ${log.User}</p>
             <p>Items: ${items.join(', ')}</p>
-          </div>
-        `;
+          </div>`;
       }).join('');
-      body.innerHTML = html || '<p>No Transactions</p>';
+      bd.innerHTML = html || '<p>No Transactions</p>';
     })
-    .catch(err=>{
-      body.innerHTML = `<p style="color:red;">Error loading data</p>`;
-      console.error("Date modal error:", err);
+    .catch(e=>{
+      bd.innerHTML = '<p style="color:red;">Error loading</p>';
+      console.error(e);
     });
 }
 
 function openUserModal(user){
-  const backdrop = document.getElementById('modalBackdrop');
-  const modal    = document.getElementById('userModal');
-  const title    = document.getElementById('userModalTitle');
-  const body     = document.getElementById('userModalBody');
-  title.textContent = `User “${user}”`;
-  body.innerHTML = 'Loading…';
-  backdrop.style.display = 'block';
-  modal.style.display = 'block';
+  const md = document.getElementById('userModal'),
+        bd = document.getElementById('userModalBody'),
+        tt = document.getElementById('userModalTitle');
+  tt.textContent = `User “${user}”`;
+  bd.innerHTML = 'Loading…';
+  document.getElementById('modalBackdrop').style.display='block';
+  md.style.display='block';
 
-  firebase.database()
-    .ref('Logs')
+  firebase.database().ref('Logs')
+    .orderByKey()
+    .limitToLast(30)
     .once('value')
-    .then(snap => {
-      const userDates = new Set();
-      snap.forEach(daySnap => {
-        daySnap.forEach(logSnap => {
-          if (logSnap.val().User === user) {
-            userDates.add(daySnap.key);
-          }
+    .then(snap=>{
+      const dates = new Set();
+      snap.forEach(daySnap=>{
+        Object.values(daySnap.val()).forEach(log=>{
+          if(log.User===user) dates.add(daySnap.key);
         });
       });
-      if (!userDates.size) {
-        body.innerHTML = '<p>No Transactions</p>';
+      if(!dates.size) {
+        bd.innerHTML = '<p>No Transactions</p>';
       } else {
-        body.innerHTML = Array.from(userDates)
-          .sort((a,b)=>b.localeCompare(a))
-          .map(dk => {
-            return `<button class="btn" style="margin:4px;"
-                      onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>`;
-          }).join('');
+        bd.innerHTML = Array.from(dates).sort((a,b)=>b.localeCompare(a))
+          .map(dk=>`<button class="btn" style="margin:4px;"
+            onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>`)
+          .join('');
       }
     })
-    .catch(err=>{
-      body.innerHTML = `<p style="color:red;">Error loading user data</p>`;
-      console.error("User modal error:", err);
+    .catch(e=>{
+      bd.innerHTML = '<p style="color:red;">Error loading</p>';
+      console.error(e);
     });
 }
