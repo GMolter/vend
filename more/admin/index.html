@@ -73,31 +73,42 @@
     #modal .entry { margin-bottom:12px; }
     #modal .entry h4 { margin-bottom:4px; font-size:1em; color:#2c3e50; }
     #modal .entry p { font-size:.9em; color:#555; }
+
+    /* TOAST */
+    #toast-container {
+      position:fixed; bottom:20px; left:50%;
+      transform:translateX(-50%); z-index:1001;
+    }
+    .toast {
+      background:rgba(0,0,0,.8); color:#fff; padding:8px 16px;
+      margin-top:6px; border-radius:4px; opacity:0;
+      animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
+    }
+    @keyframes fadein { to{opacity:1} }
+    @keyframes fadeout{ to{opacity:0} }
   </style>
 </head>
 <body>
-  <div id="container">
-    <h1>Admin Panel</h1>
-    <div id="topButtons">
-      <a class="btn" style="background:orange;" href="https://gmolter.github.io/vend/more" target="_blank">Dev Page</a>
-      <a class="btn save" href="https://gmolter.github.io/vend/" target="_blank">Stable Page</a>
-    </div>
-
-    <h2>Recent 6 Transactions</h2>
-    <div id="recentContainer"></div>
-    <button id="moreRecent" class="btn cancel" style="display:none;">More…</button>
-
-    <div id="browseSection">
-      <h2>Browse</h2>
-      <input id="searchInput" placeholder="Search by Date or User" />
-    </div>
-
-    <h3>By Date</h3>
-    <div id="dateContainer"></div>
-
-    <h3>By User</h3>
-    <div id="userContainer"></div>
+  <h1>Admin Panel</h1>
+  <div id="topButtons">
+    <a class="btn" style="background:orange;" href="https://gmolter.github.io/vend/more" target="_blank">Dev Page</a>
+    <a class="btn save" href="https://gmolter.github.io/vend/" target="_blank">Stable Page</a>
   </div>
+
+  <h2>Recent 6 Transactions</h2>
+  <div id="recentContainer">Loading…</div>
+  <button id="moreRecent" class="btn cancel" style="display:none;">More…</button>
+
+  <div id="browseSection">
+    <h2>Browse</h2>
+    <input id="searchInput" placeholder="Search by Date or User" />
+  </div>
+
+  <h3>By Date</h3>
+  <div id="dateContainer">Loading…</div>
+
+  <h3>By User</h3>
+  <div id="userContainer">Loading…</div>
 
   <!-- Modal -->
   <div id="modalOverlay">
@@ -110,12 +121,17 @@
     </div>
   </div>
 
+  <div id="toast-container"></div>
+
   <script>
-    // Initialize Firebase
+    // Disable touch scrolling
+    document.addEventListener('touchmove', e => e.preventDefault(), { passive:false });
+
+    // Firebase init (no trailing slash here!)
     const cfg = {
       apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain: "cyberflashvend.firebaseapp.com",
-      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
       projectId: "cyberflashvend",
       storageBucket: "cyberflashvend.firebasestorage.app",
       messagingSenderId: "63786658773",
@@ -129,99 +145,106 @@
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
       "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
       "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
-      "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins",
+      "250606":"Madeline Penney","250639":"Rohan Rajahalli","260627":"Mason Robbins",
       "360794":"Calix Baker","DEV":"DEV MODE"
     };
     const SNACK_SLOTS = [
-      {slot:"C2", name:"Chips"},
-      {slot:"E1", name:"Cookies"},
-      {slot:"E2", name:"Pretzels"},
-      {slot:"E3", name:"Candy Bar"},
-      {slot:"E4", name:"Granola Bar"},
-      {slot:"E5", name:"Trail Mix"}
+      {slot:"C2",name:"Chips"},
+      {slot:"E1",name:"Cookies"},
+      {slot:"E2",name:"Pretzels"},
+      {slot:"E3",name:"Candy Bar"},
+      {slot:"E4",name:"Granola Bar"},
+      {slot:"E5",name:"Trail Mix"}
     ];
 
     let allLogs = [];
 
-    function fmtTime(t) {
+    function fmtTime(t){
       return t.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, (_,h,m,ap)=>`${h}:${m}${ap}`);
     }
-    function mapPayload(p) {
-      return p.split(",").map(n => {
+    function mapPayload(p){
+      return p.split(",").map(n=>{
         const idx = parseInt(n,10)-1;
         return SNACK_SLOTS[idx]?.name||"Unknown";
       }).join(", ");
     }
 
-    // Load logs
+    function showToast(msg){
+      const t = document.createElement("div");
+      t.className = "toast"; t.textContent = msg;
+      document.getElementById("toast-container").appendChild(t);
+      setTimeout(()=>t.remove(),3000);
+    }
+
+    // Fetch logs
     db.ref("Logs").once("value")
       .then(snap => {
-        const data = snap.val()||{};
-        Object.entries(data).forEach(([dateKey, entries])=>{
-          Object.values(entries).forEach(log=>{
-            allLogs.push({
-              date: dateKey,
-              time: log.Time,
-              User: log.User,
-              Payload: log.Payload
+        const data = snap.val();
+        if(!data){
+          showToast("No logs found in database");
+        } else {
+          Object.entries(data).forEach(([dateKey, entries])=>{
+            Object.values(entries).forEach(log=>{
+              allLogs.push({ date:dateKey, time:log.Time, User:log.User, Payload:log.Payload });
             });
           });
-        });
-        // sort descending
+        }
         allLogs.sort((a,b)=>{
-          if (a.date !== b.date) return b.date.localeCompare(a.date);
+          if(a.date!==b.date) return b.date.localeCompare(a.date);
           return b.time.localeCompare(a.time);
         });
-        console.log("Loaded logs:", allLogs.length);
+        showToast(`Loaded ${allLogs.length} logs`);
         renderRecent();
         renderByDate();
         renderByUser();
       })
-      .catch(err => console.error("Firebase error:", err));
+      .catch(err=>{
+        console.error(err);
+        showToast("Error loading logs");
+      });
 
-    function element(selector){
-      return document.querySelector(selector);
-    }
-    function on(id,evt,fn){ element(id).addEventListener(evt,fn); }
+    // Helper to select
+    const $ = s => document.querySelector(s);
 
-    // Recent 6
+    // Render Recent 6
     function renderRecent(){
-      const rc = element("#recentContainer");
+      const rc = $("#recentContainer");
       rc.innerHTML = "";
       const recent = allLogs.slice(0,6);
       recent.forEach(log=>{
-        const div = document.createElement("div");
-        div.className="card";
-        div.innerHTML = `
-          <h4>${log.date.replace(/-/g,"/")} ${fmtTime(log.time)}</h4>
-          <p><strong>${log.User}</strong><br>${mapPayload(log.Payload)}</p>`;
-        rc.appendChild(div);
+        const d = document.createElement("div");
+        d.className = "card";
+        d.innerHTML = `<h4>${log.date.replace(/-/g,"/")} ${fmtTime(log.time)}</h4>
+                       <p><strong>${log.User}</strong><br>${mapPayload(log.Payload)}</p>`;
+        rc.appendChild(d);
       });
-      element("#moreRecent").style.display = allLogs.length>6 ? "inline-block":"none";
+      $("#moreRecent").style.display = allLogs.length > 6 ? "inline-block" : "none";
     }
-    on("#moreRecent","click",()=> openLogModal("All Transactions", allLogs));
+    $("#moreRecent").onclick = ()=> openLogModal("All Transactions", allLogs);
 
-    // By Date
+    // Render By Date
     function renderByDate(){
-      const dc = element("#dateContainer");
+      const dc = $("#dateContainer");
       dc.innerHTML = "";
       const dates = Array.from(new Set(allLogs.map(l=>l.date)));
       dates.forEach(date=>{
         const btn = document.createElement("button");
-        btn.className="btn save";
+        btn.className = "btn save";
         btn.textContent = date.replace(/-/g,"/");
-        btn.onclick = ()=> openLogModal(`Date ${btn.textContent}`, allLogs.filter(l=>l.date===date));
+        btn.onclick = ()=> openLogModal(`Date ${btn.textContent}`,
+                                       allLogs.filter(l=>l.date===date));
         dc.appendChild(btn);
       });
+      if(dates.length===0) dc.textContent="No transactions";
     }
 
-    // By User
+    // Render By User
     function renderByUser(){
-      const uc = element("#userContainer");
+      const uc = $("#userContainer");
       uc.innerHTML = "";
       Object.entries(STUDENTS).forEach(([id,name])=>{
         const btn = document.createElement("button");
-        btn.className="btn";
+        btn.className = "btn";
         btn.textContent = name;
         btn.onclick = ()=> openUserModal(name,id);
         uc.appendChild(btn);
@@ -229,25 +252,25 @@
     }
 
     // Search
-    on("#searchInput","keypress",e=>{
+    $("#searchInput").addEventListener("keypress", e=>{
       if(e.key==="Enter"){
-        const q = e.target.value.trim();
+        const q=e.target.value.trim();
         if(!q) return;
-        const dateKey = q.replace(/[\.\/]/g,"-");
+        const dateKey=q.replace(/[\/\.]/g,"-");
         const byDate = allLogs.filter(l=>l.date===dateKey);
         if(byDate.length) return openLogModal(`Date ${q}`, byDate);
         const byUser = allLogs.filter(l=>l.User.toLowerCase().includes(q.toLowerCase()));
-        if(byUser.length) return openLogModal(`“${q}”`, byUser);
+        if(byUser.length) return openLogModal(`User “${q}”`, byUser);
         alert("No results");
       }
     });
 
-    // Modal
-    const overlay = element("#modalOverlay"),
-          modal   = element("#modal"),
-          titleEl = element("#modalTitle"),
-          content = element("#modalContent");
-    on("#modalClose","click",()=> overlay.style.display="none");
+    // Modal logic
+    const overlay = $("#modalOverlay"),
+          modal   = $("#modal"),
+          titleEl = $("#modalTitle"),
+          content = $("#modalContent");
+    $("#modalClose").onclick = ()=> overlay.style.display="none";
 
     function openLogModal(title, logs){
       titleEl.textContent = title;
@@ -270,16 +293,12 @@
       }
       // group by date
       const byDate = {};
-      userLogs.forEach(l=> (byDate[l.date] = byDate[l.date]||[]).push(l) );
-      const entries = Object.entries(byDate).map(([date, logs])=>({
-        date: date.replace(/-/g,"/"),
-        logs
-      }));
-      // build content
+      userLogs.forEach(l=>(byDate[l.date]=byDate[l.date]||[]).push(l));
+      const entries = Object.entries(byDate).map(([date,logs])=>({ date, logs }));
       titleEl.textContent = `History for ${name} (ID:${id})`;
       content.innerHTML = entries.map(e=>`
         <div class="entry">
-          <h4>${e.date}</h4>
+          <h4>${e.date.replace(/-/g,"/")}</h4>
           ${e.logs.map(l=>`<p>${fmtTime(l.time)} — ${mapPayload(l.Payload)}</p>`).join("")}
         </div>`).join("");
       overlay.style.display = "flex";
