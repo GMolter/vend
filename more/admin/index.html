@@ -100,24 +100,22 @@
   </style>
 </head>
 <body>
+  <!-- Mini-console + inline hook -->
   <div id="miniConsole"></div>
-
-  <!-- inline console hook & quick test -->
   <script>
-    document.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
-    function _log(type,args){
-      const mc = document.getElementById('miniConsole');
-      const d = document.createElement('div');
-      d.textContent = `[${type}] ${Array.from(args).join(' ')}`;
-      mc.appendChild(d); mc.scrollTop = mc.scrollHeight;
+    document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+    function _log(t,a){
+      const mc=document.getElementById('miniConsole'),
+            d=document.createElement('div');
+      d.textContent=`[${t}] ${Array.from(a).join(' ')}`;
+      mc.appendChild(d); mc.scrollTop=mc.scrollHeight;
     }
-    console.log   = (...a)=>_log('LOG',a);
-    console.warn  = (...a)=>_log('WARN',a);
-    console.error = (...a)=>_log('ERR',a);
+    console.log   =(...a)=>_log('LOG',a);
+    console.warn  =(...a)=>_log('WARN',a);
+    console.error =(...a)=>_log('ERR',a);
     console.log('🔥 INLINE OK');
-    // ensure container exists for test
-    const test = document.getElementById('recentContainer');
-    if(test) test.innerHTML = '✅ INLINE container OK';
+    const test=document.getElementById('recentContainer');
+    if(test) test.innerHTML='✅ INLINE OK';
   </script>
 
   <div id="app">
@@ -167,115 +165,87 @@
     <div id="userModalBody" class="modal-body">Loading…</div>
   </div>
 
-  <!-- Firebase libs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-  <!-- all admin code inlined -->
+  <!-- All admin logic inlined here -->
   <script>
-    console.log('🔥 bootstrapping admin…');
+    console.log('🚀 fetch-based admin starting');
 
-    // init Firebase
-    const cfg = {
-      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-      authDomain: "cyberflashvend.firebaseapp.com",
-      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
-      projectId: "cyberflashvend",
-      storageBucket: "cyberflashvend.firebasestorage.app",
-      messagingSenderId: "63786658773",
-      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
-    };
-    firebase.initializeApp(cfg);
-    const db = firebase.database();
-    console.log('Firebase ready');
+    const BASE = 'https://cyberflashvend-default-rtdb.firebaseio.com';
+    const SLOT_NAMES = ["Chips","Cookies","Pretzels","Candy Bar","Granola Bar","Trail Mix"];
 
-    // snack lookup
-    const SNACK_SLOTS = [
-      { slot:"C2", name:"Chips" },{ slot:"E1", name:"Cookies" },
-      { slot:"E2", name:"Pretzels" },{ slot:"E3", name:"Candy Bar" },
-      { slot:"E4", name:"Granola Bar" },{ slot:"E5", name:"Trail Mix" }
-    ];
-
-    // storage for search
     window._dates = [];
     window._users = [];
 
-    // fetch asap
-    fetchRecent();
-    fetchBrowse();
+    // Fetch and render Recent 6
+    fetch(`${BASE}/Logs.json?orderBy="$key"&limitToLast=6`)
+      .then(r=>r.json())
+      .then(data=>{
+        console.log('recent data', data);
+        const rc=document.getElementById('recentContainer');
+        rc.innerHTML='';
+        const list = [];
+        Object.entries(data||{}).forEach(([dateKey, logs])=>{
+          const date = dateKey.replace(/-/g,'/');
+          Object.values(logs).forEach(l=>{
+            const items = (l.Payload+'').split(',')
+              .filter(x=>x)
+              .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
+            list.push({ date, time:l.Time.replace(/s.*$/,''), user:l.User, items });
+          });
+        });
+        list.reverse().forEach(e=>{
+          const d=document.createElement('div');
+          d.className='recent-card';
+          d.innerHTML=`
+            <p class="time">${e.date} ${e.time}</p>
+            <p>User: ${e.user}</p>
+            <p>Items: ${e.items.join(', ')}</p>`;
+          rc.appendChild(d);
+        });
+        if(list.length>6){
+          const mb=document.getElementById('moreBtn');
+          mb.style.display='inline-block';
+          mb.onclick=()=>document.getElementById('browseWrapper')
+                        .scrollIntoView({behavior:'smooth'});
+        }
+      })
+      .catch(e=>console.error('fetchRecent error', e));
 
-    function fetchRecent(){
-      console.log('fetchRecent()');
-      db.ref('Logs').orderByKey().limitToLast(6).once('value')
-        .then(snap=>{
-          console.log('recent snap', snap.val());
-          const rc = document.getElementById('recentContainer');
-          rc.innerHTML = '';
-          const list=[];
-          snap.forEach(day=>{
-            const d=day.key.replace(/-/g,'/');
-            day.forEach(ls=>{
-              const L=ls.val(),
-                    items=(L.Payload+'').split(',')
-                      .filter(x=>x)
-                      .map(i=>SNACK_SLOTS[+i-1]?.name||`#${i}`);
-              list.push({date:d,time:L.Time.replace(/s.*$/,''),user:L.User,items});
-            });
-          });
-          list.reverse().forEach(e=>{
-            const el=document.createElement('div');
-            el.className='recent-card';
-            el.innerHTML=`
-              <p class="time">${e.date} ${e.time}</p>
-              <p>User: ${e.user}</p>
-              <p>Items: ${e.items.join(', ')}</p>`;
-            rc.appendChild(el);
-          });
-          if(list.length>6){
-            const mb=document.getElementById('moreBtn');
-            mb.style.display='inline-block';
-            mb.onclick=()=>document.getElementById('browseWrapper')
-                          .scrollIntoView({behavior:'smooth'});
-          }
-        })
-        .catch(e=>console.error('fetchRecent err',e));
-    }
+    // Fetch and render Browse last 30 days
+    fetch(`${BASE}/Logs.json?orderBy="$key"&limitToLast=30`)
+      .then(r=>r.json())
+      .then(data=>{
+        console.log('browse data', Object.keys(data||{}));
+        const dc=document.getElementById('datesContainer'),
+              uc=document.getElementById('usersContainer');
+        dc.innerHTML=''; uc.innerHTML='';
+        const users=set={}, dates=Object.keys(data||{});
+        dates.forEach(dk=>{
+          Object.values(data[dk]).forEach(l=>set[l.User]=true);
+        });
+        window._dates = dates.slice();
+        window._users = Object.keys(set).slice();
+        // dates cards
+        dates.sort((a,b)=>b.localeCompare(a)).forEach(dk=>{
+          const c=document.createElement('div');
+          c.className='date-card';
+          c.innerHTML=`<span>${dk.replace(/-/g,'/')}</span>`;
+          c.onclick=()=>openDateModal(dk);
+          dc.appendChild(c);
+        });
+        // user cards
+        window._users.sort().forEach(u=>{
+          const c=document.createElement('div');
+          c.className='user-card';
+          c.innerHTML=`<span>${u}</span>`;
+          c.onclick=()=>openUserModal(u);
+          uc.appendChild(c);
+        });
+      })
+      .catch(e=>console.error('fetchBrowse error', e));
 
-    function fetchBrowse(){
-      console.log('fetchBrowse()');
-      db.ref('Logs').orderByKey().limitToLast(30).once('value')
-        .then(snap=>{
-          console.log('browse snap', Object.keys(snap.val()||{}));
-          const dc=document.getElementById('datesContainer'),
-                uc=document.getElementById('usersContainer');
-          dc.innerHTML=''; uc.innerHTML='';
-          const users={},keys=[];
-          snap.forEach(day=>{
-            keys.push(day.key);
-            day.forEach(ls=>users[ls.val().User]=true);
-          });
-          window._dates=keys.slice();
-          window._users=Object.keys(users).slice();
-          keys.sort((a,b)=>b.localeCompare(a)).forEach(k=>{
-            const c=document.createElement('div');
-            c.className='date-card';
-            c.innerHTML=`<span>${k.replace(/-/g,'/')}</span>`;
-            c.onclick=()=>openDateModal(k);
-            dc.appendChild(c);
-          });
-          window._users.sort().forEach(u=>{
-            const c=document.createElement('div');
-            c.className='user-card';
-            c.innerHTML=`<span>${u}</span>`;
-            c.onclick=()=>openUserModal(u);
-            uc.appendChild(c);
-          });
-        })
-        .catch(e=>console.error('fetchBrowse err',e));
-    }
-
+    // Search on Enter
     document.getElementById('searchInput')
-      .addEventListener('keydown',e=>{
+      .addEventListener('keydown', e=>{
         if(e.key==='Enter'){
           e.preventDefault();
           const q=e.target.value.trim();
@@ -283,8 +253,8 @@
         }
       });
 
-    window.openSearchModal=q=>{
-      console.log('search',q);
+    window.openSearchModal = q => {
+      console.log('search:', q);
       closeModal();
       const md=document.getElementById('searchModal'),
             bd=document.getElementById('searchModalBody'),
@@ -306,22 +276,24 @@
       bd.innerHTML=html||'<p>No matches.</p>';
     };
 
-    window.openDateModal=k=>{
-      console.log('dateModal',k);
+    window.openDateModal = dk => {
+      console.log('dateModal:', dk);
       closeModal();
       const md=document.getElementById('dateModal'),
             bd=document.getElementById('dateModalBody'),
             tt=document.getElementById('dateModalTitle'),
             bp=document.getElementById('modalBackdrop');
-      tt.textContent=`Transactions on ${k.replace(/-/g,'/')}`;
+      tt.textContent=`Transactions on ${dk.replace(/-/g,'/')}`;
       bd.innerHTML='Loading…';
       bp.style.display='block'; md.style.display='block';
-      firebase.database().ref(`Logs/${k}`).once('value')
-        .then(snap=>{
-          console.log('day data',snap.val());
-          const html=Object.values(snap.val()||{}).map(l=>{
-            const items=(l.Payload+'').split(',').filter(x=>x)
-              .map(i=>SNACK_SLOTS[+i-1]?.name||`#${i}`);
+      fetch(`${BASE}/Logs/${dk}.json`)
+        .then(r=>r.json())
+        .then(logs=>{
+          console.log('day logs:', logs);
+          const html=Object.values(logs||{}).map(l=>{
+            const items=(l.Payload+'').split(',')
+              .filter(x=>x)
+              .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
             return `<div class="txn-card">
               <p><strong>${l.Time.replace(/s.*$/,'')}</strong> — ${l.User}</p>
               <p>Items: ${items.join(', ')}</p>
@@ -332,24 +304,24 @@
         .catch(e=>{ console.error(e); bd.innerHTML='<p style="color:red;">Error</p>'; });
     };
 
-    window.openUserModal=u=>{
-      console.log('userModal',u);
+    window.openUserModal = u => {
+      console.log('userModal:', u);
       closeModal();
       const md=document.getElementById('userModal'),
             bd=document.getElementById('userModalBody'),
             tt=document.getElementById('userModalTitle'),
             bp=document.getElementById('modalBackdrop');
-      tt.textContent=`User “${u}”`;
+      tt.textContent=`User “${u}"`;
       bd.innerHTML='Loading…';
       bp.style.display='block'; md.style.display='block';
-      firebase.database().ref('Logs').orderByKey().limitToLast(30).once('value')
-        .then(snap=>{
-          console.log('user data keys',Object.keys(snap.val()||{}));
+      fetch(`${BASE}/Logs.json?orderBy="$key"&limitToLast=30`)
+        .then(r=>r.json())
+        .then(data=>{
           const dates=new Set();
-          snap.forEach(day=>Object.values(day.val()).forEach(l=>{
-            if(l.User===u) dates.add(day.key);
-          }));
-          console.log('user dates',Array.from(dates));
+          Object.entries(data||{}).forEach(([dk,logs])=>{
+            Object.values(logs).forEach(l=>{ if(l.User===u) dates.add(dk); });
+          });
+          console.log('user dates:', Array.from(dates));
           if(!dates.size) bd.innerHTML='<p>No Transactions</p>';
           else bd.innerHTML=Array.from(dates).sort((a,b)=>b.localeCompare(a))
             .map(dk=>`<button class="btn" onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>`)
