@@ -11,17 +11,16 @@
     /* RESET & GLOBALS */
     * { margin:0; padding:0; box-sizing:border-box; }
     html, body {
-      width:100%; min-height:100vh;
+      width:100%; min-height:100vh; padding:20px;
       font-family:Arial, sans-serif; background:#f5f5f5;
       overflow-y:auto; -webkit-overflow-scrolling:touch;
-      padding:20px;
     }
     h1,h2,h3 { color:#333; margin-bottom:8px; }
     .btn {
-      display:inline-block; background:#3498db; color:#fff; border:none;
-      border-radius:4px; padding:6px 12px; font-size:.95em;
-      text-decoration:none; text-align:center; margin:4px;
-      cursor:pointer;
+      display:inline-block; background:#3498db; color:#fff;
+      border:none; border-radius:4px; padding:6px 12px;
+      font-size:.95em; text-decoration:none; text-align:center;
+      margin:4px; cursor:pointer;
     }
     .btn:hover { background:#2980b9; }
     .btn.cancel { background:#bdc3c7; color:#333; }
@@ -56,23 +55,29 @@
     /* MODAL */
     #modalOverlay {
       position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.5); display:none;
+      align-items:center; justify-content:center;
       padding:12px; z-index:1000;
     }
     #modal {
-      background:#fff; border-radius:6px; width:100%; max-width:500px;
-      max-height:80vh; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.2);
+      background:#fff; border-radius:6px;
+      width:100%; max-width:500px; max-height:80vh;
+      overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.2);
       position:relative; padding:16px;
     }
     #modal header {
-      display:flex; justify-content:space-between; align-items:center;
-      margin-bottom:12px;
+      display:flex; justify-content:space-between;
+      align-items:center; margin-bottom:12px;
     }
     #modal header h3 { font-size:1.25em; color:#2c3e50; }
-    #modal header button { background:#e74c3c; color:#fff; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; }
-    #modal .entry { margin-bottom:12px; }
-    #modal .entry h4 { margin-bottom:4px; font-size:1em; color:#2c3e50; }
-    #modal .entry p { font-size:.9em; color:#555; }
+    #modal header button {
+      background:#e74c3c; color:#fff;
+      border:none; border-radius:4px; padding:4px 8px;
+      cursor:pointer;
+    }
+    .entry { margin-bottom:12px; }
+    .entry h4 { margin-bottom:4px; font-size:1em; color:#2c3e50; }
+    .entry p  { font-size:.9em; color:#555; }
 
     /* TOAST */
     #toast-container {
@@ -80,12 +85,12 @@
       transform:translateX(-50%); z-index:1001;
     }
     .toast {
-      background:rgba(0,0,0,.8); color:#fff; padding:8px 16px;
-      margin-top:6px; border-radius:4px; opacity:0;
-      animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
+      background:rgba(0,0,0,.8); color:#fff;
+      padding:8px 16px; margin-top:6px; border-radius:4px;
+      opacity:0; animation:fadein .3s forwards, fadeout .3s forwards 2.7s;
     }
-    @keyframes fadein { to{opacity:1} }
-    @keyframes fadeout{ to{opacity:0} }
+    @keyframes fadein { to { opacity:1 } }
+    @keyframes fadeout { to { opacity:0 } }
   </style>
 </head>
 <body>
@@ -124,14 +129,14 @@
   <div id="toast-container"></div>
 
   <script>
-    // Disable touch scrolling
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive:false });
+    // disable touch scroll
+    document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
 
-    // Firebase init (no trailing slash here!)
+    // Firebase init (with trailing slash)
     const cfg = {
       apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
       authDomain: "cyberflashvend.firebaseapp.com",
-      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
       projectId: "cyberflashvend",
       storageBucket: "cyberflashvend.firebasestorage.app",
       messagingSenderId: "63786658773",
@@ -176,37 +181,42 @@
       setTimeout(()=>t.remove(),3000);
     }
 
-    // Fetch logs
-    db.ref("Logs").once("value")
-      .then(snap => {
-        const data = snap.val();
-        if(!data){
-          showToast("No logs found in database");
-        } else {
-          Object.entries(data).forEach(([dateKey, entries])=>{
-            Object.values(entries).forEach(log=>{
-              allLogs.push({ date:dateKey, time:log.Time, User:log.User, Payload:log.Payload });
+    // Listen for logs
+    db.ref("Logs").on("value", snap => {
+      const data = snap.val();
+      console.log("Logs snapshot:", data);
+      allLogs = [];
+      if (data) {
+        Object.entries(data).forEach(([dateKey, entries])=>{
+          Object.values(entries).forEach(log=>{
+            allLogs.push({
+              date: dateKey,
+              time: log.Time,
+              User: log.User,
+              Payload: log.Payload
             });
           });
-        }
-        allLogs.sort((a,b)=>{
-          if(a.date!==b.date) return b.date.localeCompare(a.date);
-          return b.time.localeCompare(a.time);
         });
-        showToast(`Loaded ${allLogs.length} logs`);
-        renderRecent();
-        renderByDate();
-        renderByUser();
-      })
-      .catch(err=>{
-        console.error(err);
-        showToast("Error loading logs");
+      }
+      allLogs.sort((a,b)=>{
+        if(a.date!==b.date) return b.date.localeCompare(a.date);
+        return b.time.localeCompare(a.time);
       });
+      showToast(`Loaded ${allLogs.length} logs`);
+      renderRecent();
+      renderByDate();
+      renderByUser();
+    }, err => {
+      console.error("Logs error:", err);
+      showToast("Error loading logs");
+    });
 
-    // Helper to select
+    // Helpers
     const $ = s => document.querySelector(s);
 
-    // Render Recent 6
+    function showScreen(id){ /* unused here */ }
+
+    // Recent
     function renderRecent(){
       const rc = $("#recentContainer");
       rc.innerHTML = "";
@@ -222,11 +232,15 @@
     }
     $("#moreRecent").onclick = ()=> openLogModal("All Transactions", allLogs);
 
-    // Render By Date
+    // By Date
     function renderByDate(){
       const dc = $("#dateContainer");
       dc.innerHTML = "";
       const dates = Array.from(new Set(allLogs.map(l=>l.date)));
+      if (!dates.length) {
+        dc.textContent = "No transactions";
+        return;
+      }
       dates.forEach(date=>{
         const btn = document.createElement("button");
         btn.className = "btn save";
@@ -235,10 +249,9 @@
                                        allLogs.filter(l=>l.date===date));
         dc.appendChild(btn);
       });
-      if(dates.length===0) dc.textContent="No transactions";
     }
 
-    // Render By User
+    // By User
     function renderByUser(){
       const uc = $("#userContainer");
       uc.innerHTML = "";
@@ -254,20 +267,21 @@
     // Search
     $("#searchInput").addEventListener("keypress", e=>{
       if(e.key==="Enter"){
-        const q=e.target.value.trim();
+        const q = e.target.value.trim();
         if(!q) return;
-        const dateKey=q.replace(/[\/\.]/g,"-");
+        const dateKey = q.replace(/[\/\.]/g,"-");
         const byDate = allLogs.filter(l=>l.date===dateKey);
         if(byDate.length) return openLogModal(`Date ${q}`, byDate);
-        const byUser = allLogs.filter(l=>l.User.toLowerCase().includes(q.toLowerCase()));
+        const byUser = allLogs.filter(l=>
+          l.User.toLowerCase().includes(q.toLowerCase())
+        );
         if(byUser.length) return openLogModal(`User “${q}”`, byUser);
-        alert("No results");
+        showToast("No results");
       }
     });
 
-    // Modal logic
+    // Modal
     const overlay = $("#modalOverlay"),
-          modal   = $("#modal"),
           titleEl = $("#modalTitle"),
           content = $("#modalContent");
     $("#modalClose").onclick = ()=> overlay.style.display="none";
@@ -291,7 +305,7 @@
       if(!userLogs.length){
         return openLogModal(`History for ${name} (ID:${id})`, []);
       }
-      // group by date
+      // Group by date
       const byDate = {};
       userLogs.forEach(l=>(byDate[l.date]=byDate[l.date]||[]).push(l));
       const entries = Object.entries(byDate).map(([date,logs])=>({ date, logs }));
