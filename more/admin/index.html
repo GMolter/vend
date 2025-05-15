@@ -4,9 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Vending Machine Admin</title>
-  <!-- Firebase v8 -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <!-- Firebase v8 (deferred) -->
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     /* RESET & GLOBALS */
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -19,21 +21,21 @@
     }
     @media (pointer: fine)  { html,body,button,a { cursor:auto!important;  } }
     @media (pointer: coarse){ html,body,button,a { cursor:none!important; } }
+
     /* GENERIC BUTTONS */
     .btn {
       display:inline-block;
       background:#3498db; color:#fff; border:none;
       border-radius:4px; padding:8px 16px;
       font-size:1em; box-shadow:0 2px 4px rgba(0,0,0,.1);
-      text-decoration:none;
-      cursor:pointer;
+      text-decoration:none; cursor:pointer;
     }
-    .btn:hover      { background:#2980b9; }
-    .btn.cancel     { background:#bdc3c7; color:#333; }
-    .btn.danger     { background:#e74c3c; }
+    .btn:hover       { background:#2980b9; }
+    .btn.cancel      { background:#bdc3c7; color:#333; }
+    .btn.danger      { background:#e74c3c; }
     .btn.danger:hover{ background:#c0392b; }
-    .btn.save       { background:#27ae60; }
-    .btn.save:hover { background:#229954; }
+    .btn.save        { background:#27ae60; }
+    .btn.save:hover  { background:#229954; }
 
     /* MINI CONSOLE */
     #miniConsole {
@@ -124,7 +126,6 @@
       border-top:1px solid #eee; padding:8px 0;
     }
     .modal-body .txn-card:first-child { border:0; }
-
   </style>
 </head>
 <body>
@@ -189,7 +190,7 @@
     </div>
   </div>
 
-  <script>
+  <script defer>
     // disable touch-scroll
     document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
 
@@ -208,175 +209,191 @@
       console.error = function(){ logToMini("ERR", arguments); orig.error.apply(console,arguments); };
     })();
 
-    console.log("🛠️ Admin panel loading…");
+    document.addEventListener('DOMContentLoaded', ()=>{
+      console.log("🛠️ Admin panel loading…");
 
-    // Firebase init
-    const cfg = {
-      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-      authDomain: "cyberflashvend.firebaseapp.com",
-      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
-      projectId: "cyberflashvend",
-      storageBucket: "cyberflashvend.firebasestorage.app",
-      messagingSenderId: "63786658773",
-      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
-    };
-    firebase.initializeApp(cfg);
-    const db = firebase.database();
+      // Firebase init
+      const cfg = {
+        apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+        authDomain: "cyberflashvend.firebaseapp.com",
+        databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
+        projectId: "cyberflashvend",
+        storageBucket: "cyberflashvend.firebasestorage.app",
+        messagingSenderId: "63786658773",
+        appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+      };
+      firebase.initializeApp(cfg);
+      const db = firebase.database();
 
-    // map IDs → snack names
-    const SNACK_SLOTS = [
-      { slot:"C2", name:"Chips"       },
-      { slot:"E1", name:"Cookies"     },
-      { slot:"E2", name:"Pretzels"    },
-      { slot:"E3", name:"Candy Bar"   },
-      { slot:"E4", name:"Granola Bar" },
-      { slot:"E5", name:"Trail Mix"   }
-    ];
+      const SNACK_SLOTS = [
+        { slot:"C2", name:"Chips"       },
+        { slot:"E1", name:"Cookies"     },
+        { slot:"E2", name:"Pretzels"    },
+        { slot:"E3", name:"Candy Bar"   },
+        { slot:"E4", name:"Granola Bar" },
+        { slot:"E5", name:"Trail Mix"   }
+      ];
 
-    let allEntries = [];
-    let entriesByDate = {};   // dateKey → [entries]
-    let entriesByUser = {};   // userName → [entries]
-
-    // read Logs once
-    db.ref('Logs').once('value')
-      .then(snap => {
-        const logs = snap.val() || {};
-        // build
-        Object.entries(logs).forEach(([dateKey, dayObj])=>{
-          const displayDate = dateKey.replace(/-/g,'/');
-          entriesByDate[dateKey] = [];
-          Object.values(dayObj).forEach(log=>{
-            // parse payload IDs → names
-            const ids = (''+log.Payload).split(',').filter(x=>x);
-            const items = ids.map(i=>{
-              const idx = parseInt(i,10)-1;
-              return SNACK_SLOTS[idx]?.name||`#${i}`;
+      // 1) fetch & render recent 6
+      db.ref('Logs')
+        .orderByKey()
+        .limitToLast(6)
+        .once('value')
+        .then(snap => {
+          const entries = [];
+          snap.forEach(daySnap => {
+            const dateKey = daySnap.key;
+            daySnap.forEach(logSnap => {
+              const log = logSnap.val();
+              const ids = (''+log.Payload).split(',').filter(x=>x);
+              const items = ids.map(i=>{
+                const idx = parseInt(i,10)-1;
+                return SNACK_SLOTS[idx]?.name||`#${i}`;
+              });
+              entries.push({
+                displayDate: dateKey.replace(/-/g,'/'),
+                time: log.Time.replace(/s.*$/,''),
+                user: log.User,
+                items
+              });
             });
-            const e = {
-              dateKey, displayDate,
-              time: log.Time.replace(/s.*$/,''), // drop trailing sPM
-              user: log.User,
-              items
-            };
-            allEntries.push(e);
-            entriesByDate[dateKey].push(e);
-            entriesByUser[e.user] = entriesByUser[e.user]||[];
-            entriesByUser[e.user].push(e);
           });
-        });
-        renderRecent();
-        renderBrowse();
-      })
-      .catch(err=>{
-        console.error("Failed to load Logs:", err);
-      });
+          const rc = document.getElementById('recentContainer');
+          rc.innerHTML = '';
+          entries.reverse().forEach(e=>{
+            const c = document.createElement('div');
+            c.className = 'recent-card';
+            c.innerHTML = `
+              <p class="time">${e.displayDate} ${e.time}</p>
+              <p>User: ${e.user}</p>
+              <p>Items: ${e.items.join(', ')}</p>
+            `;
+            rc.appendChild(c);
+          });
+          if(entries.length>6){
+            const mb = document.getElementById('moreBtn');
+            mb.style.display = 'inline-block';
+            mb.onclick = ()=> document.getElementById('browseWrapper').scrollIntoView({behavior:'smooth'});
+          }
+        })
+        .catch(err=> console.error("Failed loading recent:", err));
 
-    function renderRecent(){
-      const rc = document.getElementById('recentContainer');
-      rc.innerHTML = '';
-      // take last 6
-      const recent = allEntries.slice(-6).reverse();
-      recent.forEach(e=>{
-        const c = document.createElement('div');
-        c.className = 'recent-card';
-        c.innerHTML = `
-          <p class="time">${e.displayDate} ${e.time}</p>
-          <p>User: ${e.user}</p>
-          <p>Items: ${e.items.join(', ')}</p>
-        `;
-        rc.appendChild(c);
-      });
-      if(allEntries.length>6){
-        const mb = document.getElementById('moreBtn');
-        mb.style.display = 'inline-block';
-        mb.onclick = ()=> document.getElementById('browseWrapper').scrollIntoView({behavior:'smooth'});
-      }
-    }
-
-    function renderBrowse(){
-      const dc = document.getElementById('datesContainer');
-      const uc = document.getElementById('usersContainer');
-      dc.innerHTML = '';
-      uc.innerHTML = '';
-      // all unique dateKeys
-      Object.keys(entriesByDate).sort((a,b)=>b.localeCompare(a)).forEach(dateKey=>{
-        const display = dateKey.replace(/-/g,'/');
-        const card = document.createElement('div');
-        card.className = 'date-card';
-        card.innerHTML = `<span>${display}</span>`;
-        card.onclick = ()=> openDateModal(dateKey);
-        dc.appendChild(card);
-      });
-      // all users sorted
-      Object.keys(entriesByUser).sort().forEach(user=>{
-        const card = document.createElement('div');
-        card.className = 'user-card';
-        card.innerHTML = `<span>${user}</span>`;
-        card.onclick = ()=> openUserModal(user);
-        uc.appendChild(card);
-      });
-    }
-
-    // search
-    document.getElementById('searchInput').addEventListener('input', e=>{
-      const q = e.target.value.toLowerCase();
-      // filter dates
-      document.querySelectorAll('.date-card').forEach(card=>{
-        const txt = card.textContent.toLowerCase();
-        card.style.display = txt.includes(q) ? '' : 'none';
-      });
-      // filter users
-      document.querySelectorAll('.user-card').forEach(card=>{
-        const txt = card.textContent.toLowerCase();
-        card.style.display = txt.includes(q) ? '' : 'none';
-      });
+      // 2) fetch date-keys & users for Browse
+      db.ref('Logs').once('value')
+        .then(snap => {
+          const entriesByUser = {};
+          const datesContainer = document.getElementById('datesContainer');
+          const usersContainer = document.getElementById('usersContainer');
+          const dateKeys = [];
+          snap.forEach(daySnap => {
+            dateKeys.push(daySnap.key);
+            daySnap.forEach(logSnap => {
+              const u = logSnap.val().User;
+              entriesByUser[u] = entriesByUser[u]||new Set();
+              entriesByUser[u].add(daySnap.key);
+            });
+          });
+          datesContainer.innerHTML = '';
+          dateKeys.sort((a,b)=>b.localeCompare(a)).forEach(dateKey=>{
+            const display = dateKey.replace(/-/g,'/');
+            const card = document.createElement('div');
+            card.className = 'date-card';
+            card.innerHTML = `<span>${display}</span>`;
+            card.onclick = ()=> openDateModal(dateKey);
+            datesContainer.appendChild(card);
+          });
+          usersContainer.innerHTML = '';
+          Object.keys(entriesByUser).sort().forEach(user=>{
+            const card = document.createElement('div');
+            card.className = 'user-card';
+            card.innerHTML = `<span>${user}</span>`;
+            card.onclick = ()=> openUserModal(user);
+            usersContainer.appendChild(card);
+          });
+        })
+        .catch(err=> console.error("Failed loading browse:", err));
     });
 
-    // open/close
     function closeModal(){
       document.getElementById('modalBackdrop').style.display='none';
       document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
     }
 
     function openDateModal(dateKey){
-      const modal = document.getElementById('dateModal'),
-            body  = document.getElementById('dateModalBody'),
-            title = document.getElementById('dateModalTitle');
+      const backdrop = document.getElementById('modalBackdrop');
+      const modal = document.getElementById('dateModal');
+      const title = document.getElementById('dateModalTitle');
+      const body  = document.getElementById('dateModalBody');
       const display = dateKey.replace(/-/g,'/');
       title.textContent = `Transactions on ${display}`;
-      const list = entriesByDate[dateKey]||[];
-      body.innerHTML = list.length
-        ? list.map(e=>
-            `<div class="txn-card">
-              <p><strong>${e.time}</strong> — ${e.user}</p>
-              <p>Items: ${e.items.join(', ')}</p>
-            </div>`
-          ).join('')
-        : '<p>No Transactions</p>';
-      document.getElementById('modalBackdrop').style.display='block';
-      modal.style.display='block';
+      body.innerHTML = 'Loading…';
+      backdrop.style.display = 'block';
+      modal.style.display = 'block';
+
+      firebase.database()
+        .ref(`Logs/${dateKey}`)
+        .once('value')
+        .then(daySnap => {
+          const logs = daySnap.val()||{};
+          const html = Object.values(logs).map(log=>{
+            const ids = (''+log.Payload).split(',').filter(x=>x);
+            const items = ids.map(i=>{
+              const idx = parseInt(i,10)-1;
+              return SNACK_SLOTS[idx]?.name||`#${i}`;
+            });
+            return `
+              <div class="txn-card">
+                <p><strong>${log.Time.replace(/s.*$/,'')}</strong> — ${log.User}</p>
+                <p>Items: ${items.join(', ')}</p>
+              </div>
+            `;
+          }).join('');
+          body.innerHTML = html || '<p>No Transactions</p>';
+        })
+        .catch(err=>{
+          body.innerHTML = `<p style="color:red;">Error loading data</p>`;
+          console.error("Date modal error:", err);
+        });
     }
 
     function openUserModal(user){
-      const modal = document.getElementById('userModal'),
-            body  = document.getElementById('userModalBody'),
-            title = document.getElementById('userModalTitle');
+      const backdrop = document.getElementById('modalBackdrop');
+      const modal = document.getElementById('userModal');
+      const title = document.getElementById('userModalTitle');
+      const body  = document.getElementById('userModalBody');
       title.textContent = `User “${user}”`;
-      const list = entriesByUser[user]||[];
-      if(!list.length){
-        body.innerHTML = '<p>No Transactions</p>';
-      } else {
-        // unique dates
-        const dates = [...new Set(list.map(e=>e.dateKey))]
-          .sort((a,b)=>b.localeCompare(a));
-        body.innerHTML = dates.map(dk=>{
-          const disp = dk.replace(/-/g,'/');
-          return `<button class="btn" style="margin:4px;"
-                   onclick="openDateModal('${dk}')">${disp}</button>`;
-        }).join('');
-      }
-      document.getElementById('modalBackdrop').style.display='block';
-      modal.style.display='block';
+      body.innerHTML = 'Loading…';
+      backdrop.style.display = 'block';
+      modal.style.display = 'block';
+
+      firebase.database()
+        .ref('Logs')
+        .once('value')
+        .then(snap => {
+          const userDates = new Set();
+          snap.forEach(daySnap => {
+            daySnap.forEach(logSnap => {
+              if (logSnap.val().User === user) {
+                userDates.add(daySnap.key);
+              }
+            });
+          });
+          if (!userDates.size) {
+            body.innerHTML = '<p>No Transactions</p>';
+          } else {
+            body.innerHTML = Array.from(userDates)
+              .sort((a,b)=>b.localeCompare(a))
+              .map(dk => {
+                const disp = dk.replace(/-/g,'/');
+                return `<button class="btn" style="margin:4px;"
+                          onclick="openDateModal('${dk}')">${disp}</button>`;
+              }).join('');
+          }
+        })
+        .catch(err=>{
+          body.innerHTML = `<p style="color:red;">Error loading user data</p>`;
+          console.error("User modal error:", err);
+        });
     }
   </script>
 </body>
