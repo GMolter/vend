@@ -15,12 +15,13 @@
   <style>
     /* RESET & GLOBAL */
     * { margin:0; padding:0; box-sizing:border-box }
-    html, body {
+    html,body {
       width:100%; height:100vh;
       overflow:hidden; overscroll-behavior:none;
       touch-action:none; font-family:Arial,sans-serif;
       background:#f5f5f5;
     }
+
     /* BUTTONS */
     .btn {
       display:inline-block; background:#3498db; color:#fff;
@@ -38,6 +39,7 @@
       background:#e74c3c; color:#fff; border:none;
       padding:4px 8px; border-radius:4px; cursor:pointer;
     }
+
     /* LAYOUT */
     #app {
       position:absolute; top:0; left:0;
@@ -46,6 +48,7 @@
     h1 { font-size:1.8em; margin-bottom:8px; color:#333 }
     .section { margin-bottom:24px }
     .section h2 { font-size:1.4em; margin:12px 0 8px; color:#555 }
+
     /* CARDS */
     #recentContainer, .card-grid {
       display:grid; gap:12px; margin-bottom:12px;
@@ -65,12 +68,14 @@
     .date-card span, .user-card span {
       display:block; color:#333; font-weight:bold;
     }
+
     /* SEARCH */
     #searchInput {
       width:100%; padding:8px 12px; font-size:1em;
       border:1px solid #ccc; border-radius:4px;
       margin-bottom:12px;
     }
+
     /* MODALS */
     .modal-backdrop {
       position:fixed; top:0; left:0; width:100%; height:100%;
@@ -84,6 +89,9 @@
       overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.3);
       padding:16px; display:none; z-index:1002;
     }
+    /* **this is the fix** */
+    .modal.active { display:block; }
+
     .modal-header {
       display:flex; justify-content:space-between;
       align-items:center; margin-bottom:12px;
@@ -96,16 +104,21 @@
 </head>
 <body>
   <div id="app">
-    <!-- 1. Search bar at very top -->
+    <!-- 1) Search bar at very top -->
     <div class="section">
-      <input id="searchInput" placeholder="Search by date or user (Type + Enter)" />
+      <input id="searchInput"
+             placeholder="Search by date or user (Type + Enter)"/>
     </div>
 
     <div style="margin-bottom:16px;">
-      <button class="btn" style="background:orange; margin-right:12px;"
-        onclick="location.href='https://gmolter.github.io/vend/more'">Dev Page</button>
+      <button class="btn" style="background:orange;margin-right:12px;"
+              onclick="location.href='https://gmolter.github.io/vend/more'">
+        Dev Page
+      </button>
       <button class="btn save"
-        onclick="location.href='https://gmolter.github.io/vend/'">Stable Page</button>
+              onclick="location.href='https://gmolter.github.io/vend/'">
+        Stable Page
+      </button>
     </div>
 
     <div class="section">
@@ -131,7 +144,9 @@
       <h3 id="searchModalTitle">Search</h3>
       <button class="close-btn" onclick="closeModal()">X</button>
     </div>
-    <div id="searchModalBody" class="modal-body"><p>Searching…</p></div>
+    <div id="searchModalBody" class="modal-body">
+      <p>Searching…</p>
+    </div>
   </div>
 
   <!-- Date Modal -->
@@ -165,11 +180,11 @@
 
       let machineConfig = {}, logsData = {};
 
-      // init Firebase & load data
+      // Init Firebase & fetch config+logs
       firebase.initializeApp({
-        apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-        authDomain:"cyberflashvend.firebaseapp.com",
-        databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/"
+        apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+        authDomain: "cyberflashvend.firebaseapp.com",
+        databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/"
       });
       const db = firebase.database();
 
@@ -193,7 +208,7 @@
         Object.entries(logsData).forEach(([dk, logs]) => {
           const disp = dk.replace(/-/g,'/');
           Object.values(logs).forEach(l => {
-            const items = (l.Payload+'').split(',').filter(x=>x).map(i=>{
+            const items = (l.Payload+'').split(',').filter(x=>x).map(i => {
               const cfg = machineConfig[i]||{};
               return cfg.name || `#${i}`;
             });
@@ -214,16 +229,16 @@
           const mb = document.getElementById('moreBtn');
           mb.style.display = 'inline-block';
           mb.onclick = ()=>document.getElementById('browseWrapper')
-                             .scrollIntoView({behavior:'smooth'});
+                              .scrollIntoView({behavior:'smooth'});
         }
       }
 
       function renderBrowse(){
         const dc = document.getElementById('datesContainer'),
               uc = document.getElementById('usersContainer');
-        dc.innerHTML = ''; uc.innerHTML = '';
+        dc.innerHTML=''; uc.innerHTML='';
 
-        // dates
+        // Dates
         Object.keys(logsData).sort((a,b)=>b.localeCompare(a)).forEach(dk=>{
           const c = document.createElement('div');
           c.className = 'date-card';
@@ -232,7 +247,7 @@
           dc.appendChild(c);
         });
 
-        // users
+        // Users
         Object.entries(STUDENTS).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([uid,name])=>{
           const c = document.createElement('div');
           c.className = 'user-card';
@@ -261,23 +276,23 @@
         tt.textContent = `Search: "${q}"`;
         let html = '';
         const ql = q.toLowerCase();
-        // dates
+
+        // date matches
         Object.keys(logsData).forEach(dk=>{
           if(dk.replace(/-/g,'/').includes(ql)){
-            html += `<button class="btn" onclick="openDateModal('${dk}')">
-                        ${dk.replace(/-/g,'/')}
-                     </button>`;
+            html += `<button class="btn" onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>`;
           }
         });
-        // users
+
+        // user matches
         Object.entries(STUDENTS).forEach(([uid,name])=>{
           if(name.toLowerCase().includes(ql)||uid.includes(ql)){
             html += `<button class="btn" onclick="openUserModal('${uid}')">${name}</button>`;
           }
         });
-        bd.innerHTML = html || '<p>No matches.</p>';
-        md.classList.add('active');
-        bp.style.display = 'block';
+
+        bd.innerHTML = html||'<p>No matches.</p>';
+        md.classList.add('active'); bp.style.display='block';
       };
 
       window.openDateModal = dk => {
@@ -290,17 +305,15 @@
         let html = '';
         Object.values(logsData[dk]||{}).forEach(l=>{
           const items = (l.Payload+'').split(',').filter(x=>x).map(i=>{
-            const cfg = machineConfig[i]||{};
-            return cfg.name || `#${i}`;
+            const cfg = machineConfig[i]||{}; return cfg.name||`#${i}`;
           });
           html += `<div class="txn-card">
                      <p><strong>${l.Time.replace(/s.*$/,'')}</strong> — ${l.User}</p>
                      <p>Items: ${items.join(', ')}</p>
                    </div>`;
         });
-        bd.innerHTML = html || '<p>No Transactions</p>';
-        md.classList.add('active');
-        bp.style.display = 'block';
+        bd.innerHTML = html||'<p>No Transactions</p>';
+        md.classList.add('active'); bp.style.display='block';
       };
 
       window.openUserModal = uid => {
@@ -320,20 +333,17 @@
           .sort((a,b)=>b.localeCompare(a));
         if(!dates.length) html += '<p>No Transactions</p>';
         else dates.forEach(dk=>{
-          html += `<button class="btn" style="margin:4px;"
-                       onclick="openDateModal('${dk}')">
+          html += `<button class="btn" style="margin:4px;" onclick="openDateModal('${dk}')">
                      ${dk.replace(/-/g,'/')}
                    </button>`;
         });
         bd.innerHTML = html;
-        md.classList.add('active');
-        bp.style.display = 'block';
+        md.classList.add('active'); bp.style.display='block';
       };
 
       window.closeModal = () => {
         document.getElementById('modalBackdrop').style.display = 'none';
-        document.querySelectorAll('.modal')
-                .forEach(m=>m.classList.remove('active'));
+        document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));
       };
     })();
   </script>
