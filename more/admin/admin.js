@@ -1,27 +1,27 @@
 // admin.js
 
-// —————————————————————————————————————————
-// 1) Mini-console hook is already inline in index.html.
-// 2) This file executes immediately (script is at bottom of body).
-// —————————————————————————————————————————
+// 1) Your inline console‐hook in index.html already captures console.log → miniConsole.
+//    These logs below should show up there on the iPad.
 
-// Kick things off
-console.log('🛠️ admin.js loaded; scheduling data load…');
+// Kick everything off right away:
+console.log('🔥 admin.js loaded');
 
-// Firebase init
+// --- Firebase init ---
 const cfg = {
   apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
   authDomain: "cyberflashvend.firebaseapp.com",
-  databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
+  databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
   projectId: "cyberflashvend",
   storageBucket: "cyberflashvend.firebasestorage.app",
   messagingSenderId: "63786658773",
   appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
 };
+console.log('Initializing Firebase…');
 firebase.initializeApp(cfg);
 const db = firebase.database();
+console.log('Firebase initialized');
 
-// Snack-slot lookup for all modals
+// snack‐slot lookup
 const SNACK_SLOTS = [
   { slot:"C2", name:"Chips"       },
   { slot:"E1", name:"Cookies"     },
@@ -31,25 +31,24 @@ const SNACK_SLOTS = [
   { slot:"E5", name:"Trail Mix"   }
 ];
 
-// Hold lists for search
+// placeholders for search
 window._dates = [];
 window._users = [];
 
-// Fetch everything once browser is idle (or after 100ms)
-function loadAll() {
-  fetchRecent();
-  fetchBrowse();
-}
-if (window.requestIdleCallback) {
-  requestIdleCallback(loadAll);
-} else {
-  setTimeout(loadAll, 100);
-}
+// immediately fetch both views
+console.log('Calling fetchRecent() and fetchBrowse()');
+fetchRecent();
+fetchBrowse();
 
 // — Recent 6 Transactions —
 function fetchRecent() {
-  db.ref('Logs').orderByKey().limitToLast(6).once('value')
+  console.log('fetchRecent: starting…');
+  db.ref('Logs')
+    .orderByKey()
+    .limitToLast(6)
+    .once('value')
     .then(snap => {
+      console.log('fetchRecent: snapshot.val() =', snap.val());
       const rc = document.getElementById('recentContainer');
       rc.innerHTML = '';
       const rows = [];
@@ -60,14 +59,10 @@ function fetchRecent() {
           const items = (''+l.Payload).split(',')
             .filter(x=>x)
             .map(i => SNACK_SLOTS[+i-1]?.name || `#${i}`);
-          rows.push({
-            date,
-            time: l.Time.replace(/s.*$/,''),
-            user: l.User,
-            items
-          });
+          rows.push({ date, time:l.Time.replace(/s.*$/,''), user:l.User, items });
         });
       });
+      console.log('fetchRecent: built rows.length =', rows.length);
       rows.reverse().forEach(e => {
         const d = document.createElement('div');
         d.className = 'recent-card';
@@ -85,14 +80,19 @@ function fetchRecent() {
                                  .scrollIntoView({behavior:'smooth'});
       }
     })
-    .catch(err => console.error('Recent load error:', err));
+    .catch(err => console.error('fetchRecent error:', err));
 }
 
-// — Browse last 30 days (dates + users) —
+// — Browse last 30 days —
 function fetchBrowse() {
+  console.log('fetchBrowse: starting…');
   const DAYS = 30;
-  db.ref('Logs').orderByKey().limitToLast(DAYS).once('value')
+  db.ref('Logs')
+    .orderByKey()
+    .limitToLast(DAYS)
+    .once('value')
     .then(snap => {
+      console.log('fetchBrowse: snapshot.val().keys =', Object.keys(snap.val()||{}));
       const dc = document.getElementById('datesContainer');
       const uc = document.getElementById('usersContainer');
       dc.innerHTML = '';
@@ -101,26 +101,23 @@ function fetchBrowse() {
 
       snap.forEach(daySnap => {
         keys.push(daySnap.key);
-        daySnap.forEach(ls => {
-          users[ls.val().User] = true;
-        });
+        daySnap.forEach(ls => users[ls.val().User] = true);
       });
 
-      // store for search
       window._dates = keys.slice();
       window._users = Object.keys(users).slice();
+      console.log('fetchBrowse: dates=', window._dates, 'users=', window._users);
 
-      // render date cards
-      keys.sort((a,b) => b.localeCompare(a)).forEach(dk => {
+      // render dates
+      keys.sort((a,b)=>b.localeCompare(a)).forEach(dk => {
         const card = document.createElement('div');
         card.className = 'date-card';
-        const disp = dk.replace(/-/g,'/');
-        card.innerHTML = `<span>${disp}</span>`;
+        card.innerHTML = `<span>${dk.replace(/-/g,'/')}</span>`;
         card.onclick = () => openDateModal(dk);
         dc.appendChild(card);
       });
 
-      // render user cards
+      // render users
       window._users.sort().forEach(u => {
         const card = document.createElement('div');
         card.className = 'user-card';
@@ -129,77 +126,76 @@ function fetchBrowse() {
         uc.appendChild(card);
       });
     })
-    .catch(err => console.error('Browse load error:', err));
+    .catch(err => console.error('fetchBrowse error:', err));
 }
 
-// — Search via Enter key (opens modal) —
-document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const q = e.target.value.trim();
-    if (q) openSearchModal(q);
-  }
-});
+// — Search (Enter key) —
+document.getElementById('searchInput')
+  .addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = e.target.value.trim();
+      if (q) openSearchModal(q);
+    }
+  });
 
 // — Search Modal —
 window.openSearchModal = function(q) {
+  console.log('openSearchModal:', q);
   closeModal();
   const md = document.getElementById('searchModal'),
         bd = document.getElementById('searchModalBody'),
         tt = document.getElementById('searchModalTitle'),
         bp = document.getElementById('modalBackdrop');
   tt.textContent = `Search: "${q}"`;
-  bd.innerHTML   = '<p>Searching…</p>';
+  bd.innerHTML = '<p>Searching…</p>';
   bp.style.display = 'block';
   md.style.display = 'block';
 
   const ql = q.toLowerCase();
   let html = '';
 
-  // date matches
   const matchesD = window._dates.filter(dk => dk.replace(/-/g,'/').includes(ql));
+  console.log('search: matched dates:', matchesD);
   if (matchesD.length) {
-    html += '<h4>Dates</h4>' + 
-      matchesD.map(dk => `
-        <button class="btn" style="margin:4px;"
-          onclick="openDateModal('${dk}')">
-          ${dk.replace(/-/g,'/')}
-        </button>
-      `).join('');
+    html += '<h4>Dates</h4>' + matchesD.map(dk=>`
+      <button class="btn" onclick="openDateModal('${dk}')">${dk.replace(/-/g,'/')}</button>
+    `).join('');
   }
-  // user matches
+
   const matchesU = window._users.filter(u => u.toLowerCase().includes(ql));
+  console.log('search: matched users:', matchesU);
   if (matchesU.length) {
-    html += '<h4>Users</h4>' +
-      matchesU.map(u => `
-        <button class="btn" style="margin:4px;"
-          onclick="openUserModal('${u}')">
-          ${u}
-        </button>
-      `).join('');
+    html += '<h4>Users</h4>' + matchesU.map(u=>`
+      <button class="btn" onclick="openUserModal('${u}')">${u}</button>
+    `).join('');
   }
+
   if (!html) html = '<p>No matches found.</p>';
   bd.innerHTML = html;
 };
 
 // — Date Modal —
 window.openDateModal = function(dk) {
+  console.log('openDateModal:', dk);
   closeModal();
   const md = document.getElementById('dateModal'),
         bd = document.getElementById('dateModalBody'),
         tt = document.getElementById('dateModalTitle'),
         bp = document.getElementById('modalBackdrop');
-  tt.textContent   = `Transactions on ${dk.replace(/-/g,'/')}`;
-  bd.innerHTML     = 'Loading…';
+  tt.textContent = `Transactions on ${dk.replace(/-/g,'/')}`;
+  bd.innerHTML = 'Loading…';
   bp.style.display = 'block';
   md.style.display = 'block';
 
-  firebase.database().ref(`Logs/${dk}`).once('value')
+  firebase.database().ref(`Logs/${dk}`)
+    .once('value')
     .then(snap => {
-      const html = Object.values(snap.val()||{}).map(l => {
+      console.log('date modal snap:', snap.val());
+      const html = Object.values(snap.val()||{}).map(l=>{
         const items = (''+l.Payload).split(',')
           .filter(x=>x)
-          .map(i => SNACK_SLOTS[+i-1]?.name || `#${i}`);
+          .map(i=>SNACK_SLOTS[+i-1]?.name||`#${i}`);
         return `
           <div class="txn-card">
             <p><strong>${l.Time.replace(/s.*$/,'')}</strong> — ${l.User}</p>
@@ -209,52 +205,56 @@ window.openDateModal = function(dk) {
       bd.innerHTML = html || '<p>No Transactions</p>';
     })
     .catch(e => {
+      console.error('date modal error:', e);
       bd.innerHTML = '<p style="color:red;">Error loading</p>';
-      console.error(e);
     });
 };
 
 // — User Modal —
 window.openUserModal = function(user) {
+  console.log('openUserModal:', user);
   closeModal();
   const md = document.getElementById('userModal'),
         bd = document.getElementById('userModalBody'),
         tt = document.getElementById('userModalTitle'),
         bp = document.getElementById('modalBackdrop');
-  tt.textContent   = `User “${user}”`;
-  bd.innerHTML     = 'Loading…';
+  tt.textContent = `User “${user}”`;
+  bd.innerHTML = 'Loading…';
   bp.style.display = 'block';
   md.style.display = 'block';
 
-  firebase.database().ref('Logs').orderByKey().limitToLast(30).once('value')
+  firebase.database().ref('Logs')
+    .orderByKey().limitToLast(30)
+    .once('value')
     .then(snap => {
+      console.log('user modal snap keys:', Object.keys(snap.val()||{}));
       const dates = new Set();
       snap.forEach(daySnap => {
         Object.values(daySnap.val()).forEach(l => {
           if (l.User === user) dates.add(daySnap.key);
         });
       });
+      console.log('user modal dates:', Array.from(dates));
       if (!dates.size) {
         bd.innerHTML = '<p>No Transactions</p>';
       } else {
         bd.innerHTML = Array.from(dates)
           .sort((a,b)=>b.localeCompare(a))
-          .map(dk => `
-            <button class="btn" style="margin:4px;"
-              onclick="openDateModal('${dk}')">
+          .map(dk=>`
+            <button class="btn" onclick="openDateModal('${dk}')">
               ${dk.replace(/-/g,'/')}
             </button>
           `).join('');
       }
     })
     .catch(e => {
+      console.error('user modal error:', e);
       bd.innerHTML = '<p style="color:red;">Error loading</p>';
-      console.error(e);
     });
 };
 
-// — Close any open modal —
+// — Close any modal —
 function closeModal() {
   document.getElementById('modalBackdrop').style.display = 'none';
-  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
 }
