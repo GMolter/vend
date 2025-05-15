@@ -11,7 +11,380 @@
     /* RESET & GLOBAL */
     * { margin:0; padding:0; box-sizing:border-box }
     html, body {
+      width:100%; height:100vh;<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Vending Machine Admin</title>
+  <style>
+    /* RESET & GLOBAL */
+    * { margin:0; padding:0; box-sizing:border-box }
+    html, body {
       width:100%; height:100vh;
+      overflow:hidden; overscroll-behavior:none;
+      touch-action:none; font-family:Arial,sans-serif;
+      background:#f5f5f5;
+    }
+    /* BUTTONS */
+    .btn {
+      display:inline-block; background:#3498db; color:#fff;
+      border:none; border-radius:4px; padding:8px 16px;
+      font-size:1em; box-shadow:0 2px 4px rgba(0,0,0,.1);
+      cursor:pointer; text-decoration:none;
+    }
+    .btn:hover { background:#2980b9 }
+    .btn.save { background:#27ae60 }
+    .btn.save:hover { background:#229954 }
+    .close-btn {
+      background:#e74c3c; color:#fff; border:none;
+      padding:4px 8px; border-radius:4px; cursor:pointer;
+    }
+    /* MINI CONSOLE */
+    #miniConsole {
+      position:fixed; top:0; left:0;
+      width:100%; height:20vh;
+      background:#111; color:#0f0;
+      font-family:monospace; font-size:.85em;
+      overflow-y:auto; padding:8px; z-index:1000;
+    }
+    /* LAYOUT */
+    #app {
+      position:absolute; top:20vh; left:0;
+      width:100%; height:80vh; overflow-y:auto; padding:16px;
+    }
+    h1 { font-size:1.8em; margin-bottom:8px; color:#333 }
+    .section { margin-bottom:24px }
+    .section h2 { font-size:1.4em; margin:12px 0 8px; color:#555 }
+    /* CARDS */
+    #recentContainer, .card-grid {
+      display:grid; gap:12px; margin-bottom:12px;
+    }
+    #recentContainer {
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    }
+    .card-grid {
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    }
+    .recent-card, .date-card, .user-card {
+      background:#fff; border:1px solid #ddd;
+      border-radius:6px; padding:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,.1);
+    }
+    .recent-card p, .txn-card p {
+      margin:4px 0; color:#444; font-size:.95em;
+    }
+    .recent-card .time { font-weight:bold }
+    .date-card, .user-card { text-align:center; cursor:pointer }
+    .date-card span, .user-card span {
+      display:block; color:#333; font-weight:bold;
+    }
+    /* SEARCH */
+    #searchInput {
+      width:100%; padding:8px 12px; font-size:1em;
+      border:1px solid #ccc; border-radius:4px;
+      margin-bottom:12px;
+    }
+    /* MODALS */
+    .modal-backdrop {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,.5); display:none; z-index:1001;
+    }
+    .modal {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      background:#fff; border-radius:6px;
+      width:90%; max-width:500px; max-height:80vh;
+      overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,.3);
+      padding:16px; display:none; z-index:1002;
+    }
+    .modal-header {
+      display:flex; justify-content:space-between;
+      align-items:center; margin-bottom:12px;
+    }
+    .txn-card {
+      border-top:1px solid #eee; padding:8px 0;
+    }
+    .txn-card:first-child { border:0 }
+  </style>
+</head>
+<body>
+  <!-- mini-console + inline hook -->
+  <div id="miniConsole"></div>
+  <script>
+    document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+    function _log(type,args){
+      const mc=document.getElementById('miniConsole'),
+            d=document.createElement('div');
+      d.textContent=`[${type}] ${Array.from(args).join(' ')}`;
+      mc.appendChild(d); mc.scrollTop=mc.scrollHeight;
+    }
+    console.log   =(...a)=>_log('LOG',a);
+    console.warn  =(...a)=>_log('WARN',a);
+    console.error =(...a)=>_log('ERR',a);
+    console.log('🔥 INLINE OK');
+    const test=document.getElementById('recentContainer');
+    if(test) test.innerHTML='✅ INLINE OK';
+  </script>
+
+  <div id="app">
+    <div style="margin-bottom:16px;">
+      <button class="btn" style="background:orange; margin-right:12px;"
+        onclick="location.href='https://gmolter.github.io/vend/more'">
+        Dev Page
+      </button>
+      <button class="btn save"
+        onclick="location.href='https://gmolter.github.io/vend/'">
+        Stable Page
+      </button>
+    </div>
+
+    <div class="section" id="recentSection">
+      <h1>Recent 6 Transactions</h1>
+      <div id="recentContainer"><p>Loading recent…</p></div>
+      <button id="moreBtn" class="btn save" style="display:none">More…</button>
+    </div>
+
+    <div class="section" id="browseWrapper">
+      <h1>Browse</h1>
+      <input id="searchInput" placeholder="Type + Enter"/>
+      <h2>By Date</h2>
+      <div id="datesContainer" class="card-grid"><p>Loading dates…</p></div>
+      <h2>By User</h2>
+      <div id="usersContainer" class="card-grid"><p>Loading users…</p></div>
+    </div>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop"></div>
+
+  <div id="searchModal" class="modal">
+    <div class="modal-header">
+      <h3 id="searchModalTitle">Search</h3>
+      <button class="close-btn" onclick="closeModal()">X</button>
+    </div>
+    <div id="searchModalBody" class="modal-body"><p>Enter query.</p></div>
+  </div>
+
+  <div id="dateModal" class="modal">
+    <div class="modal-header">
+      <h3 id="dateModalTitle">Transactions</h3>
+      <button class="close-btn" onclick="closeModal()">X</button>
+    </div>
+    <div id="dateModalBody" class="modal-body">Loading…</div>
+  </div>
+
+  <div id="userModal" class="modal">
+    <div class="modal-header">
+      <h3 id="userModalTitle">User</h3>
+      <button class="close-btn" onclick="closeModal()">X</button>
+    </div>
+    <div id="userModalBody" class="modal-body">Loading…</div>
+  </div>
+
+  <!-- Firebase-less: all logic via fetch() -->
+  <script>
+    console.log('🚀 admin inlined starting');
+
+    const BASE = 'https://cyberflashvend-default-rtdb.firebaseio.com';
+    const SLOT_NAMES = ["Chips","Cookies","Pretzels","Candy Bar","Granola Bar","Trail Mix"];
+    const STUDENTS = {
+      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
+      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
+      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
+      "250606":"Madeline Penney","250639":"Rohan Rajanahalli","260627":"Mason Robbins",
+      "360794":"Calix Baker"
+    };
+
+    window._dates = [];
+    window._userRecords = {};
+    window._users = Object.keys(STUDENTS).sort((a,b)=>
+      STUDENTS[a].localeCompare(STUDENTS[b])
+    );
+
+    // Recent 6
+    fetch(`${BASE}/Logs.json?orderBy="$key"&limitToLast=6`)
+      .then(r=>r.json())
+      .then(data=>{
+        console.log('recent data', data);
+        const rc = document.getElementById('recentContainer');
+        rc.innerHTML = '';
+        const list = [];
+        Object.entries(data||{}).forEach(([dk, logs])=>{
+          const date = dk.replace(/-/g,'/');
+          Object.values(logs).forEach(l=>{
+            const items = (l.Payload+'').split(',')
+              .filter(x=>x)
+              .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
+            list.push({ date, time:l.Time.replace(/s.*$/,''), user:l.User, items });
+          });
+        });
+        list.reverse().forEach(e=>{
+          const d = document.createElement('div');
+          d.className = 'recent-card';
+          d.innerHTML = `
+            <p class="time">${e.date} ${e.time}</p>
+            <p>User: ${e.user}</p>
+            <p>Items: ${e.items.join(', ')}</p>`;
+          rc.appendChild(d);
+        });
+        if(list.length>6){
+          const mb = document.getElementById('moreBtn');
+          mb.style.display='inline-block';
+          mb.onclick = ()=>document.getElementById('browseWrapper')
+                            .scrollIntoView({behavior:'smooth'});
+        }
+      })
+      .catch(e=>console.error('fetchRecent error', e));
+
+    // Browse & Users
+    fetch(`${BASE}/Logs.json`)
+      .then(r=>r.json())
+      .then(data=>{
+        console.log('browse data', Object.keys(data||{}));
+        const dc = document.getElementById('datesContainer'),
+              uc = document.getElementById('usersContainer');
+        dc.innerHTML = ''; uc.innerHTML = '';
+
+        // build userRecords & dates
+        const recs = {}, dates = Object.keys(data||{}).sort((a,b)=>b.localeCompare(a));
+        window._dates = dates;
+        dates.forEach(dk=>{
+          Object.values(data[dk]||{}).forEach(l=>{
+            recs[l.User] = recs[l.User]||new Set();
+            recs[l.User].add(dk);
+          });
+        });
+        Object.entries(recs).forEach(([u, s])=>{
+          window._userRecords[u] = Array.from(s);
+        });
+
+        // date cards
+        dates.forEach(dk=>{
+          const card = document.createElement('div');
+          card.className='date-card';
+          card.innerHTML = `<span>${dk.replace(/-/g,'/')}</span>`;
+          card.onclick = ()=>openDateModal(dk);
+          dc.appendChild(card);
+        });
+
+        // user cards
+        window._users.forEach(uid=>{
+          const name = STUDENTS[uid]||uid;
+          const card = document.createElement('div');
+          card.className='user-card';
+          card.innerHTML = `<span>${name}</span>
+                            <span style="font-size:.8em;color:#666;">${uid}</span>`;
+          card.onclick = ()=>openUserModal(uid);
+          uc.appendChild(card);
+        });
+      })
+      .catch(e=>console.error('fetchBrowse error', e));
+
+    // Search on Enter
+    document.getElementById('searchInput')
+      .addEventListener('keydown', e=>{
+        if(e.key==='Enter'){
+          e.preventDefault();
+          const q=e.target.value.trim();
+          if(q) openSearchModal(q);
+        }
+      });
+
+    // Modals
+    window.openSearchModal = q=>{
+      console.log('search:', q);
+      closeModal();
+      const md=document.getElementById('searchModal'),
+            bd=document.getElementById('searchModalBody'),
+            tt=document.getElementById('searchModalTitle'),
+            bp=document.getElementById('modalBackdrop');
+      tt.textContent = `Search: "${q}"`;
+      bd.innerHTML = 'Searching…';
+      bp.style.display='block'; md.style.display='block';
+      let html='';
+      const ql=q.toLowerCase();
+      const dmatch = window._dates.filter(dk=>
+        dk.replace(/-/g,'/').includes(ql)
+      );
+      if(dmatch.length){
+        html += '<h4>Dates</h4>'+
+          dmatch.map(dk=>`<button class="btn" onclick="openDateModal('${dk}')">
+            ${dk.replace(/-/g,'/')}</button>`).join('');
+      }
+      const umatch = window._users.filter(u=>
+        STUDENTS[u].toLowerCase().includes(ql) || u.includes(ql)
+      );
+      if(umatch.length){
+        html += '<h4>Users</h4>'+
+          umatch.map(u=>`<button class="btn" onclick="openUserModal('${u}')">
+            ${STUDENTS[u]}</button>`).join('');
+      }
+      bd.innerHTML = html||'<p>No matches.</p>';
+    };
+
+    window.openDateModal = dk=>{
+      console.log('dateModal:', dk);
+      closeModal();
+      const md=document.getElementById('dateModal'),
+            bd=document.getElementById('dateModalBody'),
+            tt=document.getElementById('dateModalTitle'),
+            bp=document.getElementById('modalBackdrop');
+      tt.textContent = `Transactions on ${dk.replace(/-/g,'/')}`;
+      bd.innerHTML = 'Loading…';
+      bp.style.display='block'; md.style.display='block';
+      fetch(`${BASE}/Logs/${dk}.json`)
+        .then(r=>r.json())
+        .then(logs=>{
+          console.log('day logs:', logs);
+          const html = Object.values(logs||{}).map(l=>{
+            const items = (l.Payload+'').split(',')
+              .filter(x=>x)
+              .map(i=>SLOT_NAMES[parseInt(i,10)-1]||`#${i}`);
+            return `<div class="txn-card">
+              <p><strong>${l.Time.replace(/s.*$/,'')}</strong> — ${l.User}</p>
+              <p>Items: ${items.join(', ')}</p>
+            </div>`;
+          }).join('');
+          bd.innerHTML = html||'<p>No Transactions</p>';
+        })
+        .catch(e=>{ console.error(e); bd.innerHTML='<p style="color:red;">Error</p>'; });
+    };
+
+    window.openUserModal = uid=>{
+      console.log('userModal:', uid);
+      closeModal();
+      const md=document.getElementById('userModal'),
+            bd=document.getElementById('userModalBody'),
+            tt=document.getElementById('userModalTitle'),
+            bp=document.getElementById('modalBackdrop');
+      const name = STUDENTS[uid]||uid;
+      tt.textContent = name;
+      bd.innerHTML = `<p><strong>ID:</strong> ${uid}</p>`;
+      const recs = window._userRecords[uid]||[];
+      if(!recs.length){
+        bd.innerHTML += '<p>No Transactions</p>';
+      } else {
+        recs.sort((a,b)=>b.localeCompare(a))
+            .forEach(dk=>{
+              const disp = dk.replace(/-/g,'/');
+              bd.innerHTML += `<button class="btn" style="margin:4px;"
+                onclick="openDateModal('${dk}')">${disp}</button>`;
+            });
+      }
+      bp.style.display='block'; md.style.display='block';
+    };
+
+    function closeModal(){
+      document.getElementById('modalBackdrop').style.display='none';
+      document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+    }
+  </script>
+</body>
+</html>
+
       overflow:hidden; overscroll-behavior:none;
       touch-action:none;
       font-family:Arial,sans-serif;
