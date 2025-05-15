@@ -79,13 +79,13 @@
     .entry h4 { margin-bottom:4px; font-size:1em; color:#2c3e50; }
     .entry p  { font-size:.9em; color:#555; }
 
-    /* MINI CONSOLE */
+    /* MINI CONSOLE AT TOP */
     #miniConsole {
-      position:fixed; bottom:0; left:0; width:100%;
+      position:fixed; top:0; left:0; width:100%;
       max-height:30vh; background:#111; color:#0f0;
       font-family:monospace; font-size:.85em;
       overflow-y:auto; padding:8px;
-      box-shadow:0 -2px 6px rgba(0,0,0,.5);
+      box-shadow:0 2px 6px rgba(0,0,0,.5);
       z-index:1002;
     }
     #miniConsole div { margin-bottom:4px; }
@@ -102,9 +102,19 @@
     }
     @keyframes fadein { to { opacity:1 } }
     @keyframes fadeout { to { opacity:0 } }
+
+    /* MOBILE */
+    @media(max-width:600px){
+      body { padding:12px; }
+      #topButtons { font-size:.9em; }
+      .card { padding:8px; }
+    }
   </style>
 </head>
 <body>
+  <!-- Mini-console up top -->
+  <div id="miniConsole"></div>
+
   <h1>Admin Panel</h1>
   <div id="topButtons">
     <a class="btn" style="background:orange;" href="https://gmolter.github.io/vend/more" target="_blank">Dev Page</a>
@@ -137,51 +147,53 @@
     </div>
   </div>
 
-  <!-- Mini Console -->
-  <div id="miniConsole"></div>
-
   <div id="toast-container"></div>
 
   <script>
-    // redirect all console outputs to miniConsole as well
+    // redirect console to miniConsole
     (function(){
-      const origLog = console.log, origWarn = console.warn, origErr = console.error;
+      const orig = { log:console.log, warn:console.warn, error:console.error };
       const mc = document.getElementById("miniConsole");
-      function append(type,args){
+      function feed(type,args){
         const d = document.createElement("div");
-        d.textContent = "["+type+"] "+ Array.from(args).join(" ");
+        d.textContent = `[${type}] ${Array.from(args).join(" ")}`;
         mc.appendChild(d);
         mc.scrollTop = mc.scrollHeight;
       }
-      console.log = function(){ append("LOG",arguments); origLog.apply(console,arguments); }
-      console.warn = function(){ append("WARN",arguments); origWarn.apply(console,arguments); }
-      console.error = function(){ append("ERR",arguments); origErr.apply(console,arguments); }
+      console.log = function(){ feed("LOG", arguments); orig.log.apply(console,arguments); }
+      console.warn = function(){ feed("WARN",arguments); orig.warn.apply(console,arguments); }
+      console.error = function(){ feed("ERR", arguments); orig.error.apply(console,arguments); }
     })();
 
     // disable touch scroll
     document.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
 
-    // Firebase init (with trailing slash)
+    // Firebase init
     const cfg = {
-      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
-      authDomain: "cyberflashvend.firebaseapp.com",
-      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com/",
-      projectId: "cyberflashvend",
-      storageBucket: "cyberflashvend.firebasestorage.app",
-      messagingSenderId: "63786658773",
-      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+      apiKey:"AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain:"cyberflashvend.firebaseapp.com",
+      databaseURL:"https://cyberflashvend-default-rtdb.firebaseio.com/",
+      projectId:"cyberflashvend",
+      storageBucket:"cyberflashvend.firebasestorage.app",
+      messagingSenderId:"63786658773",
+      appId:"1:63786658773:web:7792d3693ef45e9ec4eb5c"
     };
     firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    // Constants
-    const STUDENTS = {
-      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
-      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
-      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
-      "250606":"Madeline Penney","250639":"Rohan Rajahalli","260627":"Mason Robbins",
-      "360794":"Calix Baker","DEV":"DEV MODE"
-    };
+    // Data holders
+    let allLogs = [];
+
+    // Utility
+    function showToast(msg){
+      const t=document.createElement("div");
+      t.className="toast"; t.textContent=msg;
+      document.getElementById("toast-container").appendChild(t);
+      setTimeout(()=>t.remove(),3000);
+    }
+    function fmtTime(t){
+      return t.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, (_,h,m,ap)=>`${h}:${m}${ap}`);
+    }
     const SNACK_SLOTS = [
       {slot:"C2",name:"Chips"},
       {slot:"E1",name:"Cookies"},
@@ -190,104 +202,76 @@
       {slot:"E4",name:"Granola Bar"},
       {slot:"E5",name:"Trail Mix"}
     ];
-
-    let allLogs = [];
-
-    function fmtTime(t){
-      return t.replace(/(\d+)h:(\d+)m:\d+s(am|pm)/, (_,h,m,ap)=>`${h}:${m}${ap}`);
-    }
-    function mapPayload(p){
-      return p.split(",").map(n=>{
-        const idx = parseInt(n,10)-1;
-        return SNACK_SLOTS[idx]?.name||"Unknown";
-      }).join(", ");
-    }
-
-    function showToast(msg){
-      const t = document.createElement("div");
-      t.className = "toast"; t.textContent = msg;
-      document.getElementById("toast-container").appendChild(t);
-      setTimeout(()=>t.remove(),3000);
-    }
+    const STUDENTS = {
+      "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
+      "250202":"Mitchell Douglass","250298":"Heyden Halstead","270391":"Nate Jones",
+      "280335":"Calli Justice","260913":"Levi Kane","280508":"Colden Oakley",
+      "250606":"Madeline Penney","250639":"Rohan Rajahalli","260627":"Mason Robbins",
+      "360794":"Calix Baker","DEV":"DEV MODE"
+    };
 
     // Listen for logs
-    console.log("⏳ Setting up RTDB listener...");
-    db.ref("Logs").on("value", snap => {
-      const data = snap.val();
-      console.log("Logs snapshot:", data);
+    console.log("▶️ Subscribing to Logs…");
+    db.ref("Logs").on("value", snap=>{
+      console.log("📥 Logs snapshot", snap.val());
+      const data = snap.val()||{};
       allLogs = [];
-      if (data) {
-        Object.entries(data).forEach(([dateKey, entries])=>{
-          Object.values(entries).forEach(log=>{
-            allLogs.push({
-              date: dateKey,
-              time: log.Time,
-              User: log.User,
-              Payload: log.Payload
-            });
-          });
-        });
-      }
+      Object.entries(data).forEach(([date, entries])=>{
+        Object.values(entries).forEach(l=> allLogs.push({ date, ...l }));
+      });
       allLogs.sort((a,b)=>{
         if(a.date!==b.date) return b.date.localeCompare(a.date);
-        return b.time.localeCompare(a.time);
+        return a.Time.localeCompare(b.Time);
       });
-      showToast(`Loaded ${allLogs.length} logs`);
-      renderRecent();
-      renderByDate();
-      renderByUser();
-    }, err => {
-      console.error("RTDB error:", err);
-      showToast("Error loading logs");
+      showToast(`Loaded ${allLogs.length} entries`);
+      renderRecent(); renderByDate(); renderByUser();
+    }, err=>{
+      console.error("⚠️ RTDB error", err);
+      showToast("Failed to load logs");
     });
 
-    // Helpers
-    const $ = s => document.querySelector(s);
+    // DOM shortcuts
+    const $ = s=>document.querySelector(s);
 
-    // Recent
+    // Recent 6
     function renderRecent(){
-      const rc = $("#recentContainer");
-      rc.innerHTML = "";
+      const rc = $("#recentContainer"); rc.innerHTML="";
       const recent = allLogs.slice(0,6);
-      recent.forEach(log=>{
-        const d = document.createElement("div");
-        d.className = "card";
-        d.innerHTML = `<h4>${log.date.replace(/-/g,"/")} ${fmtTime(log.time)}</h4>
-                       <p><strong>${log.User}</strong><br>${mapPayload(log.Payload)}</p>`;
-        rc.appendChild(d);
+      recent.forEach(l=>{
+        const card = document.createElement("div"); card.className="card";
+        card.innerHTML = `
+          <h4>${l.date.replace(/-/g,"/")} ${fmtTime(l.Time)}</h4>
+          <p><strong>${l.User}</strong><br>
+             ${l.Payload.split(",").map(n=>SNACK_SLOTS[n-1]?.name).join(", ")}</p>`;
+        rc.appendChild(card);
       });
-      $("#moreRecent").style.display = allLogs.length > 6 ? "inline-block" : "none";
+      $("#moreRecent").style.display = allLogs.length>6?"inline-block":"none";
     }
     $("#moreRecent").onclick = ()=> openLogModal("All Transactions", allLogs);
 
     // By Date
     function renderByDate(){
-      const dc = $("#dateContainer");
-      dc.innerHTML = "";
-      const dates = Array.from(new Set(allLogs.map(l=>l.date)));
-      if (!dates.length) {
-        dc.textContent = "No transactions";
-        return;
-      }
-      dates.forEach(date=>{
-        const btn = document.createElement("button");
-        btn.className = "btn save";
-        btn.textContent = date.replace(/-/g,"/");
+      const dc = $("#dateContainer"); dc.innerHTML="";
+      const dates = [...new Set(allLogs.map(l=>l.date))];
+      if(!dates.length){ dc.textContent="No transactions"; return; }
+      dates.forEach(d=>{
+        const btn=document.createElement("button");
+        btn.className="btn save";
+        btn.textContent = d.replace(/-/g,"/");
         btn.onclick = ()=> openLogModal(`Date ${btn.textContent}`,
-                                       allLogs.filter(l=>l.date===date));
+          allLogs.filter(l=>l.date===d));
         dc.appendChild(btn);
       });
     }
 
     // By User
     function renderByUser(){
-      const uc = $("#userContainer");
-      uc.innerHTML = "";
+      const uc = $("#userContainer"); uc.innerHTML="";
       Object.entries(STUDENTS).forEach(([id,name])=>{
-        const btn = document.createElement("button");
-        btn.className = "btn";
+        const btn=document.createElement("button");
+        btn.className="btn";
         btn.textContent = name;
-        btn.onclick = ()=> openUserModal(name,id);
+        btn.onclick = ()=> openLogModal(`User ${name}`, allLogs.filter(l=>l.User===name));
         uc.appendChild(btn);
       });
     }
@@ -295,55 +279,35 @@
     // Search
     $("#searchInput").addEventListener("keypress", e=>{
       if(e.key==="Enter"){
-        const q = e.target.value.trim();
+        const q=e.target.value.trim();
         if(!q) return;
-        const dateKey = q.replace(/[\/\.]/g,"-");
-        const byDate = allLogs.filter(l=>l.date===dateKey);
-        if(byDate.length) return openLogModal(`Date ${q}`, byDate);
-        const byUser = allLogs.filter(l=>
-          l.User.toLowerCase().includes(q.toLowerCase())
-        );
+        const dkey=q.replace(/[\/\.]/g,"-");
+        const byDate = allLogs.filter(l=>l.date===dkey);
+        if(byDate.length) return openLogModal(`Date ${q}`,byDate);
+        const byUser = allLogs.filter(l=>l.User.toLowerCase().includes(q.toLowerCase()));
         if(byUser.length) return openLogModal(`User “${q}”`, byUser);
         showToast("No results");
       }
     });
 
     // Modal
-    const overlay = $("#modalOverlay"),
-          titleEl = $("#modalTitle"),
-          content = $("#modalContent");
-    $("#modalClose").onclick = ()=> overlay.style.display="none";
-
+    $("#modalClose").onclick = () => $("#modalOverlay").style.display="none";
     function openLogModal(title, logs){
-      titleEl.textContent = title;
+      $("#modalTitle").textContent = title;
+      const c = $("#modalContent"); c.innerHTML="";
       if(!logs.length){
-        content.innerHTML = "<p>No Transactions</p>";
+        c.innerHTML = "<p>No Transactions</p>";
       } else {
-        content.innerHTML = logs.map(l=>`
-          <div class="entry">
-            <h4>${l.date.replace(/-/g,"/")} ${fmtTime(l.time)}</h4>
-            <p><strong>${l.User}</strong><br>${mapPayload(l.Payload)}</p>
-          </div>`).join("");
+        logs.forEach(l=>{
+          const div=document.createElement("div"); div.className="entry";
+          div.innerHTML=`
+            <h4>${l.date.replace(/-/g,"/")} ${fmtTime(l.Time)}</h4>
+            <p><strong>${l.User}</strong><br>
+               ${l.Payload.split(",").map(n=>SNACK_SLOTS[n-1]?.name).join(", ")}</p>`;
+          c.appendChild(div);
+        });
       }
-      overlay.style.display = "flex";
-    }
-
-    function openUserModal(name,id){
-      const userLogs = allLogs.filter(l=>l.User===name);
-      if(!userLogs.length){
-        return openLogModal(`History for ${name} (ID:${id})`, []);
-      }
-      // Group by date
-      const byDate = {};
-      userLogs.forEach(l=>(byDate[l.date]=byDate[l.date]||[]).push(l));
-      const entries = Object.entries(byDate).map(([date,logs])=>({ date, logs }));
-      titleEl.textContent = `History for ${name} (ID:${id})`;
-      content.innerHTML = entries.map(e=>`
-        <div class="entry">
-          <h4>${e.date.replace(/-/g,"/")}</h4>
-          ${e.logs.map(l=>`<p>${fmtTime(l.time)} — ${mapPayload(l.Payload)}</p>`).join("")}
-        </div>`).join("");
-      overlay.style.display = "flex";
+      $("#modalOverlay").style.display="flex";
     }
   </script>
 </body>
