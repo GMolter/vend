@@ -248,9 +248,13 @@
     const db=firebase.database();
 
     let serverSecret=null,
-        machineConfig={}, currentScreen="logo",
-        studentId="", selectedItems=new Set(),
-        idleTimer, countdownTimer, countdownValue=5;
+        machineConfig={},
+        currentScreen="logo",
+        studentId="",
+        selectedItems=new Set(),
+        idleTimer,
+        countdownTimer,
+        countdownValue=5;
 
     const STUDENTS={
       "260514":"Gavin Molter","250257":"Amit Ghumaan","251022":"Sun Bawi",
@@ -365,14 +369,14 @@
             const ph=document.createElement("div");
             ph.style.width="88px"; ph.style.height="88px";
             keypadButtons.appendChild(ph);
-          } else {
+          }else{
             const btn=document.createElement("div");
             btn.className="keypad-btn"+(val==="backspace"?" backspace":"");
             btn.textContent=(val==="backspace")?"←":val;
             if(val==="backspace"){
               btn.addEventListener("touchstart",e=>{e.preventDefault();handleBack();},{passive:false});
               btn.addEventListener("click",handleBack);
-            } else {
+            }else{
               btn.addEventListener("touchstart",e=>{e.preventDefault();handleDigit(val);},{passive:false});
               btn.addEventListener("click",()=>handleDigit(val));
             }
@@ -401,7 +405,7 @@
       if(STUDENTS[studentId]){
         document.getElementById("student-name").textContent=STUDENTS[studentId];
         showScreen("snack-screen"); renderSnackGrid();
-      } else {
+      }else{
         digitDisplay.classList.add("shake");
         setTimeout(()=>{ digitDisplay.classList.remove("shake"); studentId=""; renderDigits(); },500);
         showToast("Invalid ID");
@@ -426,9 +430,9 @@
             if(idx>=0 && idx<SNACK_SLOTS.length){
               toggleSnack(SNACK_SLOTS[idx].slot,snackGrid.children[idx]);
             }
-          } else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
+          }else if((e.key==="Enter"||e.code==="NumpadEnter")&&selectedItems.size){
             proceedToDispense();
-          } else if(e.key==="Escape"){
+          }else if(e.key==="Escape"){
             signOut();
           }
         }
@@ -439,14 +443,14 @@
       selectedItems.clear();
       snackGrid.innerHTML = "";
       SNACK_SLOTS.forEach(s => {
-        const cfg     = machineConfig[s.slot]||{},
-              enabled = cfg.enabled!==false,
-              stock   = cfg.stock!=null ?(cfg.stock):s.qty,
-              name    = cfg.name||s.name;
+        const cfg = machineConfig[s.slot]||{},
+              enabled = (cfg.enabled!==false),
+              stock   = (cfg.stock!=null?cfg.stock:s.qty),
+              name    = (cfg.name||s.name);
 
         const card = document.createElement("div");
-        card.className="snack-item"+(enabled?"":" disabled");
-        card.innerHTML=`<h4>${name}</h4><p>ID: ${s.slot} | Qty: ${stock}</p>`;
+        card.className = "snack-item" + (enabled?"":" disabled");
+        card.innerHTML = `<h4>${name}</h4><p>ID: ${s.slot} | Qty: ${stock}</p>`;
 
         if(stock<=0){
           card.classList.add("disabled");
@@ -457,22 +461,14 @@
 
         if(enabled){
           ["click","touchstart"].forEach(evt=>{
-            card.addEventListener(evt,e=>{
-              if(evt==="touchstart")e.preventDefault();
-              toggleSnack(s.slot,card);
-            },{passive:false});
+            card.addEventListener(evt,e=>{ if(evt==="touchstart")e.preventDefault(); toggleSnack(s.slot,card); },{passive:false});
           });
         }
 
-        // place B row in row 1, C row in row 2
-        const row = s.slot[0]==="B"?1:2;
-        const col = s.slot[1];
-        card.style.gridRow    = row;
-        card.style.gridColumn = col;
-
         snackGrid.appendChild(card);
       });
-      dispenseBtn.style.display="none";
+
+      dispenseBtn.style.display = "none";
       document.getElementById("menuBtn").style.display = (studentId==="DEV MODE")?"block":"none";
     }
 
