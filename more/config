@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CyberFlashVend RTDB Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0b0c10;
+      color: #e6e7e8;
+    }
+    header {
+      background: #111;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 600;
+    }
+    main {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #15161a;
+      border: 1px solid #2a2c31;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .card header {
+      background: transparent;
+      border: 0;
+      padding: 12px 14px;
+    }
+    pre {
+      margin: 0;
+      padding: 12px 14px;
+      overflow: auto;
+      max-height: 70vh;
+      border-top: 1px solid #2a2c31;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #2a2c31;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background: #0f1115;
+      position: sticky;
+      top: 0;
+    }
+    code { font-family: ui-monospace, monospace; }
+    .grid {
+      overflow: auto;
+      max-height: 70vh;
+      border-top: 1px solid #2a2c31;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CyberFlashVend RTDB Viewer</h1>
+    <div id="status">Connecting...</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <header>
+        <strong>Raw JSON (Pretty)</strong>
+      </header>
+      <pre id="jsonOut">{}</pre>
+    </section>
+
+    <section class="card">
+      <header>
+        <strong>Flattened View</strong>
+      </header>
+      <div class="grid">
+        <table id="flatTable">
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Type</th>
+              <th>Value (preview)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    // 🔧 Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB3rahMcbUqRAetLoEKwwTDKf89I2sn85Y",
+      authDomain: "cyberflashvend.firebaseapp.com",
+      databaseURL: "https://cyberflashvend-default-rtdb.firebaseio.com",
+      projectId: "cyberflashvend",
+      storageBucket: "cyberflashvend.firebasestorage.app",
+      messagingSenderId: "63786658773",
+      appId: "1:63786658773:web:7792d3693ef45e9ec4eb5c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const jsonOut = document.getElementById('jsonOut');
+    const tbody = document.querySelector('#flatTable tbody');
+    const statusEl = document.getElementById('status');
+
+    // Fetch all data at root
+    async function loadData() {
+      try {
+        statusEl.textContent = 'Loading...';
+        const snapshot = await get(ref(db, '/'));
+        const data = snapshot.val();
+
+        if (!data) {
+          jsonOut.textContent = '{ }';
+          tbody.innerHTML = '<tr><td colspan="3">(no data)</td></tr>';
+          statusEl.textContent = 'No data found';
+          return;
+        }
+
+        // Pretty JSON
+        jsonOut.textContent = JSON.stringify(data, null, 2);
+        statusEl.textContent = 'Loaded ✓';
+
+        // Flatten
+        renderFlat(data);
+      } catch (err) {
+        console.error(err);
+        jsonOut.textContent = JSON.stringify({ error: String(err) }, null, 2);
+        statusEl.textContent = 'Error';
+      }
+    }
+
+    function renderFlat(obj) {
+      tbody.innerHTML = '';
+      const maxRows = 5000;
+      let rows = 0;
+
+      function visit(node, path) {
+        if (rows >= maxRows) return;
+        const type = Object.prototype.toString.call(node).slice(8, -1).toLowerCase();
+        if (node === null || (type !== 'object' && type !== 'array')) {
+          addRow(path, typeof node, preview(node));
+          rows++;
+          return;
+        }
+        const keys = Object.keys(node);
+        if (!keys.length) {
+          addRow(path, type, '(empty)');
+          rows++;
+          return;
+        }
+        for (const k of keys) {
+          visit(node[k], path === '/' ? `/${k}` : `${path}/${k}`);
+        }
+      }
+
+      function addRow(path, type, value) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><code>${escapeHtml(path)}</code></td>
+          <td>${type}</td>
+          <td>${escapeHtml(String(value))}</td>`;
+        tbody.appendChild(tr);
+      }
+
+      function preview(v) {
+        if (v === null) return 'null';
+        if (typeof v === 'string') return v.length > 120 ? v.slice(0,117) + '…' : v;
+        if (Array.isArray(v)) return `[array:${v.length}]`;
+        if (typeof v === 'object') return '{object}';
+        return String(v);
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      visit(obj, '/');
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
